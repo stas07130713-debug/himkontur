@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 116">
+  <defs>
+    <linearGradient id="pipe" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff7a5"/><stop offset=".18" stop-color="#ffd92f"/><stop offset=".55" stop-color="#e7a900"/><stop offset=".82" stop-color="#ffd52a"/><stop offset="1" stop-color="#9a6800"/></linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#32383a"/><stop offset=".28" stop-color="#cbd2d2"/><stop offset=".5" stop-color="#596163"/><stop offset=".75" stop-color="#e6ecec"/><stop offset="1" stop-color="#303638"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#172226" flood-opacity=".42"/></filter>
+  </defs>
+  <ellipse cx="130" cy="99" rx="111" ry="9" fill="#17272c" opacity=".25"/>
+  <g filter="url(#shadow)">
+    <rect x="22" y="42" width="216" height="38" rx="19" fill="url(#pipe)" stroke="#805900" stroke-width="3"/>
+    <path d="M31 49h198" stroke="#fff9a9" stroke-width="4" stroke-linecap="round" opacity=".65"/>
+    <g fill="url(#steel)" stroke="#3c4446" stroke-width="2"><rect x="45" y="30" width="13" height="62" rx="3"/><rect x="202" y="30" width="13" height="62" rx="3"/></g>
+    <g fill="#d9dfdf" stroke="#3a4244"><circle cx="51.5" cy="35" r="3"/><circle cx="51.5" cy="87" r="3"/><circle cx="208.5" cy="35" r="3"/><circle cx="208.5" cy="87" r="3"/></g>
+    <path d="M112 42V25h36v17" fill="none" stroke="url(#steel)" stroke-width="15"/>
+    <path d="M130 25V14" stroke="#4c5557" stroke-width="7"/><circle cx="130" cy="13" r="12" fill="#efc018" stroke="#6f5300" stroke-width="3"/><path d="M118 13h24M130 1v24" stroke="#574300" stroke-width="3"/>
+    <rect x="91" y="49" width="78" height="25" rx="5" fill="#f4c516" stroke="#674e00" stroke-width="2"/>
+    <text x="130" y="67" fill="#151a1b" font-family="Arial,sans-serif" font-size="16" font-weight="900" text-anchor="middle">ХЛОР</text>
+  </g>
+</svg>

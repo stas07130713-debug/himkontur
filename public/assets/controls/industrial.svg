@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 100">
+  <defs><linearGradient id="red" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ff9b87"/><stop offset="1" stop-color="#b6343b"/></linearGradient><linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f3f7f6"/><stop offset="1" stop-color="#768c91"/></linearGradient><filter id="s"><feDropShadow dx="0" dy="4" stdDeviation="3" flood-opacity=".35"/></filter></defs>
+  <ellipse cx="70" cy="91" rx="61" ry="6" fill="#26373d" opacity=".3"/><g filter="url(#s)"><path d="M10 48 31 31l18 17 22-21 20 21h35v37H10z" fill="url(#red)" stroke="#783039" stroke-width="2"/><path d="M97 10h15v48H97z" fill="url(#steel)" stroke="#475c62" stroke-width="2"/><path d="M94 10h21v8H94z" fill="#c8d4d5" stroke="#475c62" stroke-width="2"/><path d="M115 56h14v29h-14z" fill="#8c3b3e" stroke="#693035" stroke-width="2"/><ellipse cx="122" cy="56" rx="7" ry="3" fill="#d7e1e1" stroke="#52676c"/></g>
+  <g fill="#fff5dc" stroke="#9a4e45"><path d="M19 58h15v12H19zm25 0h15v12H44zm25 0h15v12H69zm25 0h15v12H94z"/></g><path d="M5 86h130" stroke="#344c55" stroke-width="4"/>
+</svg>

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+release/
+build/.electron-data/
+.edge-check/
+*.tsbuildinfo
+ui-*.png
