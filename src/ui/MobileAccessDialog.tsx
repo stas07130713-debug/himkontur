@@ -85,15 +85,13 @@ export function MobileAccessDialog({ open, onClose }: Props) {
                 <span className="branded-download-progress"><DownloadMark />Подготавливается QR-код…</span>
               )}
             </div>
+          </div>
+
+          <div className="mobile-download-actions" aria-label="Загрузка приложений">
             <a className="application-download android" href={ANDROID_DOWNLOAD}>
               <DownloadMark />
               <span><strong>Скачать для Android</strong><small>Установочный файл APK</small></span>
             </a>
-          </div>
-
-          <div className="desktop-download-block">
-            <h3>Приложение для Windows</h3>
-            <p>Полная автономная версия для компьютера.</p>
             <a className="application-download windows" href={WINDOWS_DOWNLOAD}>
               <DownloadMark />
               <span><strong>Скачать для Windows</strong><small>Установочный файл EXE</small></span>

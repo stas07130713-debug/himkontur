@@ -1233,7 +1233,7 @@ button.wide { width: 100%; margin-top: 10px; }
 }
 
 /* Мобильный доступ и установочный QR-код. */
-.mobile-access-dialog { position: relative; width: min(470px, 94vw); max-height: min(760px, 94dvh); overflow-y: auto; padding: 22px; border: 1px solid #2d8793; border-radius: 16px; background: #f8fdfd; box-shadow: 0 24px 70px #001c2d99; color: #163c48; }
+.mobile-access-dialog { position: relative; width: min(520px, 94vw); max-height: min(800px, 94dvh); overflow-y: auto; padding: 22px; border: 1px solid #2d8793; border-radius: 16px; background: #f8fdfd; box-shadow: 0 24px 70px #001c2d99; color: #163c48; }
 .mobile-dialog-heading { display: grid; grid-template-columns: 48px 1fr; gap: 12px; align-items: center; padding-right: 28px; }
 .mobile-dialog-icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 13px; background: linear-gradient(145deg, #079ba8, #04566d); color: #fff; font-size: 27px; }
 .mobile-dialog-icon svg { width: 40px; height: 40px; }
@@ -1242,16 +1242,17 @@ button.wide { width: 100%; margin-top: 10px; }
 .download-mark-arrow { fill: none; stroke: #063746; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .mobile-dialog-heading h2 { margin: 0; color: #073b58; font-size: 22px; }
 .mobile-dialog-heading p { margin: 3px 0 0; color: #607a80; font-size: 12px; line-height: 1.35; }
-.mobile-download-layout { margin-top: 16px; display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: 13px; }
+.mobile-download-layout { margin-top: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .mobile-download-layout h3 { margin: 0 0 4px; color: #073b58; font-size: 14px; }
 .mobile-download-layout p { min-height: 32px; margin: 0; color: #607a80; font-size: 10px; line-height: 1.35; }
-.mobile-qr-frame { width: min(290px, 76vw); aspect-ratio: 1; margin: 18px auto 10px; display: grid; place-items: center; padding: 10px; border: 1px solid #a8d0d4; border-radius: 14px; background: #fff; }
+.mobile-qr-frame { width: min(300px, 76vw); aspect-ratio: 1; margin: 14px auto 4px; display: grid; place-items: center; padding: 12px; border: 1px solid #a8d0d4; border-radius: 14px; background: #fff; }
 .mobile-qr-frame img { width: 100%; height: 100%; display: block; }
+.mobile-download-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .branded-download-progress { display: grid; justify-items: center; gap: 8px; color: #39707a; font-size: 10px; }
 .branded-download-progress svg { width: 58px; height: 58px; animation: branded-download-pulse 1.1s ease-in-out infinite; }
 .application-download { min-height: 58px; padding: 8px 10px; display: flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid #078894; border-radius: 10px; background: linear-gradient(180deg, #079ba8, #05717e); color: #fff; text-decoration: none; box-shadow: 0 5px 16px #006f7c30; }
 .application-download:hover { filter: brightness(1.08); }
-.application-download.windows { margin-top: 16px; border-color: #356d9d; background: linear-gradient(180deg, #397bac, #24577f); }
+.application-download.windows { border-color: #356d9d; background: linear-gradient(180deg, #397bac, #24577f); }
 .application-download > svg { width: 38px; height: 38px; flex: 0 0 38px; }
 .application-download > span { min-width: 0; display: grid; }
 .application-download strong { font-size: 12px; }
@@ -1340,8 +1341,7 @@ button.wide { width: 100%; margin-top: 10px; }
   .mobile-dialog-heading h2 { font-size: 19px; }
   .mobile-download-layout { grid-template-columns: 1fr; }
   .mobile-download-layout p { min-height: 0; }
-  .desktop-download-block { padding-top: 12px; border-top: 1px solid #bfd9dc; }
-  [data-theme="dark"] .desktop-download-block { border-top-color: #315762; }
+  .mobile-download-actions { grid-template-columns: 1fr; }
   [data-theme="dark"] .topbar { border-bottom-color: #124452; background: linear-gradient(160deg, #020d14, #061f2b 62%, #03131c); box-shadow: 0 4px 18px #000a; }
   [data-theme="dark"] .main-tabs button { border-color: #225260; background: #061a24; color: #aac4ca; }
   [data-theme="dark"] .main-tabs button.active { border-color: #1fc6ce; background: linear-gradient(180deg, #0a5667, #073444); color: #fff; }
