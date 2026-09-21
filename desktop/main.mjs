@@ -5,7 +5,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HOST = '127.0.0.1';
-const PORT = 32174;
+const PORT = Number(process.env.HIMKONTUR_LOCAL_PORT ?? '32174');
 const CURRENT_DIRECTORY = resolve(fileURLToPath(new URL('.', import.meta.url)));
 const WEB_ROOT = resolve(CURRENT_DIRECTORY, '..', 'dist');
 const MIME = Object.freeze({

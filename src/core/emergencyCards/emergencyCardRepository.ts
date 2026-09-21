@@ -18,13 +18,16 @@ export class EmergencyCardRepository {
   private constructor(private readonly database: EmergencyCardsDatabase) {}
 
   static async load(signal?: AbortSignal): Promise<EmergencyCardRepository> {
-    const [index, cards, profiles, meta] = await Promise.all([
+    const [index, cards, profiles, supplementalIndex, ergCards, cameoProfiles, meta] = await Promise.all([
       loadJson<readonly DangerousGoodIndexEntry[]>('dangerous-goods-index-2026.json', signal),
       loadJson<readonly EmergencyCard[]>('emergency-cards-2026.json', signal),
       loadJson<readonly SubstanceSpecificProfile[]>('dangerous-goods-profiles-2026.json', signal),
+      loadJson<readonly DangerousGoodIndexEntry[]>('erg-dangerous-goods-index-2024.json', signal),
+      loadJson<readonly EmergencyCard[]>('erg-emergency-cards-2024.json', signal),
+      loadJson<readonly SubstanceSpecificProfile[]>('cameo-profiles-3.1.0.json', signal),
       loadJson<EmergencyCardsMeta>('emergency-cards-meta.json', signal),
     ]);
-    return EmergencyCardRepository.fromDatabase({ index, cards, profiles, meta });
+    return EmergencyCardRepository.fromDatabase({ index: [...index, ...supplementalIndex], cards: [...cards, ...ergCards], profiles: [...profiles, ...cameoProfiles], meta });
   }
 
   static fromDatabase(database: EmergencyCardsDatabase): EmergencyCardRepository {

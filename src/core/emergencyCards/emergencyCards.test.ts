@@ -23,6 +23,30 @@ const chlorineCard = database.cards[0];
 if (chlorineEntry === undefined || chlorineCard === undefined) throw new Error('Некорректная тестовая база.');
 
 describe('локальная база аварийных карточек', () => {
+  it('полная автономная база CAMEO/ERG покрывает каждый UN без пустых карточек', () => {
+    const directory = resolve(process.cwd(), 'public/data/emergency-cards');
+    const full: EmergencyCardsDatabase = {
+      index: [
+        ...(JSON.parse(readFileSync(resolve(directory, 'dangerous-goods-index-2026.json'), 'utf8')) as EmergencyCardsDatabase['index']),
+        ...(JSON.parse(readFileSync(resolve(directory, 'erg-dangerous-goods-index-2024.json'), 'utf8')) as EmergencyCardsDatabase['index']),
+      ],
+      cards: [
+        ...(JSON.parse(readFileSync(resolve(directory, 'emergency-cards-2026.json'), 'utf8')) as EmergencyCardsDatabase['cards']),
+        ...(JSON.parse(readFileSync(resolve(directory, 'erg-emergency-cards-2024.json'), 'utf8')) as EmergencyCardsDatabase['cards']),
+      ],
+      profiles: [
+        ...(JSON.parse(readFileSync(resolve(directory, 'dangerous-goods-profiles-2026.json'), 'utf8')) as NonNullable<EmergencyCardsDatabase['profiles']>),
+        ...(JSON.parse(readFileSync(resolve(directory, 'cameo-profiles-3.1.0.json'), 'utf8')) as NonNullable<EmergencyCardsDatabase['profiles']>),
+      ],
+      meta: JSON.parse(readFileSync(resolve(directory, 'emergency-cards-meta.json'), 'utf8')) as EmergencyCardsDatabase['meta'],
+    };
+    const report = validateEmergencyCardsDatabase(full);
+    expect(report.errors).toEqual([]);
+    expect(new Set(full.profiles?.map((profile) => profile.un)).size).toBe(2323);
+    const helium = full.profiles?.find((profile) => profile.un === '1963');
+    expect(JSON.stringify(helium)).toMatch(/обморож/iu);
+    expect(JSON.stringify(helium)).not.toMatch(/ещ[её] не прошли|сюда не подставляется/iu);
+  });
   it('рабочие JSON-файлы читаются и проходят валидацию без ошибок', () => {
     const directory = resolve(process.cwd(), 'public/data/emergency-cards');
     const actual: EmergencyCardsDatabase = {

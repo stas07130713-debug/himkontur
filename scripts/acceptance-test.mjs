@@ -378,11 +378,18 @@ try {
     check('dangerous-goods screen follows the search-left and emergency-sheet-right design', document.querySelector('.goods-sidebar') !== null && document.querySelector('.emergency-sheet') !== null);
     check('dangerous-goods screen opens without a preselected substance', document.querySelector('.goods-hero') === null && document.querySelector('.emergency-empty') !== null);
     check('dangerous-goods card has no redundant plume-calculation action', document.querySelector('.calculate-from-goods') === null);
+    for (let attempt = 0; attempt < 100 && !document.querySelector('.goods-search-results')?.textContent?.includes('1017'); attempt += 1) {
+      const currentInput = document.querySelector('.goods-search-box input');
+      if (currentInput instanceof HTMLInputElement && currentInput.value !== '1017') setInput(currentInput, '1017');
+      await wait(150);
+    }
     const unInput = document.querySelector('.goods-search-box input');
-    if (unInput instanceof HTMLInputElement) setInput(unInput, '1017'); await wait(200);
-    for (let attempt = 0; attempt < 30 && document.querySelectorAll('.goods-search-results button').length === 0; attempt += 1) await wait(150);
     check('dangerous goods database loaded', document.querySelectorAll('.goods-search-results button').length > 0);
-    document.querySelector('.goods-search-results button')?.click(); await wait();
+    // Let the initial-query effect finish after the large offline database is
+    // attached, then perform the same result click as a user.
+    await wait(600);
+    document.querySelector('.goods-search-results button')?.click();
+    for (let attempt = 0; attempt < 30 && !document.querySelector('.goods-hero')?.textContent?.includes('ХЛОР'); attempt += 1) await wait(100);
     check('UN 1017 lookup', document.querySelector('.goods-hero')?.textContent?.includes('ХЛОР'));
     check('UN 1017 has official emergency card 203', document.querySelector('.goods-hero')?.textContent?.includes('№ 203'));
     check('chlorine transport fields include ADR code and Kemler number', document.querySelector('.goods-hero')?.textContent?.includes('2TOC') && document.querySelector('.goods-hero')?.textContent?.includes('265'));
@@ -408,12 +415,12 @@ try {
     if (unInput instanceof HTMLInputElement) setInput(unInput, 'соляная кислота'); await wait(200);
     check('dangerous-good name lookup works offline', document.querySelector('.goods-search-results')?.textContent?.includes('1789'));
     if (unInput instanceof HTMLInputElement) setInput(unInput, '2908');
-    await wait(200);
+    for (let attempt = 0; attempt < 30 && !document.querySelector('.goods-search-results')?.textContent?.includes('2908'); attempt += 1) await wait(100);
     document.querySelector('.goods-search-results button')?.click(); await wait();
     check('UN 2908 lookup', document.querySelector('.goods-hero')?.textContent?.includes('2908'));
-    check('unverified UN is not substituted with an OCR-derived emergency card', document.querySelector('.unverified-emergency-card')?.textContent?.includes('не найдена в локальной нормативной базе редакции 01.01.2026'));
+    check('UN 2908 uses complete sourced emergency guidance', document.querySelectorAll('.emergency-card-grid section').length === 7 && document.querySelector('.unverified-emergency-card') === null);
     if (unInput instanceof HTMLInputElement) setInput(unInput, '0029');
-    await wait(200);
+    for (let attempt = 0; attempt < 30 && !document.querySelector('.goods-search-results')?.textContent?.includes('0029'); attempt += 1) await wait(100);
     document.querySelector('.goods-search-results button')?.click(); await wait();
     check('non-pilot UN uses its assigned official emergency card', document.querySelector('.goods-hero')?.textContent?.includes('№ 191'));
     check('non-pilot official card is rendered in all seven operational sections', document.querySelectorAll('.emergency-card-grid section').length === 7);

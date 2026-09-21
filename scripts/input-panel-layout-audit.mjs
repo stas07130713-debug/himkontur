@@ -38,7 +38,7 @@ try {
   });
   await command('Runtime.enable');
   await command('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
-  await delay(1000);
+  await delay(3000);
   const evaluate = async (expression) => (await command('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true })).result.value;
   const labels = await evaluate(`(async () => {
     const wait = (ms) => new Promise((resolveWait) => setTimeout(resolveWait, ms));

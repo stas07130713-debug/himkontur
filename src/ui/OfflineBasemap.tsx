@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Map as MapLibreMap, addProtocol, setWorkerUrl, type StyleSpecification } from 'maplibre-gl';
 import mapWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-import { PMTiles, type Source } from 'pmtiles';
+import { PMTiles } from 'pmtiles';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { GeoPoint } from '../core/types';
 
@@ -12,15 +12,10 @@ setWorkerUrl(mapWorkerUrl);
 function getOfflineArchive(): Promise<PMTiles> {
   if (offlineArchivePromise !== null) return offlineArchivePromise;
   const archiveUrl = new URL('map-data/monchegorsk-v5.pmtiles', document.baseURI).href;
-  offlineArchivePromise = fetch(archiveUrl).then(async (response) => {
-    if (!response.ok) throw new Error(`Автономная карта не загружена: HTTP ${response.status}`);
-    const archive = await response.arrayBuffer();
-    const source: Source = {
-      getKey: () => archiveUrl,
-      getBytes: async (offset, length) => ({ data: archive.slice(offset, offset + length) }),
-    };
-    return new PMTiles(source);
-  });
+  // PMTiles reads only the header, directory and currently visible tiles via
+  // byte ranges. Loading the whole archive here blocked the reference cards
+  // and looked like an endless application startup on slower devices.
+  offlineArchivePromise = Promise.resolve(new PMTiles(archiveUrl));
   return offlineArchivePromise;
 }
 

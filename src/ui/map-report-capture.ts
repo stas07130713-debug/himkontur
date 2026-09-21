@@ -89,7 +89,7 @@ export async function captureMapForReport(map: HTMLElement, sidePanel?: HTMLElem
       onclone: (documentClone) => {
         documentClone.querySelectorAll('.map-context-menu, .basemap-tile-preload').forEach((node) => node.remove());
         documentClone.querySelectorAll<HTMLButtonElement>('.result-actions button').forEach((button) => {
-          if (button.textContent?.includes('Формируется')) {
+          if (button.textContent.includes('Формируется')) {
             button.textContent = 'Сформировать отчёт';
             button.disabled = false;
           }

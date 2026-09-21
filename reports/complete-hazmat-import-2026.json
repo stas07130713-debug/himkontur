@@ -1,0 +1,20 @@
+{
+  "generatedAt": "2026-09-21T15:56:00.374Z",
+  "source": "CAMEO Chemicals 3.1.0 rev 1 / ERG 2024",
+  "transportRows": 3122,
+  "uniqueUN": 2323,
+  "exactChemicalProfiles": 1400,
+  "ambiguousChemicalMappings": 317,
+  "transportGuideProfiles": 606,
+  "officialErgGuides": 64,
+  "supplementalIndexRows": 508,
+  "preservedVerifiedProfiles": 3,
+  "importedProfiles": 2320,
+  "conservativeFallbacks": [
+    {
+      "un": "0190",
+      "guide": 111,
+      "reason": "ERG 2024 does not assign a material-specific guide; official unidentified-cargo procedure used."
+    }
+  ]
+}

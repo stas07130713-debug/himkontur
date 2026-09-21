@@ -21,7 +21,7 @@ export function validateEmergencyCardsDatabase(database: EmergencyCardsDatabase)
   const duplicateCards = new Set<string>();
   for (const [index, card] of database.cards.entries()) {
     const path = `cards[${index}]`;
-    if (!/^\d{3}$/u.test(card.cardNumber)) errors.push({ code: 'INVALID_CARD_NUMBER', message: 'Некорректный номер аварийной карточки.', path: `${path}.cardNumber` });
+    if (!/^(?:\d{3}|ERG-\d{3})$/u.test(card.cardNumber)) errors.push({ code: 'INVALID_CARD_NUMBER', message: 'Некорректный номер аварийной карточки или руководства ERG.', path: `${path}.cardNumber` });
     if (cardNumbers.has(card.cardNumber)) duplicateCards.add(card.cardNumber);
     cardNumbers.add(card.cardNumber);
     const hazardSections = [card.mainProperties, card.fireExplosionHazard, card.humanHazard.description, card.humanHazard.symptoms];

@@ -4,9 +4,18 @@ import { join } from 'node:path';
 const root = process.cwd();
 const dataDirectory = join(root, 'public', 'data', 'emergency-cards');
 const reportDirectory = join(root, 'reports');
-const index = JSON.parse(readFileSync(join(dataDirectory, 'dangerous-goods-index-2026.json'), 'utf8'));
-const cards = JSON.parse(readFileSync(join(dataDirectory, 'emergency-cards-2026.json'), 'utf8'));
-const profiles = JSON.parse(readFileSync(join(dataDirectory, 'dangerous-goods-profiles-2026.json'), 'utf8'));
+const index = [
+  ...JSON.parse(readFileSync(join(dataDirectory, 'dangerous-goods-index-2026.json'), 'utf8')),
+  ...JSON.parse(readFileSync(join(dataDirectory, 'erg-dangerous-goods-index-2024.json'), 'utf8')),
+];
+const cards = [
+  ...JSON.parse(readFileSync(join(dataDirectory, 'emergency-cards-2026.json'), 'utf8')),
+  ...JSON.parse(readFileSync(join(dataDirectory, 'erg-emergency-cards-2024.json'), 'utf8')),
+];
+const profiles = [
+  ...JSON.parse(readFileSync(join(dataDirectory, 'dangerous-goods-profiles-2026.json'), 'utf8')),
+  ...JSON.parse(readFileSync(join(dataDirectory, 'cameo-profiles-3.1.0.json'), 'utf8')),
+];
 const validatedPilotSource = readFileSync(join(root, 'src', 'core', 'substances', 'validatedSubstancesPilot.ts'), 'utf8');
 const validatedPilotUN = new Set([...validatedPilotSource.matchAll(/pilot\(\{\s*un:\s*'(?<un>\d{4})'/gu)].map((match) => match.groups?.un).filter(Boolean));
 const transportLines = readFileSync(join(root, 'public', 'data', 'dangerous-goods.tsv'), 'utf8').replace(/^\uFEFF/u, '').split(/\r?\n/u).slice(1).filter(Boolean);

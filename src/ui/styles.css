@@ -1114,7 +1114,18 @@ button.wide { width: 100%; margin-top: 10px; }
 
 /* Desktop title-bar overlay must never cover theme controls. */
 @media (min-width: 721px) {
-  .topbar.electron-topbar { padding-right: 154px; }
+  .topbar.electron-topbar {
+    grid-template-columns: max-content max-content minmax(0, 1fr) auto 152px;
+    padding-right: 0;
+  }
+  .topbar.electron-topbar::after {
+    content: "";
+    grid-column: 5;
+    width: 152px;
+    min-width: 152px;
+    height: 100%;
+    pointer-events: none;
+  }
   .topbar.electron-topbar .file-actions { padding-right: 0; }
   .topbar.electron-topbar > .theme-switch { position: static; }
 }

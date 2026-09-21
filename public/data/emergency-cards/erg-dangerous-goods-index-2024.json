@@ -1,0 +1,3050 @@
+[
+  {
+    "un": "0004",
+    "name": "АММОНИЯ ПИКРАТ сухой или с массовой долей воды менее 10%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0005",
+    "name": "ПАТРОНЫ ДЛЯ ОРУЖИЯ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1F"
+  },
+  {
+    "un": "0006",
+    "name": "ПАТРОНЫ ДЛЯ ОРУЖИЯ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1E"
+  },
+  {
+    "un": "0007",
+    "name": "ПАТРОНЫ ДЛЯ ОРУЖИЯ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2F"
+  },
+  {
+    "un": "0009",
+    "name": "БОЕПРИПАСЫ ЗАЖИГАТЕЛЬНЫЕ, снаряженные или не снаряженные разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2G"
+  },
+  {
+    "un": "0010",
+    "name": "БОЕПРИПАСЫ ЗАЖИГАТЕЛЬНЫЕ, снаряженные или не снаря-женные разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0012",
+    "name": "ПАТРОНЫ ДЛЯ ОРУЖИЯ С ИНЕРТНЫМ СНАРЯДОМ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0012",
+    "name": "ПАТРОНЫ ДЛЯ СТРЕЛКОВОГО ОРУЖИЯ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0014",
+    "name": "ПАТРОНЫ ДЛЯ ОРУЖИЯ ХОЛОСТЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0014",
+    "name": "ПАТРОНЫ ДЛЯ СТРЕЛКОВОГО ОРУЖИЯ ХОЛОСТЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0014",
+    "name": "ПАТРОНЫ ДЛЯ ИНСТРУМЕНТОВ ХОЛОСТЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0015",
+    "name": "БОЕПРИПАСЫ ДЫМОВЫЕ, снаряженные или не снаряженные разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2G"
+  },
+  {
+    "un": "0015",
+    "name": "БОЕПРИПАСЫ ДЫМОВЫЕ, снаряженные или не снаряженные разрывным, вышибным или метательным зарядом, содержащие коррозионные вещества",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2G"
+  },
+  {
+    "un": "0015",
+    "name": "БОЕПРИПАСЫ ДЫМОВЫЕ, снаряженные или не снаряженные разрывным, вышибным или метательным зарядом, содержащие токсичные при вдыхании вещества",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2G"
+  },
+  {
+    "un": "0016",
+    "name": "БОЕПРИПАСЫ ДЫМОВЫЕ, снаряженные или не снаряженные разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0016",
+    "name": "БОЕПРИПАСЫ ДЫМОВЫЕ, снаряженные или не снаряженные разрывным, вышибным или метательным зарядом, содержащие коррозионные вещества",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0016",
+    "name": "БОЕПРИПАСЫ ДЫМОВЫЕ, снаряженные или не снаряженные разрывным, вышибным или метательным зарядом, содержащие токсичные при вдыхании вещества",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0018",
+    "name": "БОЕПРИПАСЫ СЛЕЗОТОЧИВЫЕ с разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2G"
+  },
+  {
+    "un": "0019",
+    "name": "БОЕПРИПАСЫ СЛЕЗОТОЧИВЫЕ с разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0020",
+    "name": "БОЕПРИПАСЫ С ОТРАВЛЯЮЩИМИ ВЕЩЕСТВАМИ с разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2K"
+  },
+  {
+    "un": "0021",
+    "name": "БОЕПРИПАСЫ С ОТРАВЛЯЮЩИМИ ВЕЩЕСТВАМИ с разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3K"
+  },
+  {
+    "un": "0027",
+    "name": "ПОРОХ ДЫМНЫЙ (ПОРОХ ЧЕРНЫЙ) гранулированный или в порошке",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0028",
+    "name": "ПОРОХ ДЫМНЫЙ (ПОРОХ ЧЕРНЫЙ) ПРЕССОВАННЫЙ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0028",
+    "name": "ПОРОХ ДЫМНЫЙ (ПОРОХ ЧЕРНЫЙ) В ШАШКАХ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0033",
+    "name": "БОМБЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1F"
+  },
+  {
+    "un": "0034",
+    "name": "БОМБЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0035",
+    "name": "БОМБЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2D"
+  },
+  {
+    "un": "0037",
+    "name": "ФОТОАВИАБОМБЫ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1F"
+  },
+  {
+    "un": "0038",
+    "name": "ФОТОАВИАБОМБЫ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0039",
+    "name": "ФОТОАВИАБОМБЫ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2G"
+  },
+  {
+    "un": "0042",
+    "name": "ДЕТОНАТОРЫ ВТОРИЧНЫЕ без первичного детонатора",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0043",
+    "name": "ЗАРЯДЫ РАЗРЫВНЫЕ взрывчатые",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0044",
+    "name": "КАПСЮЛИ-ВОСПЛАМЕНИТЕЛИ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0048",
+    "name": "ЗАРЯДЫ ПОДРЫВНЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0049",
+    "name": "ПАТРОНЫ ОСВЕТИТЕЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1G"
+  },
+  {
+    "un": "0050",
+    "name": "ПАТРОНЫ ОСВЕТИТЕЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0054",
+    "name": "ПАТРОНЫ СИГНАЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0055",
+    "name": "ГИЛЬЗЫ ПАТРОННЫЕ ПУСТЫЕ С КАПСЮЛЯМИ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0056",
+    "name": "БОМБЫ ГЛУБИННЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0060",
+    "name": "ЗАРЯДЫ ДОПОЛНИТЕЛЬНЫЕ ВЗРЫВЧАТЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0066",
+    "name": "ШНУР ОГНЕПРОВОДНЫЙ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0070",
+    "name": "РЕЗАКИ КАБЕЛЬНЫЕ ВЗРЫВЧАТЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0072",
+    "name": "ЦИКЛОТРИМЕТИЛЕНТРИНИТРАМИН (ГЕКСОГЕН, ЦИКЛОНИТ, RDX) УВЛАЖНЕННЫЙ с массовой долей воды не менее 15%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0073",
+    "name": "ДЕТОНАТОРЫ ДЛЯ БОЕПРИПАСОВ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1B"
+  },
+  {
+    "un": "0074",
+    "name": "ДИАЗОДИНИТРОФЕНОЛ УВЛАЖНЕННЫЙ с массовой долей воды или смеси спирта и воды не менее 40%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1A"
+  },
+  {
+    "un": "0075",
+    "name": "ДИЭТИЛЕНГЛИКОЛЬДИНИТРАТ ДЕСЕНСИБИЛИЗИРОВАННЫЙ с массовой долей нелетучего и нерастворимого в воде флегматизатора не менее 25%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0076",
+    "name": "ДИНИТРОФЕНОЛ сухой или увлажненный с массовой долей воды менее 15%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0077",
+    "name": "ДИНИТРОФЕНОЛЯТЫ щелочных металлов сухие или увлажненные с массовой долей воды менее 15%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0078",
+    "name": "ДИНИТРОРЕЗОРЦИН сухой или увлажненный с массовой долей воды менее 15%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0079",
+    "name": "ГЕКСАНИТРОДИФЕНИЛАМИН (ДИПИКРИЛАМИН, ГЕКСИЛ)",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0081",
+    "name": "ВЗРЫВЧАТОЕ ВЕЩЕСТВО БРИЗАНТНОЕ, ТИП А",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0082",
+    "name": "ВЗРЫВЧАТОЕ ВЕЩЕСТВО БРИЗАНТНОЕ, ТИП В",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0083",
+    "name": "ВЗРЫВЧАТОЕ ВЕЩЕСТВО БРИЗАНТНОЕ, ТИП С",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0084",
+    "name": "ВЗРЫВЧАТОЕ ВЕЩЕСТВО БРИЗАНТНОЕ, ТИП D",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0092",
+    "name": "РАКЕТЫ ОСВЕТИТЕЛЬНЫЕ, ЗАПУСКАЕМЫЕ С ЗЕМЛИ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0093",
+    "name": "РАКЕТЫ ОСВЕТИТЕЛЬНЫЕ АВИАЦИОННЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0094",
+    "name": "ПОРОХ ДЛЯ ПИРОТЕХНИЧЕСКИХ ИЗДЕЛИЙ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1G"
+  },
+  {
+    "un": "0101",
+    "name": "ВЗРЫВАТЕЛЬ НЕДЕТОНИРУЮЩИЙ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0102",
+    "name": "ШНУР (ЗАПАЛ) ДЕТОНИРУЮЩИЙ в металлической оболочке",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2D"
+  },
+  {
+    "un": "0103",
+    "name": "ЗАПАЛ трубчатый в металлической оболочке",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0104",
+    "name": "ШНУР (ЗАПАЛ) ДЕТОНИРУЮЩИЙ СЛАБОГО ДЕЙСТВИЯ в металлической оболочке",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4D"
+  },
+  {
+    "un": "0105",
+    "name": "ШНУР ОГНЕПРОВОДНЫЙ БЕЗОПАСНЫЙ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0106",
+    "name": "ТРУБКИ ДЕТОНАЦИОННЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1B"
+  },
+  {
+    "un": "0107",
+    "name": "ТРУБКИ ДЕТОНАЦИОННЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2B"
+  },
+  {
+    "un": "0110",
+    "name": "ГРАНАТЫ ПРАКТИЧЕСКИЕ ручные или ружейные",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0113",
+    "name": "ГУАНИЛНИТРОЗОАМИНОГУАНИЛИДЕНГИДРАЗИН УВЛАЖНЕННЫЙ с массовой долей воды не менее 30%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1A"
+  },
+  {
+    "un": "0114",
+    "name": "ГУАНИЛНИТРОЗОАМИНОГУАНИЛТЕТРАЗЕН (ТЕТРАЗЕН) УВЛАЖНЕННЫЙ с массовой долей воды или смеси спирта и воды не менее 30%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1A"
+  },
+  {
+    "un": "0118",
+    "name": "ГЕКСОЛИТ (ГЕКСОТОЛ) сухой или увлажненный с массовой долей воды менее 15%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0121",
+    "name": "ВОСПЛАМЕНИТЕЛИ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1G"
+  },
+  {
+    "un": "0129",
+    "name": "СВИНЦА АЗИД УВЛАЖНЕННЫЙ с массовой долей воды или смеси спирта и воды не менее 20%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1A"
+  },
+  {
+    "un": "0130",
+    "name": "СВИНЦА СТИФНАТ (СВИНЦА ТРИНИТРОРЕЗОРЦИНАТ) УВЛАЖНЕННЫЙ с массовой долей воды или смеси спирта и воды не менее 20%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1A"
+  },
+  {
+    "un": "0131",
+    "name": "ВОСПЛАМЕНИТЕЛИ ОГНЕПРОВОДНОГО ШНУРА",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0132",
+    "name": "СОЛИ МЕТАЛЛОВ ДЕФЛАГРИРУЮЩИЕ, НИТРОПРОИЗВОДНЫЕ АРОМАТИЧЕСКОГО РЯДА, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0133",
+    "name": "МАННИТГЕКСАНИТРАТ (НИТРОМАННИТ) УВЛАЖНЕННЫЙ с массовой долей воды или смеси спирта и воды не менее 40%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0135",
+    "name": "РТУТЬ ГРЕМУЧАЯ УВЛАЖНЕННАЯ с массовой долей воды или смеси спирта и воды не менее 20%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1A"
+  },
+  {
+    "un": "0136",
+    "name": "МИНЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1F"
+  },
+  {
+    "un": "0137",
+    "name": "МИНЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0138",
+    "name": "МИНЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2D"
+  },
+  {
+    "un": "0143",
+    "name": "НИТРОГЛИЦЕРИН ДЕСЕНСИБИЛИЗИРОВАННЫЙ с массовой долей нелетучего и нерастворимого в воде флегматизатора не менее 40%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0144",
+    "name": "НИТРОГЛИЦЕРИНА СПИРТОВОЙ РАСТВОР с массовой долей нитроглицерина более 1%, но не более 10%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0146",
+    "name": "НИТРОКРАХМАЛ сухой или увлажненный с массовой долей воды менее 20%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0147",
+    "name": "НИТРОМОЧЕВИНА",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0150",
+    "name": "ПЕНТАЭРИТРИТТЕТРАНИТРАТ (ПЕНТАЭРИТРИТОЛ ТЕТРАНИТРАТ; ПЭТН) УВЛАЖНЕННЫЙ с массовой долей воды не менее 25%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0150",
+    "name": "ПЕНТАЭРИТРИТТЕТРАНИТРАТ (ПЕНТАЭРИТРИТОЛ ТЕТРАНИТРАТ; ПЭТН) ДЕСЕНСИБИЛИЗИРОВАННЫЙ с массовой долей флегматизатора не менее 15%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0151",
+    "name": "ПЕНТОЛИТ сухой или увлажнен-ный с массовой долей воды менее 15%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0153",
+    "name": "ТРИНИТРОАНИЛИН (ПИКРАМИД)",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0154",
+    "name": "ТРИНИТРОФЕНОЛ (КИСЛОТА ПИКРИНОВАЯ) сухой или увлажненный с массовой долей воды менее 30%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0155",
+    "name": "ТРИНИТРОХЛОРБЕНЗОЛ (ПИКРИЛХЛОРИД)",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0159",
+    "name": "ПОРОХ В БРИКЕТАХ (ПАСТА ПОРОХОВАЯ) УВЛАЖНЕННЫЙ с массовой долей воды не менее 25%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0160",
+    "name": "ПОРОХ БЕЗДЫМНЫЙ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1C"
+  },
+  {
+    "un": "0167",
+    "name": "СНАРЯДЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1F"
+  },
+  {
+    "un": "0168",
+    "name": "СНАРЯДЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0169",
+    "name": "СНАРЯДЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2D"
+  },
+  {
+    "un": "0171",
+    "name": "БОЕПРИПАСЫ ОСВЕТИТЕЛЬНЫЕ, снаряженные или не снаряженные разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2G"
+  },
+  {
+    "un": "0173",
+    "name": "УСТРОЙСТВА РАСЦЕПЛЕНИЯ ВЗРЫВЧАТЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0174",
+    "name": "ЗАКЛЕПКИ ВЗРЫВЧАТЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0180",
+    "name": "РАКЕТЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1F"
+  },
+  {
+    "un": "0181",
+    "name": "РАКЕТЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1E"
+  },
+  {
+    "un": "0182",
+    "name": "РАКЕТЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2E"
+  },
+  {
+    "un": "0183",
+    "name": "РАКЕТЫ с инертной головкой",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0186",
+    "name": "ДВИГАТЕЛИ РАКЕТНЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0190",
+    "name": "ВЗРЫВЧАТЫХ ВЕЩЕСТВ ОБРАЗЦЫ, кроме инициирующих ВВ",
+    "emergencyCardNumber": "ERG-111",
+    "classificationCode": null
+  },
+  {
+    "un": "0191",
+    "name": "УСТРОЙСТВА СИГНАЛЬНЫЕ РУЧНЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0192",
+    "name": "ПЕТАРДЫ ЖЕЛЕЗНОДОРОЖНЫЕ ВЗРЫВЧАТЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1G"
+  },
+  {
+    "un": "0193",
+    "name": "ПЕТАРДЫ ЖЕЛЕЗНОДОРОЖНЫЕ ВЗРЫВЧАТЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0194",
+    "name": "СИГНАЛЫ БЕДСТВИЯ судовые",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1G"
+  },
+  {
+    "un": "0195",
+    "name": "СИГНАЛЫ БЕДСТВИЯ судовые",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0196",
+    "name": "СИГНАЛЫ ДЫМОВЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1G"
+  },
+  {
+    "un": "0197",
+    "name": "СИГНАЛЫ ДЫМОВЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0204",
+    "name": "СИГНАЛЫ ЗВУКОВЫЕ ВЗРЫВЧАТЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2F"
+  },
+  {
+    "un": "0207",
+    "name": "ТЕТРАНИТРОАНИЛИН",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0208",
+    "name": "ТРИНИТРОФЕНИЛМЕТИЛНИТРАМИН (ТЕТРИЛ)",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0209",
+    "name": "ТРИНИТРОТОЛУОЛ (ТНТ) сухой или увлажненный с массовой долей воды менее 30%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0212",
+    "name": "ТРАССЕРЫ ДЛЯ БОЕПРИПАСОВ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0213",
+    "name": "ТРИНИТРОАНИЗОЛ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0214",
+    "name": "ТРИНИТРОБЕНЗОЛ сухой или увлажненный с массовой долей воды менее 30%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0215",
+    "name": "КИСЛОТА ТРИНИТРОБЕНЗОЙНАЯ сухая или увлажненная с массовой долей воды менее 30%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0216",
+    "name": "ТРИНИТРО-м-КРЕЗОЛ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0217",
+    "name": "ТРИНИТРОНАФТАЛИН",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0218",
+    "name": "ТРИНИТРОФЕНЕТОЛ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0219",
+    "name": "ТРИНИТРОРЕЗОРЦИН (КИСЛОТА СТИФНИНОВАЯ) сухой или увлажненный с массовой долей воды или смеси спирта и воды менее 20%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0220",
+    "name": "МОЧЕВИНЫ НИТРАТ сухой или увлажненный с массовой долей воды менее 20%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0221",
+    "name": "БОЕГОЛОВКИ ТОРПЕД с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0222",
+    "name": "АММОНИЯ НИТРАТ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0224",
+    "name": "БАРИЯ АЗИД сухой или увлаж-ненный с массовой долей воды менее 50%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1A"
+  },
+  {
+    "un": "0225",
+    "name": "ДЕТОНАТОРЫ ВТОРИЧНЫЕ С ПЕРВИЧНЫМ ДЕТОНАТОРОМ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1B"
+  },
+  {
+    "un": "0226",
+    "name": "ЦИКЛОТЕТРАМЕТИЛЕНТЕТРАНИТРАМИН (НМХ; ОКТОГЕН) УВЛАЖНЕННЫЙ с массовой долей воды не менее 15%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0234",
+    "name": "НАТРИЯ ДИНИТРО-о-КРЕЗОЛЯТ сухой или увлажненный с массовой долей воды менее 15%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0235",
+    "name": "НАТРИЯ ПИКРАМАТ сухой или увлажненный с массовой долей воды менее 20%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0236",
+    "name": "ЦИРКОНИЯ ПИКРАМАТ сухой или увлажненный с массовой долей воды менее 20%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0237",
+    "name": "ЗАРЯДЫ КУМУЛЯТИВНЫЕ ГИБКИЕ УДЛИНЕННЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4D"
+  },
+  {
+    "un": "0238",
+    "name": "РАКЕТЫ ТРОСОМЕТАТЕЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2G"
+  },
+  {
+    "un": "0240",
+    "name": "РАКЕТЫ ТРОСОМЕТАТЕЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0241",
+    "name": "ВЗРЫВЧАТОЕ ВЕЩЕСТВО БРИЗАНТНОЕ, ТИП Е",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0242",
+    "name": "ЗАРЯДЫ МЕТАТЕЛЬНЫЕ ДЛЯ ОРУДИЙ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0243",
+    "name": "БОЕПРИПАСЫ ЗАЖИГАТЕЛЬНЫЕ С БЕЛЫМ ФОСФОРОМ с разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2H"
+  },
+  {
+    "un": "0244",
+    "name": "БОЕПРИПАСЫ ЗАЖИГАТЕЛЬНЫЕ С БЕЛЫМ ФОСФОРОМ с разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3H"
+  },
+  {
+    "un": "0245",
+    "name": "БОЕПРИПАСЫ ДЫМОВЫЕ С БЕЛЫМ ФОСФОРОМ с разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2H"
+  },
+  {
+    "un": "0246",
+    "name": "БОЕПРИПАСЫ ДЫМОВЫЕ С БЕЛЫМ ФОСФОРОМ с разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3H"
+  },
+  {
+    "un": "0247",
+    "name": "БОЕПРИПАСЫ ЗАЖИГАТЕЛЬНЫЕ, снаряженные жидкостью или гелем, с разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3J"
+  },
+  {
+    "un": "0248",
+    "name": "УСТРОЙСТВА ВОДОАКТИВИРУЕМЫЕ с разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2L"
+  },
+  {
+    "un": "0249",
+    "name": "УСТРОЙСТВА ВОДОАКТИВИРУЕМЫЕ с разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3L"
+  },
+  {
+    "un": "0250",
+    "name": "ДВИГАТЕЛИ РАКЕТНЫЕ С ГИПЕРГОЛИЧЕСКОЙ ЖИДКОСТЬЮ с вышибным зарядом или без него",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3L"
+  },
+  {
+    "un": "0254",
+    "name": "БОЕПРИПАСЫ ОСВЕТИТЕЛЬНЫЕ, снаряженные или не снаряженные разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0255",
+    "name": "ДЕТОНАТОРЫ ЭЛЕКТРИЧЕСКИЕ для взрывных работ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4B"
+  },
+  {
+    "un": "0257",
+    "name": "ТРУБКИ ДЕТОНАЦИОННЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4B"
+  },
+  {
+    "un": "0266",
+    "name": "ОКТОЛИТ (ОКТОЛ) сухой или увлажненный с массовой долей воды менее 15%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0267",
+    "name": "ДЕТОНАТОРЫ НЕЭЛЕКТРИЧЕСКИЕ для взрывных работ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4B"
+  },
+  {
+    "un": "0268",
+    "name": "ДЕТОНАТОРЫ ВТОРИЧНЫЕ С ПЕРВИЧНЫМ ДЕТОНАТОРОМ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2B"
+  },
+  {
+    "un": "0271",
+    "name": "ЗАРЯДЫ МЕТАТЕЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1C"
+  },
+  {
+    "un": "0272",
+    "name": "ЗАРЯДЫ МЕТАТЕЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0275",
+    "name": "ПАТРОНЫ ДЛЯ ЗАПУСКА МЕХАНИЗМОВ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0276",
+    "name": "ПАТРОНЫ ДЛЯ ЗАПУСКА МЕХАНИЗМОВ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4C"
+  },
+  {
+    "un": "0277",
+    "name": "ПАТРОНЫ ДЛЯ НЕФТЕСКВАЖИН",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0279",
+    "name": "ЗАРЯДЫ МЕТАТЕЛЬНЫЕ ДЛЯ ОРУДИЙ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1C"
+  },
+  {
+    "un": "0280",
+    "name": "ДВИГАТЕЛИ РАКЕТНЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1C"
+  },
+  {
+    "un": "0281",
+    "name": "ДВИГАТЕЛИ РАКЕТНЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2C"
+  },
+  {
+    "un": "0282",
+    "name": "НИТРОГУАНИДИН (ПИКРИТ) сухой или увлажненный с массовой долей воды менее 20%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0283",
+    "name": "ДЕТОНАТОРЫ ВТОРИЧНЫЕ без первичного детонатора",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2D"
+  },
+  {
+    "un": "0284",
+    "name": "ГРАНАТЫ ручные или ружейные с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0285",
+    "name": "ГРАНАТЫ ручные или ружейные с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2D"
+  },
+  {
+    "un": "0286",
+    "name": "БОЕГОЛОВКИ РАКЕТ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0287",
+    "name": "БОЕГОЛОВКИ РАКЕТ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2D"
+  },
+  {
+    "un": "0288",
+    "name": "ЗАРЯДЫ КУМУЛЯТИВНЫЕ ГИБКИЕ УДЛИНЕННЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0289",
+    "name": "ШНУР ДЕТОНИРУЮЩИЙ гибкий",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4D"
+  },
+  {
+    "un": "0291",
+    "name": "БОМБЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2F"
+  },
+  {
+    "un": "0292",
+    "name": "ГРАНАТЫ ручные или ружейные с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1F"
+  },
+  {
+    "un": "0293",
+    "name": "ГРАНАТЫ ручные или ружейные с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2F"
+  },
+  {
+    "un": "0294",
+    "name": "МИНЫ С РАЗРЫВНЫМ ЗАРЯДОМ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2F"
+  },
+  {
+    "un": "0295",
+    "name": "РАКЕТЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2F"
+  },
+  {
+    "un": "0296",
+    "name": "СИГНАЛЫ ЗВУКОВЫЕ ВЗРЫВЧАТЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1F"
+  },
+  {
+    "un": "0297",
+    "name": "БОЕПРИПАСЫ ОСВЕТИТЕЛЬНЫЕ, снаряженные или не снаря-женные разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0299",
+    "name": "ФОТОАВИАБОМБЫ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0300",
+    "name": "БОЕПРИПАСЫ ЗАЖИГАТЕЛЬНЫЕ, снаряженные или не снаря-женные разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0301",
+    "name": "БОЕПРИПАСЫ СЛЕЗОТОЧИВЫЕ с разрывным, вышибным или метательным зарядом",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0303",
+    "name": "БОЕПРИПАСЫ ДЫМОВЫЕ, снаряженные или не снаряженные разрывным, вышибным или мета-тельным зарядом",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0303",
+    "name": "БОЕПРИПАСЫ ДЫМОВЫЕ, снаряженные или не снаряженные разрывным, вышибным или мета-тельным зарядом, содержащие коррозионные вещества",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0303",
+    "name": "БОЕПРИПАСЫ ДЫМОВЫЕ, снаряженные или не снаряженные разрывным, вышибным или мета-тельным зарядом, содержащие токсичные при вдыхании вещества",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0305",
+    "name": "ПОРОХ ДЛЯ ПИРОТЕХНИЧЕСКИХ ИЗДЕЛИЙ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0306",
+    "name": "ТРАССЕРЫ ДЛЯ БОЕПРИПАСОВ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0312",
+    "name": "ПАТРОНЫ СИГНАЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0313",
+    "name": "СИГНАЛЫ ДЫМОВЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2G"
+  },
+  {
+    "un": "0314",
+    "name": "ВОСПЛАМЕНИТЕЛИ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2G"
+  },
+  {
+    "un": "0315",
+    "name": "ВОСПЛАМЕНИТЕЛИ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0316",
+    "name": "ТРУБКИ ЗАЖИГАТЕЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0317",
+    "name": "ТРУБКИ ЗАЖИГАТЕЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0318",
+    "name": "ГРАНАТЫ ПРАКТИЧЕСКИЕ ручные или ружейные",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0319",
+    "name": "ВТУЛКИ КАПСЮЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0320",
+    "name": "ВТУЛКИ КАПСЮЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0321",
+    "name": "ПАТРОНЫ ДЛЯ ОРУЖИЯ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2E"
+  },
+  {
+    "un": "0322",
+    "name": "ДВИГАТЕЛИ РАКЕТНЫЕ С ГИПЕРГОЛИЧЕСКОЙ ЖИДКОСТЬЮ с вышибным зарядом или без него",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2L"
+  },
+  {
+    "un": "0323",
+    "name": "ПАТРОНЫ ДЛЯ ЗАПУСКА МЕХАНИЗМОВ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0324",
+    "name": "СНАРЯДЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2F"
+  },
+  {
+    "un": "0325",
+    "name": "ВОСПЛАМЕНИТЕЛИ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0326",
+    "name": "ПАТРОНЫ ДЛЯ ОРУЖИЯ ХОЛОСТЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1C"
+  },
+  {
+    "un": "0327",
+    "name": "ПАТРОНЫ ДЛЯ ОРУЖИЯ ХОЛОСТЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0327",
+    "name": "ПАТРОНЫ ДЛЯ СТРЕЛКОВОГО ОРУЖИЯ ХОЛОСТЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0328",
+    "name": "ПАТРОНЫ ДЛЯ ОРУЖИЯ С ИНЕРТНЫМ СНАРЯДОМ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2C"
+  },
+  {
+    "un": "0329",
+    "name": "ТОРПЕДЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1E"
+  },
+  {
+    "un": "0330",
+    "name": "ТОРПЕДЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1F"
+  },
+  {
+    "un": "0331",
+    "name": "ВЗРЫВЧАТОЕ ВЕЩЕСТВО БРИЗАНТНОЕ, ТИП В",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.5D"
+  },
+  {
+    "un": "0332",
+    "name": "ВЗРЫВЧАТОЕ ВЕЩЕСТВО БРИЗАНТНОЕ, ТИП Е",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.5D"
+  },
+  {
+    "un": "0333",
+    "name": "СРЕДСТВА ПИРОТЕХНИЧЕСКИЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1G"
+  },
+  {
+    "un": "0334",
+    "name": "СРЕДСТВА ПИРОТЕХНИЧЕСКИЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2G"
+  },
+  {
+    "un": "0335",
+    "name": "СРЕДСТВА ПИРОТЕХНИЧЕСКИЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0336",
+    "name": "СРЕДСТВА ПИРОТЕХНИЧЕСКИЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0337",
+    "name": "СРЕДСТВА ПИРОТЕХНИЧЕСКИЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0338",
+    "name": "ПАТРОНЫ ДЛЯ ОРУЖИЯ ХОЛОСТЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4C"
+  },
+  {
+    "un": "0338",
+    "name": "ПАТРОНЫ ДЛЯ СТРЕЛКОВОГО ОРУЖИЯ ХОЛОСТЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4C"
+  },
+  {
+    "un": "0339",
+    "name": "ПАТРОНЫ ДЛЯ ОРУЖИЯ С ИНЕРТНЫМ СНАРЯДОМ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4C"
+  },
+  {
+    "un": "0339",
+    "name": "ПАТРОНЫ ДЛЯ СТРЕЛКОВОГО ОРУЖИЯ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4C"
+  },
+  {
+    "un": "0340",
+    "name": "НИТРОЦЕЛЛЮЛОЗА сухая или увлажненная с массовой долей воды (или спирта) менее 25%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0341",
+    "name": "НИТРОЦЕЛЛЮЛОЗА немодифицированная или пластифицированная с массовой долей пластификатора менее 18%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0342",
+    "name": "НИТРОЦЕЛЛЮЛОЗА ПРОПИТАННАЯ с массовой долей спирта не менее 25%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0343",
+    "name": "НИТРОЦЕЛЛЮЛОЗА ПЛАСТИФИЦИРОВАННАЯ с массовой долей пластификатора не менее 18%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0344",
+    "name": "СНАРЯДЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4D"
+  },
+  {
+    "un": "0345",
+    "name": "СНАРЯДЫ инертные с трассером",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0346",
+    "name": "СНАРЯДЫ с разрывным или вышибным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2D"
+  },
+  {
+    "un": "0347",
+    "name": "СНАРЯДЫ с разрывным или вышибным зарядом",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4D"
+  },
+  {
+    "un": "0348",
+    "name": "ПАТРОНЫ ДЛЯ ОРУЖИЯ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4F"
+  },
+  {
+    "un": "0349",
+    "name": "ИЗДЕЛИЯ ВЗРЫВЧАТЫЕ, Н.У.К.",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0350",
+    "name": "ИЗДЕЛИЯ ВЗРЫВЧАТЫЕ, Н.У.К.",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4B"
+  },
+  {
+    "un": "0351",
+    "name": "ИЗДЕЛИЯ ВЗРЫВЧАТЫЕ, Н.У.К.",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4C"
+  },
+  {
+    "un": "0352",
+    "name": "ИЗДЕЛИЯ ВЗРЫВЧАТЫЕ, Н.У.К.",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4D"
+  },
+  {
+    "un": "0353",
+    "name": "ИЗДЕЛИЯ ВЗРЫВЧАТЫЕ, Н.У.К.",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0354",
+    "name": "ИЗДЕЛИЯ ВЗРЫВЧАТЫЕ, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1L"
+  },
+  {
+    "un": "0355",
+    "name": "ИЗДЕЛИЯ ВЗРЫВЧАТЫЕ, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2L"
+  },
+  {
+    "un": "0356",
+    "name": "ИЗДЕЛИЯ ВЗРЫВЧАТЫЕ, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3L"
+  },
+  {
+    "un": "0357",
+    "name": "ВЕЩЕСТВА ВЗРЫВЧАТЫЕ, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1L"
+  },
+  {
+    "un": "0358",
+    "name": "ВЕЩЕСТВА ВЗРЫВЧАТЫЕ, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2L"
+  },
+  {
+    "un": "0359",
+    "name": "ВЕЩЕСТВА ВЗРЫВЧАТЫЕ, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3L"
+  },
+  {
+    "un": "0360",
+    "name": "СБОРКИ ДЕТОНАТОРОВ НЕЭЛЕКТРИЧЕСКИЕ для взрывных работ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1B"
+  },
+  {
+    "un": "0361",
+    "name": "СБОРКИ ДЕТОНАТОРОВ НЕЭЛЕКТРИЧЕСКИЕ для взрывных работ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4B"
+  },
+  {
+    "un": "0362",
+    "name": "БОЕПРИПАСЫ ПРАКТИЧЕСКИЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0363",
+    "name": "БОЕПРИПАСЫ ИСПЫТАТЕЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0364",
+    "name": "ДЕТОНАТОРЫ ДЛЯ БОЕПРИПАСОВ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2B"
+  },
+  {
+    "un": "0365",
+    "name": "ДЕТОНАТОРЫ ДЛЯ БОЕПРИПАСОВ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4B"
+  },
+  {
+    "un": "0366",
+    "name": "ДЕТОНАТОРЫ ДЛЯ БОЕПРИПАСОВ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0367",
+    "name": "ТРУБКИ ДЕТОНАЦИОННЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0368",
+    "name": "ТРУБКИ ЗАЖИГАТЕЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0369",
+    "name": "БОЕГОЛОВКИ РАКЕТ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1F"
+  },
+  {
+    "un": "0370",
+    "name": "БОЕГОЛОВКИ РАКЕТ с разрывным или вышибным зарядом",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4D"
+  },
+  {
+    "un": "0371",
+    "name": "БОЕГОЛОВКИ РАКЕТ с разрывным или вышибным зарядом",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4F"
+  },
+  {
+    "un": "0372",
+    "name": "ГРАНАТЫ ПРАКТИЧЕСКИЕ ручные или ружейные",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2G"
+  },
+  {
+    "un": "0373",
+    "name": "УСТРОЙСТВА СИГНАЛЬНЫЕ РУЧНЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0374",
+    "name": "СИГНАЛЫ ЗВУКОВЫЕ ВЗРЫВЧАТЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0375",
+    "name": "СИГНАЛЫ ЗВУКОВЫЕ ВЗРЫВЧАТЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2D"
+  },
+  {
+    "un": "0376",
+    "name": "ВТУЛКИ КАПСЮЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0378",
+    "name": "КАПСЮЛИ-ВОСПЛАМЕНИТЕЛИ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4B"
+  },
+  {
+    "un": "0379",
+    "name": "ГИЛЬЗЫ ПАТРОННЫЕ ПУСТЫЕ С КАПСЮЛЯМИ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4C"
+  },
+  {
+    "un": "0380",
+    "name": "ИЗДЕЛИЯ ПИРОФОРНЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2L"
+  },
+  {
+    "un": "0382",
+    "name": "ЭЛЕМЕНТЫ ЦЕПИ ВЗРЫВАНИЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2B"
+  },
+  {
+    "un": "0383",
+    "name": "ЭЛЕМЕНТЫ ЦЕПИ ВЗРЫВАНИЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4B"
+  },
+  {
+    "un": "0384",
+    "name": "ЭЛЕМЕНТЫ ЦЕПИ ВЗРЫВАНИЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0385",
+    "name": "5-НИТРОБЕНЗОТРИАЗОЛ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0386",
+    "name": "КИСЛОТА ТРИНИТРОБЕНЗОЛСУЛЬФОНОВАЯ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0387",
+    "name": "ТРИНИТРОФТОРЕНОН",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0388",
+    "name": "ТРИНИТРОТОЛУОЛА (ТНТ) И ТРИНИТРОБЕНЗОЛА СМЕСЬ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0388",
+    "name": "ТРИНИТРОТОЛУОЛА (ТНТ) И ГЕКСАНИТРОСТИЛЬБЕНА СМЕСЬ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0389",
+    "name": "ТРИНИТРОТОЛУОЛА (ТНТ) СМЕСЬ, СОДЕРЖАЩАЯ ТРИНИТРОБЕНЗОЛ И ГЕКСАНИТРОСТИЛЬБЕН",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0390",
+    "name": "ТРИТОНАЛ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0391",
+    "name": "ЦИКЛОТРИМЕТИЛЕНТРИНИТРАМИНА (ГЕКСОГЕНА; ЦИКЛОНИТА; RDX) И ЦИКЛОТЕТРАМЕТИЛЕНТЕТРАНИТРАМИНА (НМХ; ОКТОГЕН) СМЕСЬ УВЛАЖНЕННАЯ с массовой долей воды не менее 15%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0391",
+    "name": "ЦИКЛОТРИМЕТИЛЕНТРИНИТРАМИНА И ЦИКЛОТЕТРАМЕТИЛЕНТЕТРАНИТРАМИНА СМЕСЬ ДЕСЕНСИБИЛИЗИРОВАННАЯ с массовой долей флегматизатора не менее 10%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0392",
+    "name": "ГЕКСАНИТРОСТИЛЬБЕН",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0393",
+    "name": "ГЕКСАТОНАЛ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0394",
+    "name": "ТРИНИТРОРЕЗОРЦИН (КИСЛОТА СТИФНИНОВАЯ) УВЛАЖНЕННЫЙ с массовой долей воды или смеси спирта и воды не менее 20%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0395",
+    "name": "ДВИГАТЕЛИ РАКЕТНЫЕ ЖИДКОСТНЫЕ, ЗАПРАВЛЕННЫЕ ТОПЛИВОМ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2J"
+  },
+  {
+    "un": "0396",
+    "name": "ДВИГАТЕЛИ РАКЕТНЫЕ ЖИДКОСТНЫЕ, ЗАПРАВЛЕННЫЕ ТОПЛИВОМ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3J"
+  },
+  {
+    "un": "0397",
+    "name": "РАКЕТЫ, ЗАПРАВЛЕННЫЕ ЖИДКИМ ТОПЛИВОМ, с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1J"
+  },
+  {
+    "un": "0398",
+    "name": "РАКЕТЫ, ЗАПРАВЛЕННЫЕ ЖИДКИМ ТОПЛИВОМ, с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2J"
+  },
+  {
+    "un": "0399",
+    "name": "БОМБЫ С ЛЕГКОВОСПЛАМЕНЯЮЩЕЙСЯ ЖИДКОСТЬЮ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1J"
+  },
+  {
+    "un": "0400",
+    "name": "БОМБЫ С ЛЕГКОВОСПЛАМЕНЯЮЩЕЙСЯ ЖИДКОСТЬЮ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2J"
+  },
+  {
+    "un": "0401",
+    "name": "ДИПИКРИЛСУЛЬФИД сухой или увлажненный с массовой долей воды менее 10%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0402",
+    "name": "АММОНИЯ ПЕРХЛОРАТ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0403",
+    "name": "РАКЕТЫ ОСВЕТИТЕЛЬНЫЕ АВИАЦИОННЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0404",
+    "name": "РАКЕТЫ ОСВЕТИТЕЛЬНЫЕ АВИАЦИОННЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0405",
+    "name": "ПАТРОНЫ СИГНАЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0406",
+    "name": "ДИНИТРОЗОБЕНЗОЛ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0407",
+    "name": "КИСЛОТА ТЕТРАЗОЛ-1-УКСУСНАЯ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4C"
+  },
+  {
+    "un": "0408",
+    "name": "ТРУБКИ ДЕТОНАЦИОННЫЕ с защитными элементами",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0410",
+    "name": "ТРУБКИ ДЕТОНАЦИОННЫЕ с защитными элементами",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4D"
+  },
+  {
+    "un": "0411",
+    "name": "ПЕНТАЭРИТРИТТЕТРАНИТРАТ (ПЕНТАЭРИТРОЛТЕТРАНИТРАТ; ПЭТН) с массовой долей парафина не менее 7%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0412",
+    "name": "ПАТРОНЫ ДЛЯ ОРУЖИЯ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4E"
+  },
+  {
+    "un": "0413",
+    "name": "ПАТРОНЫ ДЛЯ ОРУЖИЯ ХОЛОСТЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2C"
+  },
+  {
+    "un": "0414",
+    "name": "ЗАРЯДЫ МЕТАТЕЛЬНЫЕ ДЛЯ ОРУДИЙ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2C"
+  },
+  {
+    "un": "0415",
+    "name": "ЗАРЯДЫ МЕТАТЕЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2C"
+  },
+  {
+    "un": "0417",
+    "name": "ПАТРОНЫ ДЛЯ ОРУЖИЯ С ИНЕРТНЫМ СНАРЯДОМ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0417",
+    "name": "ПАТРОНЫ ДЛЯ СТРЕЛКОВОГО ОРУЖИЯ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0418",
+    "name": "РАКЕТЫ ОСВЕТИТЕЛЬНЫЕ, ЗАПУСКАЕМЫЕ С ЗЕМЛИ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1G"
+  },
+  {
+    "un": "0419",
+    "name": "РАКЕТЫ ОСВЕТИТЕЛЬНЫЕ, ЗАПУСКАЕМЫЕ С ЗЕМЛИ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2G"
+  },
+  {
+    "un": "0420",
+    "name": "РАКЕТЫ ОСВЕТИТЕЛЬНЫЕ АВИАЦИОННЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1G"
+  },
+  {
+    "un": "0421",
+    "name": "РАКЕТЫ ОСВЕТИТЕЛЬНЫЕ АВИАЦИОННЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2G"
+  },
+  {
+    "un": "0424",
+    "name": "СНАРЯДЫ инертные с трассером",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0425",
+    "name": "СНАРЯДЫ инертные с трассером",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0426",
+    "name": "СНАРЯДЫ с разрывным или вышибным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2F"
+  },
+  {
+    "un": "0427",
+    "name": "СНАРЯДЫ с разрывным или вышибным зарядом",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4F"
+  },
+  {
+    "un": "0428",
+    "name": "ИЗДЕЛИЯ ПИРОТЕХНИЧЕСКИЕ для технических целей",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1G"
+  },
+  {
+    "un": "0429",
+    "name": "ИЗДЕЛИЯ ПИРОТЕХНИЧЕСКИЕ для технических целей",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2G"
+  },
+  {
+    "un": "0430",
+    "name": "ИЗДЕЛИЯ ПИРОТЕХНИЧЕСКИЕ для технических целей",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0431",
+    "name": "ИЗДЕЛИЯ ПИРОТЕХНИЧЕСКИЕ для технических целей",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0432",
+    "name": "ИЗДЕЛИЯ ПИРОТЕХНИЧЕСКИЕ для технических целей",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0433",
+    "name": "ПОРОХ В БРИКЕТАХ (ПАСТА ПОРОХОВАЯ), УВЛАЖНЕННЫЙ с массовой долей спирта не менее 17%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1C"
+  },
+  {
+    "un": "0434",
+    "name": "СНАРЯДЫ с разрывным или вышибным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2G"
+  },
+  {
+    "un": "0435",
+    "name": "СНАРЯДЫ с разрывным или вышибным зарядом",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0436",
+    "name": "РАКЕТЫ с вышибным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2C"
+  },
+  {
+    "un": "0437",
+    "name": "РАКЕТЫ с вышибным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0438",
+    "name": "РАКЕТЫ с вышибным зарядом",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4C"
+  },
+  {
+    "un": "0440",
+    "name": "ЗАРЯДЫ КУМУЛЯТИВНЫЕ без детонатора",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4D"
+  },
+  {
+    "un": "0441",
+    "name": "ЗАРЯДЫ КУМУЛЯТИВНЫЕ без детонатора",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0443",
+    "name": "ЗАРЯДЫ ВЗРЫВЧАТЫЕ ПРОМЫШЛЕННЫЕ без детонатора",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2D"
+  },
+  {
+    "un": "0444",
+    "name": "ЗАРЯДЫ ВЗРЫВЧАТЫЕ ПРОМЫШЛЕННЫЕ без детонатора",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4D"
+  },
+  {
+    "un": "0445",
+    "name": "ЗАРЯДЫ ВЗРЫВЧАТЫЕ ПРОМЫШЛЕННЫЕ без детонатора",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0446",
+    "name": "ГИЛЬЗЫ СГОРАЕМЫЕ ПУСТЫЕ БЕЗ КАПСЮЛЯ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4C"
+  },
+  {
+    "un": "0447",
+    "name": "ГИЛЬЗЫ СГОРАЕМЫЕ ПУСТЫЕ БЕЗ КАПСЮЛЯ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0448",
+    "name": "КИСЛОТА 5-МЕРКАПТОТЕТРАЗОЛ-1-УКСУСНАЯ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4C"
+  },
+  {
+    "un": "0449",
+    "name": "ТОРПЕДЫ С ЖИДКИМ ТОПЛИВОМ, снаряженные или не снаряженные разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1J"
+  },
+  {
+    "un": "0450",
+    "name": "ТОРПЕДЫ С ЖИДКИМ ТОПЛИВОМ с инертной головкой",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3J"
+  },
+  {
+    "un": "0451",
+    "name": "ТОРПЕДЫ с разрывным зарядом",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0452",
+    "name": "ГРАНАТЫ ПРАКТИЧЕСКИЕ ручные или ружейные",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0453",
+    "name": "РАКЕТЫ ТРОСОМЕТАТЕЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0454",
+    "name": "ВОСПЛАМЕНИТЕЛИ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0455",
+    "name": "ДЕТОНАТОРЫ НЕЭЛЕКТРИЧЕСКИЕ для взрывных работ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0456",
+    "name": "ДЕТОНАТОРЫ ЭЛЕКТРИЧЕ СКИЕ для взрывных работ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0457",
+    "name": "ЗАРЯДЫ РАЗРЫВНЫЕ ПЛАСТИФИЦИРОВАННЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0458",
+    "name": "ЗАРЯДЫ РАЗРЫВНЫЕ ПЛАСТИФИЦИРОВАННЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2D"
+  },
+  {
+    "un": "0459",
+    "name": "ЗАРЯДЫ РАЗРЫВНЫЕ ПЛАСТИФИЦИРОВАННЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4D"
+  },
+  {
+    "un": "0460",
+    "name": "ЗАРЯДЫ РАЗРЫВНЫЕ ПЛАСТИФИЦИРОВАННЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0461",
+    "name": "ЭЛЕМЕНТЫ ЦЕПИ ВЗРЫВАНИЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1B"
+  },
+  {
+    "un": "0462",
+    "name": "ВЗРЫВЧАТЫЕ ИЗДЕЛИЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1C"
+  },
+  {
+    "un": "0463",
+    "name": "ВЗРЫВЧАТЫЕ ИЗДЕЛИЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0464",
+    "name": "ВЗРЫВЧАТЫЕ ИЗДЕЛИЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1E"
+  },
+  {
+    "un": "0465",
+    "name": "ВЗРЫВЧАТЫЕ ИЗДЕЛИЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1F"
+  },
+  {
+    "un": "0466",
+    "name": "ВЗРЫВЧАТЫЕ ИЗДЕЛИЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2C"
+  },
+  {
+    "un": "0467",
+    "name": "ВЗРЫВЧАТЫЕ ИЗДЕЛИЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2D"
+  },
+  {
+    "un": "0468",
+    "name": "ВЗРЫВЧАТЫЕ ИЗДЕЛИЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2E"
+  },
+  {
+    "un": "0469",
+    "name": "ВЗРЫВЧАТЫЕ ИЗДЕЛИЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2F"
+  },
+  {
+    "un": "0470",
+    "name": "ВЗРЫВЧАТЫЕ ИЗДЕЛИЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0471",
+    "name": "ВЗРЫВЧАТЫЕ ИЗДЕЛИЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4E"
+  },
+  {
+    "un": "0472",
+    "name": "ВЗРЫВЧАТЫЕ ИЗДЕЛИЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4F"
+  },
+  {
+    "un": "0473",
+    "name": "ВЗРЫВЧАТЫЕ ВЕЩЕСТВА, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1A"
+  },
+  {
+    "un": "0474",
+    "name": "ВЗРЫВЧАТЫЕ ВЕЩЕСТВА, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1C"
+  },
+  {
+    "un": "0475",
+    "name": "ВЗРЫВЧАТЫЕ ВЕЩЕСТВА, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0476",
+    "name": "ВЗРЫВЧАТЫЕ ВЕЩЕСТВА, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1G"
+  },
+  {
+    "un": "0477",
+    "name": "ВЗРЫВЧАТЫЕ ВЕЩЕСТВА, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0478",
+    "name": "ВЗРЫВЧАТЫЕ ВЕЩЕСТВА, Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0479",
+    "name": "ВЗРЫВЧАТЫЕ ВЕЩЕСТВА, Н.У.К.",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4C"
+  },
+  {
+    "un": "0480",
+    "name": "ВЗРЫВЧАТЫЕ ВЕЩЕСТВА, Н.У.К.",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4D"
+  },
+  {
+    "un": "0481",
+    "name": "ВЗРЫВЧАТЫЕ ВЕЩЕСТВА, Н.У.К.",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0482",
+    "name": "ВЗРЫВЧАТЫЕ ВЕЩЕСТВА ОЧЕНЬ НИЗКОЙ ЧУВСТВИТЕЛЬНОСТИ (ВЗРЫВЧАТЫЕ ВЕЩЕСТВА ОНЧ), Н.У.К.",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.5D"
+  },
+  {
+    "un": "0483",
+    "name": "ЦИКЛОТРИМЕТИЛЕНТРИНИТРАМИН (ГЕКСОГЕН; ЦИКЛОНИТ; RDX) ДЕСЕНСИБИЛИЗИРОВАННЫЙ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0484",
+    "name": "ЦИКЛОТЕТРАМЕТИЛЕНТЕТРАНИТРАМИН (ОКТОГЕН; НМХ) ДЕСЕНСИБИЛИЗИРОВАННЫЙ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0485",
+    "name": "ВЕЩЕСТВА ВЗРЫВЧАТЫЕ, Н.У.К.",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0486",
+    "name": "ВЗРЫВЧАТЫЕ ИЗДЕЛИЯ ЧРЕЗВЫЧАЙНО НИЗКОЙ ЧУВСТВИТЕЛЬНОСТИ (ВЗРЫВЧАТЫЕ ИЗДЕЛИЯ ЧНЧ)",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.6N"
+  },
+  {
+    "un": "0487",
+    "name": "СИГНАЛЫ ДЫМОВЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0488",
+    "name": "БОЕПРИПАСЫ ПРАКТИЧЕСКИЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0489",
+    "name": "ДИНИТРОГЛИКОЛЬУРИЛ (ДИНГУ)",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0490",
+    "name": "НИТРОТРИАЗОЛОН (НТО)",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0491",
+    "name": "ЗАРЯДЫ МЕТАТЕЛЬНЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4C"
+  },
+  {
+    "un": "0492",
+    "name": "ПЕТАРДЫ ЖЕЛЕЗНОДОРОЖНЫЕ ВЗРЫВЧАТЫЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3G"
+  },
+  {
+    "un": "0493",
+    "name": "ПЕТАРДЫ ЖЕЛЕЗНОДОРОЖНЫЕ ВЗРЫВЧАТЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0494",
+    "name": "СНАРЯДЫ ПЕРФОРАТОРНЫЕ для нефтескважин без детонатора",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4D"
+  },
+  {
+    "un": "0495",
+    "name": "ВЗРЫВЧАТОЕ ВЕЩЕСТВО МЕТАТЕЛЬНОЕ ЖИДКОЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0496",
+    "name": "ОКТОНАЛ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0497",
+    "name": "ВЗРЫВЧАТОЕ ВЕЩЕСТВО МЕТАТЕЛЬНОЕ ЖИДКОЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1C"
+  },
+  {
+    "un": "0498",
+    "name": "ВЗРЫВЧАТОЕ ВЕЩЕСТВО МЕТАТЕЛЬНОЕ ТВЕРДОЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1C"
+  },
+  {
+    "un": "0499",
+    "name": "ВЗРЫВЧАТОЕ ВЕЩЕСТВО МЕТАТЕЛЬНОЕ ТВЕРДОЕ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0500",
+    "name": "СБОРКИ ДЕТОНАТОРОВ НЕЭЛЕКТРИЧЕСКИЕ для взрывных работ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0501",
+    "name": "ВЗРЫВЧАТОЕ ВЕЩЕСТВО МЕТАТЕЛЬНОЕ ТВЕРДОЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4C"
+  },
+  {
+    "un": "0502",
+    "name": "РАКЕТЫ с инертной головкой",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.2C"
+  },
+  {
+    "un": "0503",
+    "name": "УСТРОЙСТВА БЕЗОПАСНОСТИ ПИРОТЕХНИЧЕСКИЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0504",
+    "name": "1Н-ТЕТРАЗОЛ",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.1D"
+  },
+  {
+    "un": "0505",
+    "name": "СИГНАЛЫ БЕДСТВИЯ судовые",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4G"
+  },
+  {
+    "un": "0506",
+    "name": "СИГНАЛЫ БЕДСТВИЯ судовые",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0507",
+    "name": "СИГНАЛЫ ДЫМОВЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4S"
+  },
+  {
+    "un": "0508",
+    "name": "1-ГИДРОКСИБЕНЗОТРИАЗОЛ БЕЗВОДНЫЙ, сухой или увлажненный, с массовой долей воды менее 20%",
+    "emergencyCardNumber": "ERG-112",
+    "classificationCode": "1.3C"
+  },
+  {
+    "un": "0509",
+    "name": "ПОРОХ БЕЗДЫМНЫЙ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4C"
+  },
+  {
+    "un": "0510",
+    "name": "ДВИГАТЕЛИ РАКЕТНЫЕ",
+    "emergencyCardNumber": "ERG-114",
+    "classificationCode": "1.4C"
+  },
+  {
+    "un": "1169",
+    "name": "ЭКСТРАКТЫ АРОМАТИЧЕСКИЕ ЖИДКИЕ (давление паров при 50°С более 110 кПа)",
+    "emergencyCardNumber": "ERG-127",
+    "classificationCode": "F1"
+  },
+  {
+    "un": "1169",
+    "name": "ЭКСТРАКТЫ АРОМАТИЧЕСКИЕ ЖИДКИЕ (давление паров при 50°С не более 110 кПа)",
+    "emergencyCardNumber": "ERG-127",
+    "classificationCode": "F1"
+  },
+  {
+    "un": "1169",
+    "name": "ЭКСТРАКТЫ АРОМАТИЧЕСКИЕ ЖИДКИЕ",
+    "emergencyCardNumber": "ERG-127",
+    "classificationCode": "F1"
+  },
+  {
+    "un": "1169",
+    "name": "ЭКСТРАКТЫ АРОМАТИЧЕСКИЕ ЖИДКИЕ (имеющие температуру вспышки ниже 23°С и вязкие согласно пункту 2.2.3.1.4) (давление паров при 50°С более 110 кПа)",
+    "emergencyCardNumber": "ERG-127",
+    "classificationCode": "F1"
+  },
+  {
+    "un": "1169",
+    "name": "ЭКСТРАКТЫ АРОМАТИЧЕСКИЕ ЖИДКИЕ (имеющие температуру вспышки ниже 23°С и вязкие согласно пункту 2.2.3.1.4) (давление паров при 50°С не более 110 кПа)",
+    "emergencyCardNumber": "ERG-127",
+    "classificationCode": "F1"
+  },
+  {
+    "un": "1327",
+    "name": "Сено, Полова или Солома",
+    "emergencyCardNumber": "ERG-133",
+    "classificationCode": "F1"
+  },
+  {
+    "un": "1372",
+    "name": "Волокна животного происхождения или волокна растительного происхождения сожженные, влажные или сырые",
+    "emergencyCardNumber": "ERG-133",
+    "classificationCode": "S2"
+  },
+  {
+    "un": "1387",
+    "name": "Шерсти отходы влажные",
+    "emergencyCardNumber": "ERG-133",
+    "classificationCode": "S2"
+  },
+  {
+    "un": "1798",
+    "name": "КИСЛОТЫ АЗОТНОЙ И КИСЛОТЫ ХЛОРИСТОВОДОРОДНОЙ СМЕСЬ",
+    "emergencyCardNumber": "ERG-157",
+    "classificationCode": "COT"
+  },
+  {
+    "un": "1845",
+    "name": "Углерода диоксид твердый (лед сухой)",
+    "emergencyCardNumber": "ERG-120",
+    "classificationCode": "M11"
+  },
+  {
+    "un": "1856",
+    "name": "Ветошь промасленная",
+    "emergencyCardNumber": "ERG-133",
+    "classificationCode": "S2"
+  },
+  {
+    "un": "1857",
+    "name": "Текстиля отходы влажные",
+    "emergencyCardNumber": "ERG-133",
+    "classificationCode": "S2"
+  },
+  {
+    "un": "2071",
+    "name": "Удобрение на основе нитрата аммония, однородные азотно -фосфатные, азотно-калийные или азотно-фосфатно-калийные смеси, содержащие не более 70% нитрата аммония и не более 0,4% общего количества горючего/органического материала, расчитываемого по углероду, или не более 45% нитрата аммония и неограниченное количество горючего материала",
+    "emergencyCardNumber": "ERG-140",
+    "classificationCode": "M11"
+  },
+  {
+    "un": "2186",
+    "name": "ВОДОРОД ХЛОРИСТЫЙ ОХЛАЖДЕННЫЙ ЖИДКИЙ",
+    "emergencyCardNumber": "ERG-125",
+    "classificationCode": "3TC"
+  },
+  {
+    "un": "2216",
+    "name": "Мука рыбная (рыбные отходы) стабилизированная",
+    "emergencyCardNumber": "ERG-171",
+    "classificationCode": "M11"
+  },
+  {
+    "un": "2249",
+    "name": "ЭФИР ДИХЛОРДИМЕТИЛОВЫЙ СИММЕТРИЧНЫЙ",
+    "emergencyCardNumber": "ERG-131",
+    "classificationCode": "T1"
+  },
+  {
+    "un": "2421",
+    "name": "АЗОТА ТРИОКСИД",
+    "emergencyCardNumber": "ERG-124",
+    "classificationCode": "2TOC"
+  },
+  {
+    "un": "2455",
+    "name": "МЕТИЛНИТРИТ",
+    "emergencyCardNumber": "ERG-116",
+    "classificationCode": "2A"
+  },
+  {
+    "un": "2807",
+    "name": "Материал намагниченный",
+    "emergencyCardNumber": "ERG-171",
+    "classificationCode": "M11"
+  },
+  {
+    "un": "2812",
+    "name": "Натрия алюминат твердый",
+    "emergencyCardNumber": "ERG-154",
+    "classificationCode": "C6"
+  },
+  {
+    "un": "2908",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, ОСВОБОЖДЕННАЯ УПАКОВКА - ПОРОЖНИЙ УПАКОВОЧНЫЙ КОМПЛЕКТ",
+    "emergencyCardNumber": "ERG-161",
+    "classificationCode": null
+  },
+  {
+    "un": "2909",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, ОСВОБОЖДЕННАЯ УПАКОВКА - ИЗДЕЛИЯ, ИЗГОТОВЛЕННЫЕ ИЗ ПРИРОДНОГО УРАНА",
+    "emergencyCardNumber": "ERG-161",
+    "classificationCode": null
+  },
+  {
+    "un": "2909",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, ОСВОБОЖДЕННАЯ УПАКОВКА - ИЗДЕЛИЯ, ИЗГОТОВЛЕННЫЕ ИЗ ОБЕДНЕННОГО УРАНА",
+    "emergencyCardNumber": "ERG-161",
+    "classificationCode": null
+  },
+  {
+    "un": "2909",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, ОСВОБОЖДЕННАЯ УПАКОВКА - ИЗДЕЛИЯ, ИЗГОТОВЛЕННЫЕ ИЗ ПРИРОДНОГО ТОРИЯ",
+    "emergencyCardNumber": "ERG-161",
+    "classificationCode": null
+  },
+  {
+    "un": "2910",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, ОСВОБОЖДЕННАЯ УПАКОВКА - ОГРАНИЧЕННОЕ КОЛИЧЕСТВО МАТЕРИАЛА",
+    "emergencyCardNumber": "ERG-161",
+    "classificationCode": null
+  },
+  {
+    "un": "2911",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, ОСВОБОЖДЕННАЯ УПАКОВКА - ПРИБОРЫ",
+    "emergencyCardNumber": "ERG-161",
+    "classificationCode": null
+  },
+  {
+    "un": "2911",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, ОСВОБОЖДЕННАЯ УПАКОВКА - ИЗДЕЛИЯ",
+    "emergencyCardNumber": "ERG-161",
+    "classificationCode": null
+  },
+  {
+    "un": "2912",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, НИЗКАЯ УДЕЛЬНАЯ АКТИВНОСТЬ (LSA-I), неделящийся или делящийся-освобожденный",
+    "emergencyCardNumber": "ERG-162",
+    "classificationCode": null
+  },
+  {
+    "un": "2913",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, ОБЪЕКТЫ С ПОВЕРХНОСТНЫМ РАДИОАКТИВНЫМ ЗАГРЯЗНЕНИЕМ (SCO-I или SCO-II), неделящийся или делящийся-освобожденный",
+    "emergencyCardNumber": "ERG-162",
+    "classificationCode": null
+  },
+  {
+    "un": "2915",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, УПАКОВКА ТИПА А, не особого вида, неделящийся или делящийся-освобожденный",
+    "emergencyCardNumber": "ERG-163",
+    "classificationCode": null
+  },
+  {
+    "un": "2916",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, УПАКОВКА ТИПА B(U), неделящийся или делящийся-освобожденный",
+    "emergencyCardNumber": "ERG-163",
+    "classificationCode": null
+  },
+  {
+    "un": "2917",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, УПАКОВКА ТИПА B(M), неделящийся или делящийся-освобожденный",
+    "emergencyCardNumber": "ERG-163",
+    "classificationCode": null
+  },
+  {
+    "un": "2919",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, ТРАНСПОРТИРУЕМЫЙ В СПЕЦИАЛЬНЫХ УСЛОВИЯХ, неделящийся или делящийся-освобожденный",
+    "emergencyCardNumber": "ERG-163",
+    "classificationCode": null
+  },
+  {
+    "un": "2977",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, УРАНА ГЕКСАФТОРИД, ДЕЛЯЩИЙСЯ",
+    "emergencyCardNumber": "ERG-166",
+    "classificationCode": null
+  },
+  {
+    "un": "2978",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, УРАНА ГЕКСАФТОРИД, неделящийся или делящийся-освобожденный",
+    "emergencyCardNumber": "ERG-166",
+    "classificationCode": null
+  },
+  {
+    "un": "3097",
+    "name": "ЛЕГКОВОСПЛАМЕНЯЮЩЕЕСЯ ТВЕРДОЕ ВЕЩЕСТВО ОКИСЛЯЮЩЕЕ, Н.У.К.",
+    "emergencyCardNumber": "ERG-140",
+    "classificationCode": "FO"
+  },
+  {
+    "un": "3100",
+    "name": "ОКИСЛЯЮЩЕЕ ТВЕРДОЕ ВЕЩЕСТВО САМОНАГРЕВАЮЩЕЕСЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-135",
+    "classificationCode": "OS"
+  },
+  {
+    "un": "3111",
+    "name": "ОРГАНИЧЕСКИЙ ПЕРОКСИД ТИПА В ЖИДКИЙ С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-148",
+    "classificationCode": "P2"
+  },
+  {
+    "un": "3112",
+    "name": "ОРГАНИЧЕСКИЙ ПЕРОКСИД ТИПА В ТВЕРДЫЙ С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-148",
+    "classificationCode": "P2"
+  },
+  {
+    "un": "3113",
+    "name": "ОРГАНИЧЕСКИЙ ПЕРОКСИД ТИПА С ЖИДКИЙ С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-148",
+    "classificationCode": "P2"
+  },
+  {
+    "un": "3114",
+    "name": "ОРГАНИЧЕСКИЙ ПЕРОКСИД ТИПА С ТВЕРДЫЙ С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-148",
+    "classificationCode": "P2"
+  },
+  {
+    "un": "3115",
+    "name": "ОРГАНИЧЕСКИЙ ПЕРОКСИД ТИПА D ЖИДКИЙ С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-148",
+    "classificationCode": "P2"
+  },
+  {
+    "un": "3116",
+    "name": "ОРГАНИЧЕСКИЙ ПЕРОКСИД ТИПА D ТВЕРДЫЙ С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-148",
+    "classificationCode": "P2"
+  },
+  {
+    "un": "3117",
+    "name": "ОРГАНИЧЕСКИЙ ПЕРОКСИД ТИПА E ЖИДКИЙ С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-148",
+    "classificationCode": "P2"
+  },
+  {
+    "un": "3118",
+    "name": "ОРГАНИЧЕСКИЙ ПЕРОКСИД ТИПА Е ТВЕРДЫЙ С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-148",
+    "classificationCode": "P2"
+  },
+  {
+    "un": "3119",
+    "name": "ОРГАНИЧЕСКИЙ ПЕРОКСИД ТИПА F ЖИДКИЙ С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-148",
+    "classificationCode": "P2"
+  },
+  {
+    "un": "3120",
+    "name": "ОРГАНИЧЕСКИЙ ПЕРОКСИД ТИПА F ТВЕРДЫЙ С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-148",
+    "classificationCode": "P2"
+  },
+  {
+    "un": "3121",
+    "name": "ОКИСЛЯЮЩЕЕ ТВЕРДОЕ ВЕЩЕСТВО, РЕАГИРУЮЩЕЕ С ВОДОЙ, Н.У.К.",
+    "emergencyCardNumber": "ERG-144",
+    "classificationCode": "OW"
+  },
+  {
+    "un": "3127",
+    "name": "САМОНАГРЕВАЮЩЕЕСЯ ТВЕРДОЕ ВЕЩЕСТВО ОКИСЛЯЮЩЕЕ, Н.У.К.",
+    "emergencyCardNumber": "ERG-135",
+    "classificationCode": "SO"
+  },
+  {
+    "un": "3132",
+    "name": "РЕАГИРУЮЩЕЕ С ВОДОЙ ТВЕРДОЕ ВЕЩЕСТВО ЛЕГКОВОСПЛАМЕНЯЮЩЕЕСЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-138",
+    "classificationCode": "WF2"
+  },
+  {
+    "un": "3133",
+    "name": "РЕАГИРУЮЩЕЕ С ВОДОЙ ТВЕРДОЕ ВЕЩЕСТВО ОКИСЛЯЮЩЕЕ, Н.У.К",
+    "emergencyCardNumber": "ERG-138",
+    "classificationCode": "WO"
+  },
+  {
+    "un": "3135",
+    "name": "РЕАГИРУЮЩЕЕ С ВОДОЙ ТВЕРДОЕ ВЕЩЕСТВО САМОНАГРЕВАЮЩЕЕСЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-138",
+    "classificationCode": "WS"
+  },
+  {
+    "un": "3137",
+    "name": "ОКИСЛЯЮЩЕЕ ТВЕРДОЕ ВЕЩЕСТВО, ЛЕГКОВОСПЛАМЕНЯЮЩЕЕСЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-140",
+    "classificationCode": "OF"
+  },
+  {
+    "un": "3166",
+    "name": "ТРАНСПОРТНОЕ СРЕДСТВО, РАБОТАЮЩЕЕ НА ЛЕГКОВОСПЛАМЕНЯЮЩЕМСЯ ГАЗЕ",
+    "emergencyCardNumber": "ERG-115",
+    "classificationCode": "M11"
+  },
+  {
+    "un": "3166",
+    "name": "ТРАНСПОРТНОЕ СРЕДСТВО, РАБОТАЮЩЕЕ НА ЛЕГКОВОСПЛАМЕНЯЮЩЕЙСЯ ЖИДКОСТИ",
+    "emergencyCardNumber": "ERG-115",
+    "classificationCode": "M11"
+  },
+  {
+    "un": "3166",
+    "name": "ТРАНСПОРТНОЕ СРЕДСТВО, РАБОТАЮЩЕЕ НА ТОПЛИВНЫХ ЭЛЕМЕНТАХ, СОДЕРЖАЩИХ ЛЕГКОВОСПЛАМЕНЯЮЩИЙСЯ ГАЗ",
+    "emergencyCardNumber": "ERG-115",
+    "classificationCode": "M11"
+  },
+  {
+    "un": "3166",
+    "name": "ТРАНСПОРТНОЕ СРЕДСТВО, РАБОТАЮЩЕЕ НА ТОПЛИВНЫХ ЭЛЕМЕНТАХ, СОДЕРЖАЩИХ ЛЕГКОВОСПЛАМЕНЯЮЩУЮСЯ ЖИДКОСТЬ",
+    "emergencyCardNumber": "ERG-115",
+    "classificationCode": "M11"
+  },
+  {
+    "un": "3171",
+    "name": "ТРАНСПОРТНОЕ СРЕДСТВО, РАБОТАЮЩЕЕ НА АККУМУЛЯТОРНЫХ БАТАРЕЯХ",
+    "emergencyCardNumber": "ERG-138",
+    "classificationCode": "M11"
+  },
+  {
+    "un": "3171",
+    "name": "ОБОРУДОВАНИЕ, РАБОТАЮЩЕЕ НА АККУМУЛЯТОРНЫХ БАТАРЕЯХ",
+    "emergencyCardNumber": "ERG-138",
+    "classificationCode": "M11"
+  },
+  {
+    "un": "3231",
+    "name": "САМОРЕАКТИВНАЯ ЖИДКОСТЬ ТИПА B С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-150",
+    "classificationCode": "SR2"
+  },
+  {
+    "un": "3232",
+    "name": "САМОРЕАКТИВНОЕ ТВЕРДОЕ ВЕЩЕСТВО ТИПА B С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-150",
+    "classificationCode": "SR2"
+  },
+  {
+    "un": "3233",
+    "name": "САМОРЕАКТИВНАЯ ЖИДКОСТЬ ТИПА С С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-150",
+    "classificationCode": "SR2"
+  },
+  {
+    "un": "3234",
+    "name": "САМОРЕАКТИВНОЕ ТВЕРДОЕ ВЕЩЕСТВО ТИПА C С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-150",
+    "classificationCode": "SR2"
+  },
+  {
+    "un": "3235",
+    "name": "САМОРЕАКТИВНАЯ ЖИДКОСТЬ ТИПА D С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-150",
+    "classificationCode": "SR2"
+  },
+  {
+    "un": "3236",
+    "name": "САМОРЕАКТИВНОЕ ТВЕРДОЕ ВЕЩЕСТВО ТИПА D С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-150",
+    "classificationCode": "SR2"
+  },
+  {
+    "un": "3237",
+    "name": "САМОРЕАКТИВНАЯ ЖИДКОСТЬ ТИПА E С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-150",
+    "classificationCode": "SR2"
+  },
+  {
+    "un": "3238",
+    "name": "САМОРЕАКТИВНОЕ ТВЕРДОЕ ВЕЩЕСТВО ТИПА E С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-150",
+    "classificationCode": "SR2"
+  },
+  {
+    "un": "3239",
+    "name": "САМОРЕАКТИВНАЯ ЖИДКОСТЬ ТИПА F С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-150",
+    "classificationCode": "SR2"
+  },
+  {
+    "un": "3240",
+    "name": "САМОРЕАКТИВНОЕ ТВЕРДОЕ ВЕЩЕСТВО ТИПА F С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ",
+    "emergencyCardNumber": "ERG-150",
+    "classificationCode": "SR2"
+  },
+  {
+    "un": "3255",
+    "name": "трет-БУТИЛГИПОХЛОРИТ",
+    "emergencyCardNumber": "ERG-135",
+    "classificationCode": "SC1"
+  },
+  {
+    "un": "3321",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, НИЗКАЯ УДЕЛЬНАЯ АКТИВНОСТЬ (НУА-II), неделящийся или делящийся-освобожденный",
+    "emergencyCardNumber": "ERG-162",
+    "classificationCode": null
+  },
+  {
+    "un": "3322",
+    "name": "Радиоактивный МАТЕРИАЛ, НИЗКАЯ УДЕЛЬНАЯ АКТИВНОСТЬ (LSA-III), неделящийся или делящийся-освобожденный",
+    "emergencyCardNumber": "ERG-162",
+    "classificationCode": null
+  },
+  {
+    "un": "3323",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, УПАКОВКА ТИПА С, неделящийся или делящийся-освобожденный",
+    "emergencyCardNumber": "ERG-163",
+    "classificationCode": null
+  },
+  {
+    "un": "3324",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, НИЗКАЯ УДЕЛЬНАЯ АКТИВНОСТЬ (LSA-II), ДЕЛЯЩИЙСЯ",
+    "emergencyCardNumber": "ERG-165",
+    "classificationCode": null
+  },
+  {
+    "un": "3325",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, НИЗКАЯ УДЕЛЬНАЯ АКТИВНОСТЬ (LSA-III), ДЕЛЯЩИЙСЯ",
+    "emergencyCardNumber": "ERG-165",
+    "classificationCode": null
+  },
+  {
+    "un": "3326",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, ОБЪЕКТЫ С ПОВЕРХНОСТНЫМ РАДИОАКТИВНЫМ ЗАГРЯЗНЕНИЕМ (SCO-I), ДЕЛЯЩИЙСЯ",
+    "emergencyCardNumber": "ERG-165",
+    "classificationCode": null
+  },
+  {
+    "un": "3326",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, ОБЪЕКТЫ С ПОВЕРХНОСТНЫМ РАДИОАКТИВНЫМ ЗАГРЯЗНЕНИЕМ (SCO-II), ДЕЛЯЩИЙСЯ",
+    "emergencyCardNumber": "ERG-165",
+    "classificationCode": null
+  },
+  {
+    "un": "3327",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, УПАКОВКА ТИПА А, ДЕЛЯЩИЙСЯ, не особого вида",
+    "emergencyCardNumber": "ERG-165",
+    "classificationCode": null
+  },
+  {
+    "un": "3328",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, УПАКОВКА ТИПА Б(И), ДЕЛЯЩИЙСЯ",
+    "emergencyCardNumber": "ERG-165",
+    "classificationCode": null
+  },
+  {
+    "un": "3329",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, УПАКОВКА ТИПА В(М), ДЕЛЯЩИЙСЯ",
+    "emergencyCardNumber": "ERG-165",
+    "classificationCode": null
+  },
+  {
+    "un": "3330",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, УПАКОВКА ТИПА С, ДЕЛЯЩИЙСЯ",
+    "emergencyCardNumber": "ERG-165",
+    "classificationCode": null
+  },
+  {
+    "un": "3331",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, ТРАНСПОРТИРУЕМЫЙ В СПЕЦИАЛЬНЫХ УСЛОВИЯХ, ДЕЛЯЩИЙСЯ",
+    "emergencyCardNumber": "ERG-165",
+    "classificationCode": null
+  },
+  {
+    "un": "3332",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, УПАКОВКА ТИПА А, ОСОБОГО ВИДА, неделящийся или делящийся-освобожденный",
+    "emergencyCardNumber": "ERG-164",
+    "classificationCode": null
+  },
+  {
+    "un": "3333",
+    "name": "РАДИОАКТИВНЫЙ МАТЕРИАЛ, УПАКОВКА ТИПА А, ОСОБОГО ВИДА, ДЕЛЯЩИЙСЯ",
+    "emergencyCardNumber": "ERG-165",
+    "classificationCode": null
+  },
+  {
+    "un": "3334",
+    "name": "Жидкость, перевозка которой по воздуху регулируется правилами, Н.У.К.",
+    "emergencyCardNumber": "ERG-171",
+    "classificationCode": "M11"
+  },
+  {
+    "un": "3335",
+    "name": "Твердое вещество, перевозка которого по воздуху регулируется правилами, Н.У.К",
+    "emergencyCardNumber": "ERG-171",
+    "classificationCode": "M11"
+  },
+  {
+    "un": "3360",
+    "name": "Волокна растительного происхождения сухие",
+    "emergencyCardNumber": "ERG-133",
+    "classificationCode": "F1"
+  },
+  {
+    "un": "3363",
+    "name": "Опасные грузы в оборудовании",
+    "emergencyCardNumber": "ERG-171",
+    "classificationCode": "M11"
+  },
+  {
+    "un": "3363",
+    "name": "Опасные грузы в приборах",
+    "emergencyCardNumber": "ERG-171",
+    "classificationCode": "M11"
+  },
+  {
+    "un": "3496",
+    "name": "Батереи, никель-металл-гидридные",
+    "emergencyCardNumber": "ERG-171",
+    "classificationCode": "М11"
+  },
+  {
+    "un": "3500",
+    "name": "ХИМИЧЕСКИЙ ПРОДУКТ ПОД ДАВЛЕНИЕМ, Н.У.К.",
+    "emergencyCardNumber": "ERG-126",
+    "classificationCode": "8A"
+  },
+  {
+    "un": "3501",
+    "name": "ХИМИЧЕСКИЙ ПРОДУКТ ПОД ДАВЛЕНИЕМ ЛЕГКОВОСПЛАМЕНЯЮ-ЩИЙСЯ, Н.У.К.",
+    "emergencyCardNumber": "ERG-115",
+    "classificationCode": "8F"
+  },
+  {
+    "un": "3502",
+    "name": "ХИМИЧЕСКИЙ ПРОДУКТ ПОД ДАВЛЕНИЕМ ТОКСИЧНЫЙ, Н.У.К.",
+    "emergencyCardNumber": "ERG-123",
+    "classificationCode": "8T"
+  },
+  {
+    "un": "3503",
+    "name": "ХИМИЧЕСКИЙ ПРОДУКТ ПОД ДАВЛЕНИЕМ КОРРОЗИОННЫЙ, Н.У.К.",
+    "emergencyCardNumber": "ERG-125",
+    "classificationCode": "8C"
+  },
+  {
+    "un": "3504",
+    "name": "ХИМИЧЕСКИЙ ПРОДУКТ ПОД ДАВЛЕНИЕМ ЛЕГКОВОСПЛАМЕНЯЮ-ЩИЙСЯ ТОКСИЧНЫЙ, Н.У.К.",
+    "emergencyCardNumber": "ERG-119",
+    "classificationCode": "8TF"
+  },
+  {
+    "un": "3505",
+    "name": "ХИМИЧЕСКИЙ ПРОДУКТ ПОД ДАВЛЕНИЕМ ЛЕГКОВОСПЛАМЕНЯЮ-ЩИЙСЯ КОРРОЗИОННЫЙ, Н. У.К.",
+    "emergencyCardNumber": "ERG-118",
+    "classificationCode": "8FC"
+  },
+  {
+    "un": "3507",
+    "name": "УРАНА ГЕКСАФТОРИД, РАДИОАКТИВНЫЙ МАТЕРИАЛ, ОСВОБОЖДЕННАЯ УПАКОВКА, менее 0,1 кг на упаковку, неделящийся-освобожденный",
+    "emergencyCardNumber": "ERG-166",
+    "classificationCode": null
+  },
+  {
+    "un": "3508",
+    "name": "КОНДЕНСАТОР АСИММЕТРИЧНЫЙ (с энергоемкостью более 0,3 Вт/ч)",
+    "emergencyCardNumber": "ERG-171",
+    "classificationCode": "М11"
+  },
+  {
+    "un": "3509",
+    "name": "ТАРА ОТБРАКОВАННАЯ ПОРОЖНЯЯ НЕОЧИЩЕННАЯ",
+    "emergencyCardNumber": "ERG-171",
+    "classificationCode": "М11"
+  },
+  {
+    "un": "3510",
+    "name": "ГАЗ АДСОРБИРОВАННЫЙ ЛЕГКОВОСПЛАМЕНЯЮЩИЙСЯ, Н.У.К",
+    "emergencyCardNumber": "ERG-174",
+    "classificationCode": "9F"
+  },
+  {
+    "un": "3511",
+    "name": "ГАЗ АДСОРБИРОВАННЫЙ, Н.У.К",
+    "emergencyCardNumber": "ERG-174",
+    "classificationCode": "9A"
+  },
+  {
+    "un": "3512",
+    "name": "ГАЗ АДСОРБИРОВАННЫЙ ТОКСИЧНЫЙ, Н.У.К",
+    "emergencyCardNumber": "ERG-173",
+    "classificationCode": "9T"
+  },
+  {
+    "un": "3513",
+    "name": "ГАЗ АДСОРБИРОВАННЫЙ ОКИСЛЯЮЩИЙ, Н.У.К",
+    "emergencyCardNumber": "ERG-174",
+    "classificationCode": "9O"
+  },
+  {
+    "un": "3514",
+    "name": "ГАЗ АДСОРБИРОВАННЫЙ ТОКСИЧНЫЙ ЛЕГКОВОСПЛАМЕНЯЮЩИЙСЯ, Н.У.К",
+    "emergencyCardNumber": "ERG-173",
+    "classificationCode": "9TF"
+  },
+  {
+    "un": "3515",
+    "name": "ГАЗ АДСОРБИРОВАННЫЙ ТОКСИЧНЫЙ ОКИСЛЯЮЩИЙ, Н.У.К",
+    "emergencyCardNumber": "ERG-173",
+    "classificationCode": "9TO"
+  },
+  {
+    "un": "3516",
+    "name": "ГАЗ АДСОРБИРОВАННЫЙ ТОКСИЧНЫЙ КОРРОЗИОННЫЙ, Н.У.К",
+    "emergencyCardNumber": "ERG-173",
+    "classificationCode": "9TC"
+  },
+  {
+    "un": "3517",
+    "name": "ГАЗ АДСОРБИРОВАННЫЙ ТОКСИЧНЫЙ ЛЕГКОВОСПЛАМЕНЯЮЩИЙСЯ КОРРОЗИОННЫЙ, Н.У.К",
+    "emergencyCardNumber": "ERG-173",
+    "classificationCode": "9TFC"
+  },
+  {
+    "un": "3518",
+    "name": "ГАЗ АДСОРБИРОВАННЫЙ ТОКСИЧНЫЙ ОКИСЛЯЮЩИЙ КОРРОЗИОННЫЙ, Н.У.К",
+    "emergencyCardNumber": "ERG-173",
+    "classificationCode": "9TOC"
+  },
+  {
+    "un": "3519",
+    "name": "БОРА ТРИФТОРИД АДСОРБИРОВАННЫЙ",
+    "emergencyCardNumber": "ERG-173",
+    "classificationCode": "9TC"
+  },
+  {
+    "un": "3520",
+    "name": "БОРА ТРИФТОРИД И КИСЛОТА ПРОПИОНОВАЯ - КОМПЛЕКС, ТВЕРДЫЙ",
+    "emergencyCardNumber": "ERG-173",
+    "classificationCode": "9TOC"
+  },
+  {
+    "un": "3521",
+    "name": "КРЕМНИЯ ТЕТРАФТОРИД АДСОРБИРОВАННЫЙ",
+    "emergencyCardNumber": "ERG-173",
+    "classificationCode": "9TC"
+  },
+  {
+    "un": "3522",
+    "name": "АРСИН АДСОРБИРОВАННЫЙ",
+    "emergencyCardNumber": "ERG-173",
+    "classificationCode": "9TF"
+  },
+  {
+    "un": "3523",
+    "name": "ГЕРМАН АДСОРБИРОВАННЫЙ",
+    "emergencyCardNumber": "ERG-173",
+    "classificationCode": "9TF"
+  },
+  {
+    "un": "3524",
+    "name": "ФОСФОРА ПЕНТАФТОРИД АДСОРБИРОВАННЫЙ",
+    "emergencyCardNumber": "ERG-173",
+    "classificationCode": "9TC"
+  },
+  {
+    "un": "3525",
+    "name": "ФОСФИН АДСОРБИРОВАННЫЙ",
+    "emergencyCardNumber": "ERG-173",
+    "classificationCode": "9TF"
+  },
+  {
+    "un": "3526",
+    "name": "ВОДОРОДА СЕЛЕНИД АДСОРБИРОВАННЫЙ",
+    "emergencyCardNumber": "ERG-173",
+    "classificationCode": "9TF"
+  },
+  {
+    "un": "3527",
+    "name": "КОМПЛЕКТ СМОЛ ПОЛИЭФИРНЫХ, твердое основное вещество",
+    "emergencyCardNumber": "ERG-128",
+    "classificationCode": "F4"
+  },
+  {
+    "un": "3528",
+    "name": "ДВИГАТЕЛЬ ВНУТРЕННЕГО СГОРАНИЯ, РАБОТАЮЩИЙ НА ЛЕГКОВОСПЛАМЕНЯЮЩЕЙСЯ ЖИДКОСТИ",
+    "emergencyCardNumber": "ERG-128",
+    "classificationCode": "F3"
+  },
+  {
+    "un": "3528",
+    "name": "ДВИГАТЕЛЬ, РАБОТАЮЩИЙ НА ТОПЛИВНЫХ ЭЛЕМЕНТАХ, СОДЕРЖАЩИХ ЛЕГКОВОСПЛАМЕНЯЮЩУЮСЯ ЖИДКОСТЬ",
+    "emergencyCardNumber": "ERG-128",
+    "classificationCode": "F3"
+  },
+  {
+    "un": "3528",
+    "name": "МАШИНА С ДВИГАТЕЛЕМ ВНУТРЕННЕГО СГОРАНИЯ, РАБОТАЮЩИМ НА ЛЕГКОВОСПЛАМЕНЯЮЩЕЙСЯ ЖИДКОСТИ",
+    "emergencyCardNumber": "ERG-128",
+    "classificationCode": "F3"
+  },
+  {
+    "un": "3528",
+    "name": "МАШИНА, РАБОТАЮЩАЯ НА ТОПЛИВНЫХ ЭЛЕМЕНТАХ, СОДЕРЖАЩИХ ЛЕГКОВОСПЛАМЕНЯЮЩУЮСЯ ЖИДКОСТЬ",
+    "emergencyCardNumber": "ERG-128",
+    "classificationCode": "F3"
+  },
+  {
+    "un": "3529",
+    "name": "ДВИГАТЕЛЬ ВНУТРЕННЕГО СГОРАНИЯ, РАБОТАЮЩИЙ НА ЛЕГКОВОСПЛАМЕНЯЮЩЕМСЯ ГАЗЕ",
+    "emergencyCardNumber": "ERG-115",
+    "classificationCode": "6F"
+  },
+  {
+    "un": "3529",
+    "name": "ДВИГАТЕЛЬ, РАБОТАЮЩИЙ НА ТОПЛИВНЫХ ЭЛЕМЕНТАХ, СОДЕРЖАЩИХ ЛЕГКОВОСПЛАМЕНЯЮЩИЙСЯ ГАЗ",
+    "emergencyCardNumber": "ERG-115",
+    "classificationCode": "6F"
+  },
+  {
+    "un": "3529",
+    "name": "МАШИНА С ДВИГАТЕЛЕМ ВНУТРЕННЕГО СГОРАНИЯ, РАБОТАЮЩИМ НА ЛЕГКОВОСПЛАМЕНЯЮЩЕМСЯ ГАЗЕ",
+    "emergencyCardNumber": "ERG-115",
+    "classificationCode": "6F"
+  },
+  {
+    "un": "3529",
+    "name": "МАШИНА, РАБОТАЮЩАЯ НА ТОПЛИВНЫХ ЭЛЕМЕНТАХ, СОДЕРЖАЩИХ ЛЕГКОВОСПЛАМЕНЯЮЩИЙСЯ ГАЗ",
+    "emergencyCardNumber": "ERG-115",
+    "classificationCode": "6F"
+  },
+  {
+    "un": "3530",
+    "name": "ДВИГАТЕЛЬ ВНУТРЕННЕГО СГОРАНИЯ",
+    "emergencyCardNumber": "ERG-171",
+    "classificationCode": "М11"
+  },
+  {
+    "un": "3530",
+    "name": "МАШИНА С ДВИГАТЕЛЕМ ВНУТРЕННЕГО СГОРАНИЯ",
+    "emergencyCardNumber": "ERG-171",
+    "classificationCode": "М11"
+  },
+  {
+    "un": "3531",
+    "name": "ПОЛИМЕРИЗУЮЩЕЕСЯ ВЕЩЕСТВО ТВЕРДОЕ СТАБИЛИЗИРОВАННОЕ, Н.У.К.",
+    "emergencyCardNumber": "ERG-149",
+    "classificationCode": "PM1"
+  },
+  {
+    "un": "3532",
+    "name": "ПОЛИМЕРИЗУЮЩЕЕСЯ ВЕЩЕСТВО ЖИДКОЕ СТАБИЛИЗИРОВАННОЕ, Н.У.К.",
+    "emergencyCardNumber": "ERG-149",
+    "classificationCode": "PM1"
+  },
+  {
+    "un": "3533",
+    "name": "ПОЛИМЕРИЗУЮЩЕЕСЯ ВЕЩЕСТВО ТВЕРДОЕ С РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРОЙ, Н.У.К.",
+    "emergencyCardNumber": "ERG-150",
+    "classificationCode": "PM2"
+  },
+  {
+    "un": "3534",
+    "name": "ПОЛИМЕРИЗУЮЩЕЕСЯ ВЕЩЕСТВО ЖИДКОЕ,ПЕРЕВОЗИМОЕ ПРИ РЕГУЛИРУЕМОЙ ТЕМПЕРАТУРЕ, Н.У.К.",
+    "emergencyCardNumber": "ERG-150",
+    "classificationCode": "PM2"
+  }
+]

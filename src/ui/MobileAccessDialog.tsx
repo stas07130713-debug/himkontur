@@ -5,12 +5,14 @@ type Props = Readonly<{ open: boolean; onClose: () => void }>;
 
 const RELEASE_ROOT =
   "https://github.com/stas07130713-debug/himkontur/releases/latest/download";
+function configuredDownload(value: string | undefined, fallback: string): string {
+  const trimmed = value?.trim();
+  return trimmed === undefined || trimmed.length === 0 ? fallback : trimmed;
+}
 const ANDROID_DOWNLOAD =
-  (import.meta.env.VITE_ANDROID_DOWNLOAD_URL as string | undefined)?.trim() ||
-  `${RELEASE_ROOT}/HIMKONTUR-Android.apk`;
+  configuredDownload(import.meta.env.VITE_ANDROID_DOWNLOAD_URL as string | undefined, `${RELEASE_ROOT}/HIMKONTUR-Android.apk`);
 const WINDOWS_DOWNLOAD =
-  (import.meta.env.VITE_WINDOWS_DOWNLOAD_URL as string | undefined)?.trim() ||
-  `${RELEASE_ROOT}/HIMKONTUR-Windows-Setup.exe`;
+  configuredDownload(import.meta.env.VITE_WINDOWS_DOWNLOAD_URL as string | undefined, `${RELEASE_ROOT}/HIMKONTUR-Windows-Setup.exe`);
 
 function DownloadMark() {
   return (

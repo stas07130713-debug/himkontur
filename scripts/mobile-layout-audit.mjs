@@ -28,6 +28,7 @@ try {
   const evaluate = async (expression) => (await command('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true })).result.value;
   await command('Runtime.enable');
   await command('Page.enable');
+  await delay(3000);
   mkdirSync(resolve('artifacts'), { recursive: true });
   const cases = [];
   for (const size of [{ width: 390, height: 844 }, { width: 430, height: 932 }]) {

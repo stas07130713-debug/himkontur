@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'node_modules', '.edge-check', 'android/**/build', 'android/app/src/main/assets/public', 'public/ocr/**', 'eslint.config.js', 'vite.config.js', 'vite.config.d.ts'] },
+  { ignores: ['dist', 'coverage', 'node_modules', '.edge-check', 'android/**/build', 'android/app/src/main/assets/public', 'public/boot-guard.js', 'public/ocr/**', 'eslint.config.js', 'vite.config.js', 'vite.config.d.ts'] },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,

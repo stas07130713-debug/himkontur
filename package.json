@@ -16,6 +16,7 @@
     "test:mobile-layout": "node scripts/mobile-layout-audit.mjs",
     "test:watch": "vitest",
     "data:emergency-cards": "node scripts/build-structured-emergency-cards.mjs",
+    "data:complete-hazmat": "node scripts/build-complete-hazmat-database.mjs",
     "audit:card-coverage": "node scripts/audit-card-coverage.mjs",
     "lint": "eslint . --max-warnings 0",
     "check": "npm run lint && npm run test && npm run build",
