@@ -10,10 +10,13 @@
     <link rel="apple-touch-icon" href="./icon.svg" />
     <meta name="theme-color" content="#08717e" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https://tile.openstreetmap.org https://server.arcgisonline.com; connect-src 'self' https://api.open-meteo.com https://archive-api.open-meteo.com" />
+    <style>
+      .himkontur-boot{position:fixed;inset:0;display:grid;place-content:center;justify-items:center;gap:16px;background:linear-gradient(145deg,#031b28,#075064);color:#efffff;font-family:"Segoe UI",Arial,sans-serif}.himkontur-boot svg{width:108px;height:108px;filter:drop-shadow(0 10px 24px #00131dcc);animation:himkontur-pulse 1.15s ease-in-out infinite}.himkontur-boot strong{font-size:25px;letter-spacing:.08em}.himkontur-boot span{color:#aee7e9;font-size:12px}.himkontur-boot-line{width:190px;height:4px;overflow:hidden;border-radius:4px;background:#ffffff24}.himkontur-boot-line::after{content:"";display:block;width:45%;height:100%;border-radius:4px;background:#26d5d0;animation:himkontur-load 1.05s ease-in-out infinite}@keyframes himkontur-pulse{50%{transform:scale(1.055)}}@keyframes himkontur-load{0%{transform:translateX(-110%)}100%{transform:translateX(330%)}}
+    </style>
     <title>Прогноз АХОВ</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="himkontur-boot" aria-label="Загрузка ХИМКОНТУР"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="boot-gradient" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2adbd0"/><stop offset="1" stop-color="#04889a"/></linearGradient></defs><path fill="url(#boot-gradient)" d="M31 5 6 51c-2 4 1 8 5 8h16l7-12H20l17-31-6-11Zm9 8 14 24H30l10-17 5 8h-3l-5 9h22L45 13h-5Z"/><path fill="#b7f4f2" stroke="#efffff" stroke-width="1.8" d="M30 51h20a7 7 0 0 0 1-14 11 11 0 0 0-21 3 6 6 0 0 0 0 11Z"/></svg><strong>ХИМКОНТУР</strong><span>Загрузка автономного приложения</span><i class="himkontur-boot-line"></i></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

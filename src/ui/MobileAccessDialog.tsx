@@ -1,47 +1,50 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 
 type Props = Readonly<{ open: boolean; onClose: () => void }>;
-const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
-function initialAddress(): string {
-  const configured = import.meta.env.VITE_PUBLIC_APP_URL as string | undefined;
-  if (configured?.trim()) return configured.trim();
-  const saved = window.localStorage.getItem("himkontur-mobile-url");
-  if (saved?.trim()) return saved.trim();
-  if (!LOCAL_HOSTS.has(window.location.hostname))
-    return new URL(".", window.location.href).href;
-  return "";
+const RELEASE_ROOT =
+  "https://github.com/stas07130713-debug/himkontur/releases/latest/download";
+const ANDROID_DOWNLOAD =
+  (import.meta.env.VITE_ANDROID_DOWNLOAD_URL as string | undefined)?.trim() ||
+  `${RELEASE_ROOT}/HIMKONTUR-Android.apk`;
+const WINDOWS_DOWNLOAD =
+  (import.meta.env.VITE_WINDOWS_DOWNLOAD_URL as string | undefined)?.trim() ||
+  `${RELEASE_ROOT}/HIMKONTUR-Windows-Setup.exe`;
+
+function DownloadMark() {
+  return (
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <defs>
+        <linearGradient id="download-mark-gradient" x1="0" y1="0" x2="1" y2="1">
+          <stop stopColor="#2adbd0" />
+          <stop offset="1" stopColor="#04889a" />
+        </linearGradient>
+      </defs>
+      <path className="download-mark-triangle" d="M31 5 6 51c-2 4 1 8 5 8h16l7-12H20l17-31-6-11Zm9 8 14 24H30l10-17 5 8h-3l-5 9h22L45 13h-5Z" />
+      <path className="download-mark-cloud" d="M30 51h20a7 7 0 0 0 1-14 11 11 0 0 0-21 3 6 6 0 0 0 0 11Z" />
+      <path className="download-mark-arrow" d="M40 31v13m-5-5 5 5 5-5" />
+    </svg>
+  );
 }
 
 export function MobileAccessDialog({ open, onClose }: Props) {
-  const [address, setAddress] = useState(initialAddress);
   const [qr, setQr] = useState("");
-  const normalizedAddress = useMemo(() => {
-    const value = address.trim();
-    if (!value) return "";
-    try {
-      return new URL(value).href;
-    } catch {
-      return "";
-    }
-  }, [address]);
 
   useEffect(() => {
-    if (!open || !normalizedAddress) {
+    if (!open) {
       setQr("");
       return;
     }
-    window.localStorage.setItem("himkontur-mobile-url", normalizedAddress);
-    void QRCode.toDataURL(normalizedAddress, {
-      width: 360,
+    void QRCode.toDataURL(ANDROID_DOWNLOAD, {
+      width: 420,
       margin: 2,
       errorCorrectionLevel: "M",
       color: { dark: "#063746", light: "#ffffff" },
     })
       .then(setQr)
       .catch(() => setQr(""));
-  }, [normalizedAddress, open]);
+  }, [open]);
 
   if (!open) return null;
   return (
@@ -62,65 +65,43 @@ export function MobileAccessDialog({ open, onClose }: Props) {
           ×
         </button>
         <div className="mobile-dialog-heading">
-          <span className="mobile-dialog-icon">▣</span>
+          <span className="mobile-dialog-icon"><DownloadMark /></span>
           <div>
-            <h2 id="mobile-access-title">Поделиться QR-кодом</h2>
-            <p>
-              Откройте ХИМКОНТУР на телефоне и закрепите его как приложение.
-            </p>
+            <h2 id="mobile-access-title">Загрузить ХИМКОНТУР</h2>
+            <p>Установочные файлы автономных приложений для телефона и Windows.</p>
           </div>
         </div>
-        {normalizedAddress ? (
-          <>
+
+        <div className="mobile-download-layout">
+          <div className="mobile-qr-block">
+            <h3>Приложение для Android</h3>
+            <p>Наведите камеру телефона: QR-код сразу открывает загрузку APK.</p>
             <div className="mobile-qr-frame">
               {qr ? (
-                <img src={qr} alt="QR-код мобильной версии ХИМКОНТУР" />
+                <img src={qr} alt="QR-код прямой загрузки ХИМКОНТУР для Android" />
               ) : (
-                <span>Создаётся QR-код…</span>
+                <span className="branded-download-progress"><DownloadMark />Подготавливается QR-код…</span>
               )}
             </div>
-            <a
-              className="mobile-address"
-              href={normalizedAddress}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {normalizedAddress}
+            <a className="application-download android" href={ANDROID_DOWNLOAD}>
+              <DownloadMark />
+              <span><strong>Скачать для Android</strong><small>Установочный файл APK</small></span>
             </a>
-          </>
-        ) : (
-          <div className="mobile-address-needed">
-            Сначала опубликуйте приложение на GitHub Pages и вставьте полученную
-            ссылку ниже. Локальный адрес компьютера недоступен телефону.
           </div>
-        )}
-        <label className="mobile-url-field">
-          Адрес опубликованного приложения
-          <input
-            value={address}
-            inputMode="url"
-            placeholder="https://имя.github.io/himkontur/"
-            onChange={(event) => setAddress(event.target.value)}
-          />
-        </label>
-        {address.trim() && !normalizedAddress && (
-          <p className="mobile-url-error">
-            Введите полный адрес, начинающийся с https://
-          </p>
-        )}
-        <ol className="mobile-install-steps">
-          <li>Наведите камеру телефона на QR-код и откройте ссылку.</li>
-          <li>
-            <strong>Android:</strong> меню браузера → «Установить приложение».
-          </li>
-          <li>
-            <strong>iPhone:</strong> Safari → «Поделиться» → «На экран Домой».
-          </li>
-        </ol>
+
+          <div className="desktop-download-block">
+            <h3>Приложение для Windows</h3>
+            <p>Полная автономная версия для компьютера.</p>
+            <a className="application-download windows" href={WINDOWS_DOWNLOAD}>
+              <DownloadMark />
+              <span><strong>Скачать для Windows</strong><small>Установочный файл EXE</small></span>
+            </a>
+          </div>
+        </div>
+
         <small className="mobile-offline-note">
-          После первого полного открытия основные функции и автономный
-          справочник доступны без сети. Для загрузки новых карт и погоды
-          интернет всё равно нужен.
+          Это загрузка самостоятельных приложений, а не переход в веб-версию.
+          Интернет требуется для скачивания установочного файла и получения погоды.
         </small>
       </section>
     </div>

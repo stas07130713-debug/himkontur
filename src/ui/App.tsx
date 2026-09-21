@@ -401,8 +401,8 @@ export function App() {
           </button>
           <button
             className="mobile-access-action"
-            title="Показать QR-код"
-            aria-label="Показать QR-код мобильной версии"
+            title="Загрузить приложение"
+            aria-label="Загрузить приложения ХИМКОНТУР"
             onClick={() => setMobileOpen(true)}
           >
             <UiIcon name="qr" />
@@ -431,22 +431,6 @@ export function App() {
           >
             ↷
           </button>
-          <div className="theme-switch" aria-label="Тема оформления">
-            <button
-              className={theme === "light" ? "active" : ""}
-              title="Светлая тема"
-              onClick={() => setTheme("light")}
-            >
-              ☼
-            </button>
-            <button
-              className={theme === "dark" ? "active" : ""}
-              title="Тёмная тема"
-              onClick={() => setTheme("dark")}
-            >
-              ☾
-            </button>
-          </div>
           <input
             ref={openFileRef}
             className="scenario-file-input"
@@ -454,6 +438,24 @@ export function App() {
             accept=".himkontur,.json,application/json"
             onChange={chooseScenarioFile}
           />
+        </div>
+        <div className="theme-switch" aria-label="Тема оформления">
+          <button
+            className={theme === "light" ? "active" : ""}
+            title="Светлая тема"
+            aria-label="Включить светлую тему"
+            onClick={() => setTheme("light")}
+          >
+            ☼
+          </button>
+          <button
+            className={theme === "dark" ? "active" : ""}
+            title="Тёмная тема"
+            aria-label="Включить тёмную тему"
+            onClick={() => setTheme("dark")}
+          >
+            ☾
+          </button>
         </div>
       </header>
       {tab === "goods" ? (

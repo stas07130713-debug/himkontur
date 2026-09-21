@@ -40,6 +40,12 @@ try {
         scrollWidth: document.documentElement.scrollWidth,
         tabs: visible('.main-tabs'),
         mobileButton: visible('.mobile-access-action'),
+        themeSwitch: visible('.topbar > .theme-switch'),
+        themeDoesNotOverlapTabs: (() => {
+          const theme = document.querySelector('.topbar > .theme-switch')?.getBoundingClientRect();
+          const tabs = document.querySelector('.main-tabs')?.getBoundingClientRect();
+          return Boolean(theme && tabs && (theme.bottom <= tabs.top || theme.right <= tabs.left || theme.left >= tabs.right));
+        })(),
         left: visible('.left-column'),
         map: visible('.map-column'),
         right: visible('.right-column .results') && visible('.right-column .control-palette'),
@@ -62,7 +68,6 @@ try {
       const shot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
       writeFileSync(resolve('artifacts', 'mobile-calculation-390.png'), Buffer.from(shot.data, 'base64'));
       await evaluate(`document.querySelector('.mobile-access-action')?.click()`);
-      await evaluate(`(() => { const input = document.querySelector('.mobile-url-field input'); const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; setter.call(input, 'https://example.github.io/himkontur/'); input.dispatchEvent(new Event('input', { bubbles: true })); })()`);
       await delay(500);
       const qrShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
       writeFileSync(resolve('artifacts', 'mobile-qr-390.png'), Buffer.from(qrShot.data, 'base64'));
@@ -74,7 +79,7 @@ try {
       await evaluate(`document.querySelectorAll('.main-tabs button')[0]?.click()`);
     }
   }
-  const failures = cases.filter((item) => item.scrollWidth > item.viewport + 1 || !item.tabs || !item.mobileButton || !item.left || !item.map || !item.right || !item.mobileOrder || !item.calculate);
+  const failures = cases.filter((item) => item.scrollWidth > item.viewport + 1 || !item.tabs || !item.mobileButton || !item.themeSwitch || !item.themeDoesNotOverlapTabs || !item.left || !item.map || !item.right || !item.mobileOrder || !item.calculate);
   const report = { passed: failures.length === 0, cases, failures };
   writeFileSync(resolve('artifacts', 'mobile-layout-audit.json'), JSON.stringify(report, null, 2));
   if (failures.length) throw new Error(`Мобильная компоновка не прошла проверку: ${JSON.stringify(failures)}`);

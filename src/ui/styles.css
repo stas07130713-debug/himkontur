@@ -480,7 +480,7 @@ button.wide { width: 100%; margin-top: 10px; }
 .status-ready::first-letter { color: #54db6b; }
 
 /* Компоновка по рабочему макету: ввод слева, карта по центру, результаты справа. */
-.topbar { height: 58px; grid-template-columns: max-content max-content 1fr; align-items: stretch; padding: 0 14px; }
+.topbar { height: 58px; grid-template-columns: max-content max-content 1fr auto; align-items: stretch; padding: 0 14px; }
 .chemcontour-logo { align-self: center; min-width: 310px; }
 .chemcontour-logo svg { width: 43px; height: 43px; flex-basis: 43px; }
 .chemcontour-logo strong { font-size: 18px; }
@@ -514,9 +514,9 @@ button.wide { width: 100%; margin-top: 10px; }
 .file-actions > button .ui-mini-icon { width: 19px; height: 19px; flex-basis: 19px; }
 .file-actions > .mobile-access-action .ui-mini-icon { width: 21px; height: 21px; flex-basis: 21px; }
 .theme-switch { min-height: 38px; padding: 3px; display: flex; align-items: center; gap: 2px; overflow: hidden; border: 1px solid #376878; border-radius: 20px; background: #062b3b; box-shadow: inset 0 1px 3px #001821aa; }
-.file-actions .theme-switch { width: 68px; flex: 0 0 68px; }
-.file-actions .theme-switch button { width: 30px; min-width: 30px; min-height: 30px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: #a9c8cf; font-size: 17px; line-height: 1; box-shadow: none; }
-.file-actions .theme-switch button.active { background: #e9f8f8; color: #006d7a; box-shadow: 0 1px 6px #00192388; }
+.topbar > .theme-switch { width: 68px; flex: 0 0 68px; align-self: center; }
+.theme-switch button { width: 30px; min-width: 30px; min-height: 30px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: #a9c8cf; font-size: 17px; line-height: 1; box-shadow: none; }
+.theme-switch button.active { background: #e9f8f8; color: #006d7a; box-shadow: 0 1px 6px #00192388; }
 .workspace { height: calc(100vh - 84px); grid-template-columns: clamp(330px, 21vw, 405px) minmax(560px, 1fr) clamp(250px, 15vw, 300px); }
 .plain-section-title { margin: 0 -3px 8px; color: #073b58; }
 .plain-section-title h2 { margin: 0; font-size: 15px; }
@@ -1116,7 +1116,7 @@ button.wide { width: 100%; margin-top: 10px; }
 @media (min-width: 721px) {
   .topbar.electron-topbar { padding-right: 154px; }
   .topbar.electron-topbar .file-actions { padding-right: 0; }
-  .topbar.electron-topbar .file-actions .theme-switch { position: static; }
+  .topbar.electron-topbar > .theme-switch { position: static; }
 }
 
 /* The normal collapsed input form fits without a visible scrollbar. Expanded
@@ -1225,10 +1225,28 @@ button.wide { width: 100%; margin-top: 10px; }
 .mobile-access-dialog { position: relative; width: min(470px, 94vw); max-height: min(760px, 94dvh); overflow-y: auto; padding: 22px; border: 1px solid #2d8793; border-radius: 16px; background: #f8fdfd; box-shadow: 0 24px 70px #001c2d99; color: #163c48; }
 .mobile-dialog-heading { display: grid; grid-template-columns: 48px 1fr; gap: 12px; align-items: center; padding-right: 28px; }
 .mobile-dialog-icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 13px; background: linear-gradient(145deg, #079ba8, #04566d); color: #fff; font-size: 27px; }
+.mobile-dialog-icon svg { width: 40px; height: 40px; }
+.download-mark-triangle { fill: url(#download-mark-gradient); }
+.download-mark-cloud { fill: #b7f4f2; stroke: #efffff; stroke-width: 1.6; }
+.download-mark-arrow { fill: none; stroke: #063746; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .mobile-dialog-heading h2 { margin: 0; color: #073b58; font-size: 22px; }
 .mobile-dialog-heading p { margin: 3px 0 0; color: #607a80; font-size: 12px; line-height: 1.35; }
+.mobile-download-layout { margin-top: 16px; display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: 13px; }
+.mobile-download-layout h3 { margin: 0 0 4px; color: #073b58; font-size: 14px; }
+.mobile-download-layout p { min-height: 32px; margin: 0; color: #607a80; font-size: 10px; line-height: 1.35; }
 .mobile-qr-frame { width: min(290px, 76vw); aspect-ratio: 1; margin: 18px auto 10px; display: grid; place-items: center; padding: 10px; border: 1px solid #a8d0d4; border-radius: 14px; background: #fff; }
 .mobile-qr-frame img { width: 100%; height: 100%; display: block; }
+.branded-download-progress { display: grid; justify-items: center; gap: 8px; color: #39707a; font-size: 10px; }
+.branded-download-progress svg { width: 58px; height: 58px; animation: branded-download-pulse 1.1s ease-in-out infinite; }
+.application-download { min-height: 58px; padding: 8px 10px; display: flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid #078894; border-radius: 10px; background: linear-gradient(180deg, #079ba8, #05717e); color: #fff; text-decoration: none; box-shadow: 0 5px 16px #006f7c30; }
+.application-download:hover { filter: brightness(1.08); }
+.application-download.windows { margin-top: 16px; border-color: #356d9d; background: linear-gradient(180deg, #397bac, #24577f); }
+.application-download > svg { width: 38px; height: 38px; flex: 0 0 38px; }
+.application-download > span { min-width: 0; display: grid; }
+.application-download strong { font-size: 12px; }
+.application-download small { color: #d9f3f5; font-size: 9px; }
+.application-download .download-mark-arrow { stroke: #063746; }
+@keyframes branded-download-pulse { 0%, 100% { transform: scale(.94); opacity: .72; } 50% { transform: scale(1.06); opacity: 1; } }
 .mobile-address { display: block; overflow-wrap: anywhere; color: #007985; font-size: 11px; text-align: center; }
 .mobile-address-needed { margin: 16px 0 10px; padding: 11px; border-left: 4px solid #e3a320; background: #fff5d9; color: #765015; font-size: 11px; line-height: 1.4; }
 .mobile-url-field { margin-top: 14px; font-size: 11px; }
@@ -1240,6 +1258,8 @@ button.wide { width: 100%; margin-top: 10px; }
 [data-theme="dark"] .mobile-access-dialog { border-color: #347383; background: #0d2a36; color: #d9eaed; }
 [data-theme="dark"] .mobile-dialog-heading h2 { color: #effcfd; }
 [data-theme="dark"] .mobile-dialog-heading p, [data-theme="dark"] .mobile-url-field { color: #b6d0d5; }
+[data-theme="dark"] .mobile-download-layout h3 { color: #eefbfc; }
+[data-theme="dark"] .mobile-download-layout p { color: #a9c7cc; }
 [data-theme="dark"] .mobile-address-needed { background: #453817; color: #ffe4a1; }
 [data-theme="dark"] .mobile-offline-note { background: #123d43; color: #c4e3e5; }
 
@@ -1247,6 +1267,7 @@ button.wide { width: 100%; margin-top: 10px; }
 @media (max-width: 720px) {
   html, body, #root { width: 100%; min-width: 0; min-height: 100%; overflow-x: hidden; }
   body { background: #e8f3f5; }
+  html[data-theme="dark"], html[data-theme="dark"] body { color-scheme: dark; background: #040f16; }
   .app-shell { width: 100%; min-width: 0; height: auto; min-height: 100dvh; display: flex; flex-direction: column; overflow: visible; }
   .topbar { position: sticky; z-index: 40; top: 0; width: 100%; height: auto; min-height: 0; padding: 7px 8px 6px; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "logo theme" "tabs tabs" "actions actions"; gap: 6px; align-items: center; }
   .chemcontour-logo { grid-area: logo; min-width: 0; }
@@ -1263,8 +1284,7 @@ button.wide { width: 100%; margin-top: 10px; }
   .desktop-mobile-label { display: none; }
   .phone-mobile-label { display: inline; }
   .topbar.electron-topbar { padding-right: 8px; }
-  .theme-switch { grid-area: theme; min-height: 34px; }
-  .file-actions .theme-switch { position: absolute; top: 7px; right: 8px; }
+  .topbar > .theme-switch { grid-area: theme; position: static; width: 72px; min-height: 36px; align-self: center; justify-self: end; }
   .workspace { width: 100%; min-width: 0; height: auto; min-height: 0; padding: 8px; display: flex; flex-direction: column; gap: 10px; overflow: visible; }
   .left-column, .right-column { width: 100%; min-width: 0; min-height: 0; overflow: visible; }
   .left-column { order: 1; }
@@ -1305,7 +1325,23 @@ button.wide { width: 100%; margin-top: 10px; }
   .mobile-access-dialog { padding: 17px; }
   .mobile-dialog-heading { grid-template-columns: 40px 1fr; gap: 9px; }
   .mobile-dialog-icon { width: 40px; height: 40px; font-size: 23px; }
+  .mobile-dialog-icon svg { width: 34px; height: 34px; }
   .mobile-dialog-heading h2 { font-size: 19px; }
+  .mobile-download-layout { grid-template-columns: 1fr; }
+  .mobile-download-layout p { min-height: 0; }
+  .desktop-download-block { padding-top: 12px; border-top: 1px solid #bfd9dc; }
+  [data-theme="dark"] .desktop-download-block { border-top-color: #315762; }
+  [data-theme="dark"] .topbar { border-bottom-color: #124452; background: linear-gradient(160deg, #020d14, #061f2b 62%, #03131c); box-shadow: 0 4px 18px #000a; }
+  [data-theme="dark"] .main-tabs button { border-color: #225260; background: #061a24; color: #aac4ca; }
+  [data-theme="dark"] .main-tabs button.active { border-color: #1fc6ce; background: linear-gradient(180deg, #0a5667, #073444); color: #fff; }
+  [data-theme="dark"] .file-actions > button { border-color: #214a57; background: #061923; color: #d3e7ea; }
+  [data-theme="dark"] .theme-switch { border-color: #2d6370; background: #020d14; }
+  [data-theme="dark"] .theme-switch button.active { background: #22b6c0; color: #02141c; box-shadow: 0 0 12px #20ced166; }
+  [data-theme="dark"] .workspace, [data-theme="dark"] .goods-page, [data-theme="dark"] .emergency-workspace { background: #06151d; }
+  [data-theme="dark"] .input-panel, [data-theme="dark"] .results, [data-theme="dark"] .control-palette, [data-theme="dark"] .goods-sidebar, [data-theme="dark"] .emergency-sheet { border-color: #284b56; background: #0a222c; box-shadow: 0 4px 16px #0006; }
+  [data-theme="dark"] .input-panel .input-section-card { border-color: #315762; border-left-color: #20bdc6; background: #102f3b; }
+  [data-theme="dark"] .input-panel .input-section-card:nth-of-type(even) { background: #0b2833; }
+  [data-theme="dark"] .statusbar { border-top-color: #174553; background: #020d14; color: #a9c4ca; }
 }
 
 /* Final desktop-height override: keep this after every generic/mobile block. */
