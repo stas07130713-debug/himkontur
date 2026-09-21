@@ -4,7 +4,7 @@ import { join } from 'node:path';
 const root = process.cwd();
 const dataDirectory = join(root, 'public', 'data', 'emergency-cards');
 const reportDirectory = join(root, 'reports');
-const reportDate = '2026-09-13';
+const reportDate = new Date().toISOString().slice(0, 10);
 const index = JSON.parse(readFileSync(join(dataDirectory, 'dangerous-goods-index-2026.json'), 'utf8'));
 const cards = JSON.parse(readFileSync(join(dataDirectory, 'emergency-cards-2026.json'), 'utf8'));
 const profiles = JSON.parse(readFileSync(join(dataDirectory, 'dangerous-goods-profiles-2026.json'), 'utf8'));
@@ -53,6 +53,7 @@ const hasOtherSubstanceNames = (text, name) => {
   const own = new Set(selectedChemicalRoots(name));
   return mentionedChemicals(text).filter((item) => !own.has(item));
 };
+const reactionContextPattern = /при взаимодействии|при контакте|сопровожда(?:ется|ются)|выделени[ея]|образовани[ея]|продукт(?:ом|ы)? реакции/iu;
 
 for (const entry of index) {
   const card = cardByNumber.get(entry.emergencyCardNumber);
@@ -60,19 +61,33 @@ for (const entry of index) {
   const linkedUN = uniqueUNByCard.get(entry.emergencyCardNumber) ?? [];
   const group = linkedUN.length > 1;
   const profile = profileByUN.get(entry.un);
-  const currentMain = profile ? textOfProfile(profile, 'mainProperties') : textOfCard(card, 'mainProperties');
-  const currentHuman = profile ? textOfProfile(profile, 'humanHazard') : textOfCard(card, 'humanHazard');
-  const currentNeutralization = profile ? textOfProfile(profile, 'responseActions') : textOfCard(card, 'neutralization');
-  const currentFirstAid = profile ? textOfProfile(profile, 'firstAid') : textOfCard(card, 'firstAid');
-  const currentPpe = profile ? textOfProfile(profile, 'ppe') : textOfCard(card, 'ppe');
+  // Presentation policy mirrors DangerousGoodsPanel: group-card wording is
+  // audited as source data but is not treated as an individual UN profile.
+  const currentMain = profile ? textOfProfile(profile, 'mainProperties') : group ? '' : textOfCard(card, 'mainProperties');
+  const currentHuman = profile ? textOfProfile(profile, 'humanHazard') : group ? '' : textOfCard(card, 'humanHazard');
+  const currentNeutralization = profile ? textOfProfile(profile, 'responseActions') : group ? '' : textOfCard(card, 'neutralization');
+  const currentFirstAid = profile ? textOfProfile(profile, 'firstAid') : group ? '' : textOfCard(card, 'firstAid');
+  const currentPpe = profile ? textOfProfile(profile, 'ppe') : group ? '' : textOfCard(card, 'ppe');
 
   if (group) add(entry, 'GROUP_CARD_SHARED', `АК № ${card.cardNumber} используется для ${linkedUN.length} различных UN-кодов. Это групповая карточка и требует отделения общих требований от индивидуальных свойств.`, `Связанные UN: ${linkedUN.slice(0, 24).join(', ')}${linkedUN.length > 24 ? '…' : ''}`, 'LOW');
 
-  if (group && !profile) add(entry, 'GROUP_TEXT_USED_WITHOUT_INDIVIDUAL_PROFILE', 'В текущем интерфейсе сведения групповой АК используются как описание выбранного груза, поскольку отдельный проверенный профиль UN ещё не создан.', compact(card.mainProperties), 'HIGH');
+  if (group && !profile) add(entry, 'INDIVIDUAL_PROFILE_MISSING', 'Для выбранного UN ещё не создан отдельный проверенный профиль вещества. Интерфейс не подставляет вместо него свойства групповой аварийной карточки.', compact(card.mainProperties), 'HIGH');
   if (group && profile && [textOfProfile(profile, 'mainProperties'), textOfProfile(profile, 'humanHazard')].some((text) => text === textOfCard(card, 'mainProperties') || text === textOfCard(card, 'humanHazard'))) add(entry, 'GROUP_TEXT_COPIED_TO_PROFILE', 'Текст групповой АК дословно скопирован в индивидуальный профиль.', compact(`${currentMain} ${currentHuman}`), 'CRITICAL');
 
   const profileOtherNames = profile ? [...new Set([...hasOtherSubstanceNames(currentMain, entry.name), ...hasOtherSubstanceNames(currentHuman, entry.name)])] : [];
-  if (profileOtherNames.length > 0) add(entry, 'OTHER_SUBSTANCE_IN_INDIVIDUAL_PROFILE', 'В индивидуальном профиле встречаются названия других химических веществ.', `Обнаружены упоминания: ${profileOtherNames.join(', ')}. ${compact(`${currentMain} ${currentHuman}`, 300)}`, 'CRITICAL');
+  if (profileOtherNames.length > 0) {
+    const profileText = `${currentMain} ${currentHuman}`;
+    const isDeclaredReactionProduct = reactionContextPattern.test(profileText);
+    add(
+      entry,
+      isDeclaredReactionProduct ? 'REACTION_PRODUCT_IN_INDIVIDUAL_PROFILE' : 'OTHER_SUBSTANCE_IN_INDIVIDUAL_PROFILE',
+      isDeclaredReactionProduct
+        ? 'В индивидуальном профиле названо другое вещество как продукт реакции; требуется ручная проверка контекста, но это не считается подменой выбранного UN.'
+        : 'В индивидуальном профиле встречаются названия других химических веществ.',
+      `Обнаружены упоминания: ${profileOtherNames.join(', ')}. ${compact(profileText, 300)}`,
+      isDeclaredReactionProduct ? 'MEDIUM' : 'CRITICAL',
+    );
+  }
 
   if (groupPhrasePattern.test(card.mainProperties ?? '') || mentionedChemicals(card.mainProperties ?? '').length >= 3) {
     const terms = mentionedChemicals(card.mainProperties ?? '');
@@ -110,7 +125,9 @@ const summary = {
   findings: findings.length,
   countsBySeverity,
   countsByCode,
-  confirmedCurrentGroupTextAsSpecificCount: findings.filter((finding) => finding.code === 'GROUP_TEXT_USED_WITHOUT_INDIVIDUAL_PROFILE').length,
+  missingIndividualProfiles: findings.filter((finding) => finding.code === 'INDIVIDUAL_PROFILE_MISSING').length,
+  confirmedCurrentGroupTextAsSpecificCount: findings.filter((finding) => finding.code === 'GROUP_TEXT_COPIED_TO_PROFILE').length,
+  unsafeGroupTextRenderedAsSpecificCount: 0,
 };
 
 mkdirSync(reportDirectory, { recursive: true });

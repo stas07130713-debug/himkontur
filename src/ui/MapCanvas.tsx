@@ -16,6 +16,7 @@ import { MapLegend } from "./MapLegend";
 import type { ControlTemplate } from "./ControlPalette";
 import type { SourceConfiguration, SourceKind } from "./source-library";
 import { appAssetUrl } from "./app-url";
+import { OfflineBasemap } from "./OfflineBasemap";
 
 export type ControlPoint = Readonly<{
   id: string;
@@ -24,6 +25,16 @@ export type ControlPoint = Readonly<{
   kind?: ControlTemplate["kind"];
 }>;
 export type Basemap = "standard" | "satellite";
+type RasterTile = Readonly<{
+  key: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  tileX: number;
+  tileY: number;
+  zoom: number;
+}>;
 type Props = Readonly<{
   result: CalculationResult | null;
   calculationStarted: boolean;
@@ -99,7 +110,8 @@ function isSourceKind(value: string): value is SourceKind {
   return SOURCE_KINDS.some((kind) => kind === value);
 }
 function mapTileUrl(basemap: Basemap, zoom: number, tileX: number, tileY: number): string {
-  const local = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+  const local = navigator.userAgent.includes("Electron") ||
+    (["localhost", "127.0.0.1", "::1"].includes(window.location.hostname) && window.location.port !== "");
   if (local) return basemap === "standard" ? `/map-tiles/osm/${zoom}/${tileX}/${tileY}.png` : `/map-tiles/esri/${zoom}/${tileY}/${tileX}`;
   return basemap === "standard"
     ? `https://tile.openstreetmap.org/${zoom}/${tileX}/${tileY}.png`
@@ -257,6 +269,9 @@ export function MapCanvas(props: Props) {
   const [showPrimary, setShowPrimary] = useState(true);
   const [showSecondary, setShowSecondary] = useState(true);
   const [objectsLocked, setObjectsLocked] = useState(false);
+  const [online, setOnline] = useState(() => navigator.onLine);
+  const [rasterTileStatus, setRasterTileStatus] = useState<Readonly<Record<string, "loaded" | "failed">>>({});
+  const [committedRasterTiles, setCommittedRasterTiles] = useState<Readonly<Record<Basemap, readonly RasterTile[]>>>({ standard: [], satellite: [] });
   const [draggingSource, setDraggingSource] = useState(false);
   const [panning, setPanning] = useState(false);
   const [contextMenu, setContextMenu] = useState<
@@ -273,7 +288,7 @@ export function MapCanvas(props: Props) {
   });
   const stageRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const sourcePointerRef = useRef<number | null>(null);
+  const sourcePointerRef = useRef<{ pointerId: number; clientX: number; clientY: number; active: boolean } | null>(null);
   const controlPointerRef = useRef<{ pointerId: number; id: string } | null>(
     null,
   );
@@ -283,6 +298,9 @@ export function MapCanvas(props: Props) {
     clientY: number;
     center: GeoPoint;
   } | null>(null);
+  const touchPointsRef = useRef(new Map<number, { clientX: number; clientY: number }>());
+  const pinchRef = useRef<{ distance: number } | null>(null);
+  const longPressRef = useRef<{ timer: number; pointerId: number; clientX: number; clientY: number } | null>(null);
   const viewWidth = viewSize.width;
   const viewHeight = viewSize.height;
   const projection = useMemo(() => {
@@ -311,20 +329,22 @@ export function MapCanvas(props: Props) {
   }, [mapCenter, viewHeight, viewWidth, zoom]);
   const changeZoom = useCallback(
     (factor: number, anchor?: GeoPoint) => {
-      const nextZoom = Math.max(0.2, Math.min(8, zoom * factor));
-      const appliedFactor = nextZoom / zoom;
-      if (anchor !== undefined)
-        setMapCenter((current) => ({
-          longitude:
-            anchor.longitude -
-            (anchor.longitude - current.longitude) / appliedFactor,
-          latitude:
-            anchor.latitude -
-            (anchor.latitude - current.latitude) / appliedFactor,
-        }));
-      setZoom(nextZoom);
+      setZoom((currentZoom) => {
+        const nextZoom = Math.max(0.2, Math.min(8, currentZoom * factor));
+        const appliedFactor = nextZoom / currentZoom;
+        if (anchor !== undefined)
+          setMapCenter((current) => ({
+            longitude:
+              anchor.longitude -
+              (anchor.longitude - current.longitude) / appliedFactor,
+            latitude:
+              anchor.latitude -
+              (anchor.latitude - current.latitude) / appliedFactor,
+          }));
+        return nextZoom;
+      });
     },
-    [zoom],
+    [],
   );
   useEffect(() => {
     const stage = stageRef.current;
@@ -338,6 +358,11 @@ export function MapCanvas(props: Props) {
     });
     observer.observe(stage);
     return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener('online', update); window.addEventListener('offline', update);
+    return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); };
   }, []);
   useEffect(() => {
     setObjectsLocked(props.calculationStarted);
@@ -357,28 +382,21 @@ export function MapCanvas(props: Props) {
       ),
     );
   }, [props.result?.finalDepthKm]);
-  const tiles = useMemo(() => {
+  const tileZoom = useMemo(() => {
     const circumference =
       40_075 * Math.cos((mapCenter.latitude * Math.PI) / 180);
-    const tileZoom = Math.max(
+    return Math.max(
       10,
       Math.min(
         18,
         Math.round(Math.log2((projection.scale * circumference) / 256)),
       ),
     );
+  }, [mapCenter.latitude, projection.scale]);
+  const tiles = useMemo(() => {
     const nw = projection.unproject(0, 0);
     const se = projection.unproject(viewWidth, viewHeight);
-    const output: {
-      key: string;
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-      tileX: number;
-      tileY: number;
-      zoom: number;
-    }[] = [];
+    const output: RasterTile[] = [];
     for (
       let tileY = Math.floor(latitudeToTile(nw.latitude, tileZoom));
       tileY <= Math.floor(latitudeToTile(se.latitude, tileZoom));
@@ -409,7 +427,30 @@ export function MapCanvas(props: Props) {
         });
       }
     return output;
-  }, [mapCenter.latitude, projection, viewHeight, viewWidth]);
+  }, [projection, tileZoom, viewHeight, viewWidth]);
+  const rasterLayerReady = tiles.length > 0 && tiles.every(
+    (tile) => rasterTileStatus[`${props.basemap}:${tile.key}`] === "loaded",
+  );
+  const rasterTileSignature = tiles.map((tile) => tile.key).join('|');
+  useEffect(() => {
+    if (!rasterLayerReady) return;
+    setCommittedRasterTiles((current) => {
+      const previous = current[props.basemap];
+      if (previous.map((tile) => tile.key).join('|') === rasterTileSignature) return current;
+      return { ...current, [props.basemap]: tiles };
+    });
+  }, [props.basemap, rasterLayerReady, rasterTileSignature, tiles]);
+  const visibleRasterTiles = committedRasterTiles[props.basemap];
+  const rasterPosition = (tile: RasterTile) => {
+    const a = projection.project({ longitude: tileToLongitude(tile.tileX, tile.zoom), latitude: tileToLatitude(tile.tileY, tile.zoom) });
+    const b = projection.project({ longitude: tileToLongitude(tile.tileX + 1, tile.zoom), latitude: tileToLatitude(tile.tileY + 1, tile.zoom) });
+    return {
+      left: `${(a.x / viewWidth) * 100}%`,
+      top: `${(a.y / viewHeight) * 100}%`,
+      width: `${((b.x - a.x + 1) / viewWidth) * 100}%`,
+      height: `${((b.y - a.y + 1) / viewHeight) * 100}%`,
+    };
+  };
   const rotationRadians = (rotation * Math.PI) / 180;
   const rotationCoverScale =
     Math.abs(Math.cos(rotationRadians)) + Math.abs(Math.sin(rotationRadians));
@@ -475,10 +516,8 @@ export function MapCanvas(props: Props) {
     event.preventDefault();
     event.stopPropagation();
     if (event.button !== 0 || objectsLocked) return;
-    props.onSourceDragStart?.();
-    sourcePointerRef.current = event.pointerId;
+    sourcePointerRef.current = { pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, active: false };
     svgRef.current?.setPointerCapture(event.pointerId);
-    setDraggingSource(true);
   };
   const onControlPointerDown = (
     event: ReactPointerEvent<SVGGElement>,
@@ -500,6 +539,25 @@ export function MapCanvas(props: Props) {
     )
       return;
     event.preventDefault();
+    if (event.pointerType === 'touch') {
+      touchPointsRef.current.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
+      if (touchPointsRef.current.size === 1) {
+        const timer = window.setTimeout(() => {
+          const held = longPressRef.current;
+          if (held?.pointerId !== event.pointerId) return;
+          const rect = stageRef.current?.getBoundingClientRect();
+          const point = locate(held.clientX, held.clientY);
+          if (rect && point) setContextMenu({ target: 'map', point, x: held.clientX - rect.left, y: held.clientY - rect.top });
+          panRef.current = null; setPanning(false); longPressRef.current = null;
+        }, 650);
+        longPressRef.current = { timer, pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY };
+      } else if (touchPointsRef.current.size === 2) {
+        if (longPressRef.current !== null) window.clearTimeout(longPressRef.current.timer);
+        longPressRef.current = null; panRef.current = null; setPanning(false);
+        const [first, second] = [...touchPointsRef.current.values()];
+        if (first !== undefined && second !== undefined) pinchRef.current = { distance: Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY) };
+      }
+    }
     panRef.current = {
       pointerId: event.pointerId,
       clientX: event.clientX,
@@ -510,7 +568,32 @@ export function MapCanvas(props: Props) {
     setPanning(true);
   };
   const onPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (sourcePointerRef.current === event.pointerId) {
+    if (event.pointerType === 'touch' && touchPointsRef.current.has(event.pointerId)) {
+      const previous = touchPointsRef.current.get(event.pointerId);
+      touchPointsRef.current.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
+      const held = longPressRef.current;
+      if (held !== null && held.pointerId === event.pointerId && Math.hypot(event.clientX - held.clientX, event.clientY - held.clientY) > 8) { window.clearTimeout(held.timer); longPressRef.current = null; }
+      if (touchPointsRef.current.size >= 2) {
+        const [first, second] = [...touchPointsRef.current.values()];
+        if (first !== undefined && second !== undefined) {
+          const distance = Math.max(1, Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY));
+          const prior = pinchRef.current?.distance ?? distance;
+          const anchor = locate((first.clientX + second.clientX) / 2, (first.clientY + second.clientY) / 2);
+          if (Math.abs(distance - prior) > 1) changeZoom(distance / prior, anchor ?? undefined);
+          pinchRef.current = { distance };
+        }
+        return;
+      }
+      if (previous === undefined) return;
+    }
+    const sourcePointer = sourcePointerRef.current;
+    if (sourcePointer?.pointerId === event.pointerId) {
+      if (!sourcePointer.active) {
+        if (Math.hypot(event.clientX - sourcePointer.clientX, event.clientY - sourcePointer.clientY) < 8) return;
+        sourcePointer.active = true;
+        props.onSourceDragStart?.();
+        setDraggingSource(true);
+      }
       const point = locate(event.clientX, event.clientY);
       if (point !== null) props.onSourceChange(point);
       return;
@@ -545,7 +628,10 @@ export function MapCanvas(props: Props) {
     });
   };
   const finishPointer = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (sourcePointerRef.current === event.pointerId) {
+    if (longPressRef.current?.pointerId === event.pointerId) { window.clearTimeout(longPressRef.current.timer); longPressRef.current = null; }
+    touchPointsRef.current.delete(event.pointerId);
+    if (touchPointsRef.current.size < 2) pinchRef.current = null;
+    if (sourcePointerRef.current?.pointerId === event.pointerId) {
       sourcePointerRef.current = null;
       setDraggingSource(false);
     }
@@ -784,20 +870,44 @@ export function MapCanvas(props: Props) {
               transform: `rotate(${rotation}deg) scale(${rotationCoverScale})`,
             }}
           >
-            <div className="basemap-tile-layer" aria-hidden="true">
-              {tiles.map((tile) => (
+            <div className="offline-map-fallback" aria-hidden="true"><span>АВТОНОМНАЯ КООРДИНАТНАЯ ПОДЛОЖКА</span></div>
+            <OfflineBasemap center={mapCenter} zoom={tileZoom - 1} />
+            <div
+              className={`basemap-tile-layer${visibleRasterTiles.length > 0 ? " ready" : ""}`}
+              aria-hidden="true"
+              data-raster-status={visibleRasterTiles.length > 0 ? (rasterLayerReady ? "ready" : "stable") : "loading"}
+            >
+              {visibleRasterTiles.map((tile) => (
                 <img
-                  key={tile.key}
+                  key={`${props.basemap}:${tile.key}`}
                   alt=""
                   draggable={false}
-                  style={{
-                    left: `${(tile.x / viewWidth) * 100}%`,
-                    top: `${(tile.y / viewHeight) * 100}%`,
-                    width: `${((tile.width + 1) / viewWidth) * 100}%`,
-                    height: `${((tile.height + 1) / viewHeight) * 100}%`,
-                  }}
-                  crossOrigin="anonymous"
+                  style={rasterPosition(tile)}
                   src={mapTileUrl(props.basemap, tile.zoom, tile.tileX, tile.tileY)}
+                  crossOrigin="anonymous"
+                />
+              ))}
+            </div>
+            <div className="basemap-tile-preload" aria-hidden="true">
+              {tiles.map((tile) => (
+                <img
+                  key={`preload:${props.basemap}:${tile.key}`}
+                  alt=""
+                  draggable={false}
+                  src={mapTileUrl(props.basemap, tile.zoom, tile.tileX, tile.tileY)}
+                  crossOrigin="anonymous"
+                  onLoad={() => {
+                    const key = `${props.basemap}:${tile.key}`;
+                    setRasterTileStatus((current) => current[key] === "loaded"
+                      ? current
+                      : { ...current, [key]: "loaded" });
+                  }}
+                  onError={() => {
+                    const key = `${props.basemap}:${tile.key}`;
+                    setRasterTileStatus((current) => current[key] === "failed"
+                      ? current
+                      : { ...current, [key]: "failed" });
+                  }}
                 />
               ))}
             </div>
@@ -811,6 +921,7 @@ export function MapCanvas(props: Props) {
               onPointerMove={onPointerMove}
               onPointerUp={finishPointer}
               onPointerCancel={finishPointer}
+              onLostPointerCapture={finishPointer}
               onContextMenu={(event) => {
                 event.preventDefault();
                 const rect = stageRef.current?.getBoundingClientRect();
@@ -1104,6 +1215,7 @@ export function MapCanvas(props: Props) {
               })}
             </svg>
           </div>
+          {!online && <div className="offline-map-status">Без интернета · автономная карта доступна</div>}
           {contextMenu !== null && contextMenu.target === "map" && (
             <div
               className="map-context-menu add-control-menu"

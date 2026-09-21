@@ -36,7 +36,26 @@ export default defineConfig({
         orientation: 'any',
         icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }]
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,json,tsv,traineddata}'], maximumFileSizeToCacheInBytes: 6 * 1024 * 1024 }
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,json,tsv,traineddata,pmtiles}'],
+        // The autonomous Monchegorsk map is deliberately bundled as one
+        // PMTiles archive. It must be precached for the installed PWA and the
+        // Android WebView, otherwise the UI loads offline but the map does not.
+        maximumFileSizeToCacheInBytes: 30 * 1024 * 1024,
+        navigateFallback: 'index.html',
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/tile\.openstreetmap\.org\/.*$/u,
+            handler: 'CacheFirst',
+            options: { cacheName: 'himkontur-osm-tiles', expiration: { maxEntries: 900, maxAgeSeconds: 60 * 60 * 24 * 90 }, cacheableResponse: { statuses: [0, 200] } }
+          },
+          {
+            urlPattern: /^https:\/\/server\.arcgisonline\.com\/.*$/u,
+            handler: 'CacheFirst',
+            options: { cacheName: 'himkontur-esri-tiles', expiration: { maxEntries: 700, maxAgeSeconds: 60 * 60 * 24 * 90 }, cacheableResponse: { statuses: [0, 200] } }
+          }
+        ]
+      }
     })
   ],
   test: { environment: 'node', include: ['src/**/*.test.ts'] }

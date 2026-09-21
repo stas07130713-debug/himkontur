@@ -122,7 +122,7 @@ export async function prepareOcrCandidates(file: File): Promise<readonly OcrCand
     context.drawImage(bitmap, 0, 0, analysis.width, analysis.height);
     const detected = orangeRectangles(context.getImageData(0, 0, analysis.width, analysis.height));
     const rectangles = [...stackedPlacards(detected), ...detected].sort((left, right) => right.score - left.score).slice(0, 10).map((rectangle) => ({ ...rectangle, x: rectangle.x / analysisScale, y: rectangle.y / analysisScale, width: rectangle.width / analysisScale, height: rectangle.height / analysisScale }));
-    const candidates = rectangles.slice(0, 8).flatMap((rectangle, index) => {
+    const candidates = rectangles.slice(0, 6).flatMap((rectangle, index) => {
       const upper = { ...rectangle, height: rectangle.height * .48 };
       const lower = { ...rectangle, y: rectangle.y + rectangle.height * .52, height: rectangle.height * .48 };
       return [
@@ -133,14 +133,15 @@ export async function prepareOcrCandidates(file: File): Promise<readonly OcrCand
         cropCandidate(bitmap, rectangle, `оранжевая область ${index + 1}`, index, 'whole')
       ];
     });
-    const lowerCentre: Rectangle = { x: bitmap.width * .2, y: bitmap.height * .45, width: bitmap.width * .6, height: bitmap.height * .53, score: 0 };
-    candidates.push(cropCandidate(bitmap, lowerCentre, 'нижняя центральная часть', -1, 'fallback'));
-    candidates.push(cropCandidate(bitmap, lowerCentre, 'контрастная нижняя часть', -1, 'fallback', 0));
-    for (let row = 0; row < 2; row += 1) for (let column = 0; column < 3; column += 1) {
-      const tile: Rectangle = { x: bitmap.width * Math.max(0, column / 3 - .035), y: bitmap.height * Math.max(0, row / 2 - .045), width: bitmap.width * Math.min(.4, 1 - column / 3 + .035), height: bitmap.height * Math.min(.59, 1 - row / 2 + .045), score: 0 };
-      const region = -10 - row * 3 - column;
-      candidates.push(cropCandidate(bitmap, tile, `увеличенный участок ${row + 1}.${column + 1}`, region, 'fallback'));
-      candidates.push(cropCandidate(bitmap, tile, `контрастный участок ${row + 1}.${column + 1}`, region, 'fallback', 0));
+    if (rectangles.length === 0) {
+      const lowerCentre: Rectangle = { x: bitmap.width * .15, y: bitmap.height * .38, width: bitmap.width * .7, height: bitmap.height * .6, score: 0 };
+      candidates.push(cropCandidate(bitmap, lowerCentre, 'нижняя центральная часть', -1, 'fallback'));
+      candidates.push(cropCandidate(bitmap, lowerCentre, 'контрастная нижняя часть', -1, 'fallback', 0));
+      for (let row = 0; row < 2; row += 1) for (let column = 0; column < 3; column += 1) {
+        const tile: Rectangle = { x: bitmap.width * Math.max(0, column / 3 - .035), y: bitmap.height * Math.max(0, row / 2 - .045), width: bitmap.width * Math.min(.4, 1 - column / 3 + .035), height: bitmap.height * Math.min(.59, 1 - row / 2 + .045), score: 0 };
+        const region = -10 - row * 3 - column;
+        candidates.push(cropCandidate(bitmap, tile, `контрастный участок ${row + 1}.${column + 1}`, region, 'fallback', 0));
+      }
     }
     return candidates;
   } finally {

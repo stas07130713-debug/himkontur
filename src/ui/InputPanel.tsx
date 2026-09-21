@@ -114,14 +114,14 @@ export function InputPanel({ input, sourcePlaced, onChange, onFetchWeather, onMa
     </section>
 
     <section className={`input-section-card weather-section ${weather === null ? 'weather-origin-manual' : 'weather-origin-auto'}`}>
-      <div className="section-heading input-block-title"><h3><UiIcon name="weather"/>Метеоусловия</h3><span className="origin">{weather === null ? 'Введено вручную' : `Получено автоматически · ${weather.dataKind === 'archive' ? 'архив' : 'прогноз'}`}</span></div>
+      <div className="section-heading input-block-title"><h3><UiIcon name="weather"/>Метеоусловия</h3><span className="origin">{weather === null ? 'Вручную' : weather.dataKind === 'archive' ? 'Авто · архив' : 'Авто · прогноз'}</span></div>
       <p className="weather-location">{sourcePlaced ? `Точка источника: ${input.sourcePoint.latitude.toFixed(5)}° с.ш., ${input.sourcePoint.longitude.toFixed(5)}° в.д.` : 'Для получения погоды разместите источник на карте'}</p>
       <div className="weather-actions">
         <button type="button" className="secondary" onClick={onManualWeather}>Ввести вручную</button>
         <button type="button" onClick={onFetchWeather} disabled={weatherBusy || !sourcePlaced}>{weatherBusy ? 'Получение…' : 'Получить автоматически'}</button>
       </div>
       {weatherError !== null && <p className="weather-error">{weatherError}</p>}
-      {weather !== null && <p className="hint weather-observation">На {new Date(weather.observedAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })} · облачность {Math.round(weather.cloudCoverPercent)}%</p>}
+      {weather !== null && <p className="hint weather-observation">{new Date(weather.observedAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })} · облачность {Math.round(weather.cloudCoverPercent)}%</p>}
       <div className="field-grid weather-fields">
         <label>Температура, °C<input type="number" min="-60" max="60" step="0.01" value={displayNumber(input.temperatureC)} onChange={(event) => patch({ temperatureC: numberValue(event) })} /></label>
         <label>Ветер, м/с<input type="number" min="0.1" max="60" step="0.01" value={displayNumber(input.windSpeedMps)} onChange={(event) => patch({ windSpeedMps: numberValue(event) })} /></label>
@@ -132,7 +132,7 @@ export function InputPanel({ input, sourcePlaced, onChange, onFetchWeather, onMa
           </select>
         </label>
         <label>Точно, ° от севера<input type="number" min="0" max="359.99" step="0.01" value={displayNumber(input.windFromDegrees)} onChange={(event) => patch({ windFromDegrees: numberValue(event) })} /></label>
-        <label>Облачность (таблица В.1)
+        <label>Облачность
           <select value={input.cloudCoverPercent >= 80 ? 'overcast' : 'clear'} onChange={(event) => patch({ cloudCoverPercent: event.currentTarget.value === 'overcast' ? 100 : 0 })}>
             <option value="clear">Ясно / переменная</option>
             <option value="overcast">Сплошная</option>
@@ -144,7 +144,7 @@ export function InputPanel({ input, sourcePlaced, onChange, onFetchWeather, onMa
     </section>
 
     <section className="input-section-card forecast-section">
-      <div className="input-block-title forecast-title"><h3><UiIcon name="forecast"/>Время, прошедшее с момента аварии, для расчёта</h3></div>
+      <div className="input-block-title forecast-title"><h3><UiIcon name="forecast"/>Время после аварии для расчёта</h3></div>
       <fieldset className="forecast-offset">
         <legend>Через сколько после аварии</legend>
         <div><label>Часы<input aria-label="Часы прогноза" type="number" min="0" max="4" step="1" value={forecastHours} onChange={(event) => updateForecastHours(numberValue(event))} /></label><label>Минуты<input aria-label="Минуты прогноза" type="number" min="-1" max="60" step="1" value={forecastMinutes} onChange={(event) => updateForecastMinutes(numberValue(event))} /></label></div>

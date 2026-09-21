@@ -2,19 +2,19 @@ import html2canvas from 'html2canvas';
 
 const TILE_WAIT_MS = 10_000;
 
-function waitForImage(image: HTMLImageElement): Promise<void> {
-  if (image.complete && image.naturalWidth > 0) return Promise.resolve();
-  return new Promise((resolve, reject) => {
+function waitForImage(image: HTMLImageElement): Promise<boolean> {
+  if (image.complete) return Promise.resolve(image.naturalWidth > 0);
+  return new Promise((resolve) => {
     const cleanup = () => {
       window.clearTimeout(timeout);
       image.removeEventListener('load', loaded);
       image.removeEventListener('error', failed);
     };
-    const loaded = () => { cleanup(); resolve(); };
-    const failed = () => { cleanup(); reject(new Error('один из фрагментов подложки недоступен')); };
+    const loaded = () => { cleanup(); resolve(true); };
+    const failed = () => { cleanup(); resolve(false); };
     const timeout = window.setTimeout(() => {
       cleanup();
-      reject(new Error('подложка не успела загрузиться'));
+      resolve(false);
     }, TILE_WAIT_MS);
     image.addEventListener('load', loaded, { once: true });
     image.addEventListener('error', failed, { once: true });
@@ -66,32 +66,48 @@ function cropCanvas(source: HTMLCanvasElement, x: number, y: number, width: numb
 }
 
 export async function captureMapForReport(map: HTMLElement, sidePanel?: HTMLElement): Promise<string> {
-  const tiles = [...map.querySelectorAll<HTMLImageElement>('.basemap-tile-layer img')];
-  if (tiles.length === 0) throw new Error('подложка карты не найдена');
-  await Promise.all(tiles.map(waitForImage));
-  await document.fonts.ready;
-  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   const workspace = sidePanel?.closest<HTMLElement>('.workspace') ?? map;
-  const canvas = await html2canvas(workspace, {
-    backgroundColor: '#edf3f2',
-    scale: Math.min(2, Math.max(1.25, window.devicePixelRatio || 1)),
-    useCORS: true,
-    allowTaint: false,
-    logging: false,
-    removeContainer: true,
-    onclone: (documentClone) => {
-      documentClone.querySelectorAll('.map-context-menu').forEach((node) => node.remove());
-    }
-  });
-  await restoreSvgImages(workspace, canvas);
-  if (sidePanel === undefined) return canvas.toDataURL('image/png');
-  const workspaceRect = workspace.getBoundingClientRect();
-  const mapRect = map.getBoundingClientRect();
-  const sideRect = sidePanel.getBoundingClientRect();
-  const scale = canvas.width / Math.max(1, workspaceRect.width);
-  const left = Math.max(0, mapRect.left - workspaceRect.left);
-  const top = Math.max(0, Math.min(mapRect.top, sideRect.top) - workspaceRect.top);
-  const right = Math.min(workspaceRect.width, sideRect.right - workspaceRect.left);
-  const bottom = Math.min(workspaceRect.height, Math.max(mapRect.bottom, sideRect.bottom) - workspaceRect.top);
-  return cropCanvas(canvas, left * scale, top * scale, (right - left) * scale, (bottom - top) * scale).toDataURL('image/png');
+  const normalizeResponsiveLayout = sidePanel !== undefined && workspace.classList.contains('workspace');
+  if (normalizeResponsiveLayout) workspace.classList.add('report-capture-layout');
+  try {
+    // ResizeObserver and MapLibre both need a settled frame after the phone
+    // layout is temporarily normalized to the report's landscape geometry.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 250));
+    const tiles = [...map.querySelectorAll<HTMLImageElement>('.basemap-tile-layer img')];
+    // A report remains valid with the bundled vector basemap when raster
+    // imagery is unavailable. If a stable raster frame exists, wait for it.
+    await Promise.all(tiles.map(waitForImage));
+    await document.fonts.ready;
+    const canvas = await html2canvas(workspace, {
+      backgroundColor: '#edf3f2',
+      scale: Math.min(2, Math.max(1.25, window.devicePixelRatio || 1)),
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      removeContainer: true,
+      onclone: (documentClone) => {
+        documentClone.querySelectorAll('.map-context-menu, .basemap-tile-preload').forEach((node) => node.remove());
+        documentClone.querySelectorAll<HTMLButtonElement>('.result-actions button').forEach((button) => {
+          if (button.textContent?.includes('Формируется')) {
+            button.textContent = 'Сформировать отчёт';
+            button.disabled = false;
+          }
+        });
+      }
+    });
+    await restoreSvgImages(workspace, canvas);
+    if (sidePanel === undefined) return canvas.toDataURL('image/png');
+    const workspaceRect = workspace.getBoundingClientRect();
+    const mapRect = map.getBoundingClientRect();
+    const sideRect = sidePanel.getBoundingClientRect();
+    const scale = canvas.width / Math.max(1, workspaceRect.width);
+    const left = Math.max(0, mapRect.left - workspaceRect.left);
+    const top = Math.max(0, Math.min(mapRect.top, sideRect.top) - workspaceRect.top);
+    const right = Math.min(workspaceRect.width, sideRect.right - workspaceRect.left);
+    const bottom = Math.min(workspaceRect.height, Math.max(mapRect.bottom, sideRect.bottom) - workspaceRect.top);
+    return cropCanvas(canvas, left * scale, top * scale, (right - left) * scale, (bottom - top) * scale).toDataURL('image/png');
+  } finally {
+    if (normalizeResponsiveLayout) workspace.classList.remove('report-capture-layout');
+  }
 }

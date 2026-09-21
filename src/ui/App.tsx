@@ -26,10 +26,10 @@ import { SUBSTANCES } from "../core/reference-data";
 import { withAutomaticStability } from "../core/stability";
 import { BrandLogo } from "./BrandLogo";
 import { UiIcon } from "./UiIcon";
+import { MainTabIcon } from "./MainTabIcon";
 import { BuildingIcon } from "./BuildingIcon";
 import { evaluateControlPoint } from "../core/geo";
 import { round } from "../core/math";
-import { SUBSTANCE_PRESENTATION } from "./substance-display";
 import { MobileAccessDialog } from "./MobileAccessDialog";
 
 type Tab = "calculation" | "goods";
@@ -47,13 +47,14 @@ function message(error: unknown): string {
 }
 
 export function App() {
+  const isElectron = navigator.userAgent.includes("Electron");
   const [tab, setTab] = useState<Tab>("calculation");
   const [theme, setTheme] = useState<Theme>(() =>
     window.localStorage.getItem("himkontur-theme") === "dark"
       ? "dark"
       : "light",
   );
-  const [goodsQuery, setGoodsQuery] = useState("1017");
+  const [goodsQuery, setGoodsQuery] = useState("");
   const [input, setInput] = useState<CalculationInput>(DEFAULT_INPUT);
   const [source, setSource] = useState<SourceConfiguration>(DEFAULT_SOURCE);
   const [sourcePlaced, setSourcePlaced] = useState(true);
@@ -306,6 +307,10 @@ export function App() {
     if (calculation.result === null || verification === null || reportBusy)
       return;
     setReportBusy(true);
+    // Close the format chooser immediately. Large, map-rich PDF files may take
+    // several seconds to assemble; keeping the modal open looked like a failed
+    // click even though the file was being created correctly.
+    setReportOpen(false);
     try {
       const map = document.querySelector<HTMLElement>(".map-column");
       if (map === null) throw new Error("область карты не найдена");
@@ -314,15 +319,27 @@ export function App() {
         throw new Error("правая панель результатов не найдена");
       const { captureMapForReport } = await import("./map-report-capture");
       const mapImageDataUrl = await captureMapForReport(map, rightPanel);
+      const mapAspectRatio = await new Promise<number>((resolve, reject) => {
+        const capturedMap = new Image();
+        capturedMap.onload = () =>
+          resolve(
+            capturedMap.naturalWidth /
+              Math.max(1, capturedMap.naturalHeight),
+          );
+        capturedMap.onerror = () =>
+          reject(new Error("не удалось определить размер снимка карты"));
+        capturedMap.src = mapImageDataUrl;
+      });
       const context = {
         weatherSource:
           weather === null
             ? "введены пользователем вручную"
             : `получены автоматически из открытого сервиса ${weather.provider} (${weather.dataKind === "archive" ? "архивные почасовые данные" : "почасовой прогноз"}) для точки ${input.sourcePoint.latitude.toFixed(5)}° с.ш., ${input.sourcePoint.longitude.toFixed(5)}° в.д. на время происшествия ${new Date(weather.observedAt).toLocaleString("ru-RU")}`,
         mapImageDataUrl,
-        mapAspectRatio:
-          (map.clientWidth + rightPanel.clientWidth) /
-          Math.max(1, Math.max(map.clientHeight, rightPanel.clientHeight)),
+        // The capture is normalized to the same landscape composition on
+        // desktop and mobile. Use the actual image dimensions: after capture
+        // the live page has already returned to its responsive mobile layout.
+        mapAspectRatio,
       };
       const exporter = await import("./report-export");
       if (format === "pdf")
@@ -337,7 +354,6 @@ export function App() {
           verification,
           context,
         );
-      setReportOpen(false);
     } catch (error) {
       setNotice(
         `Отчёт не сформирован: не удалось получить точный снимок текущей карты (${message(error)}). Проверьте доступность подложки и повторите.`,
@@ -352,43 +368,44 @@ export function App() {
 
   return (
     <div className="app-shell" data-theme={theme}>
-      <header className="topbar">
+      <header className={`topbar${isElectron ? " electron-topbar" : ""}`}>
         <BrandLogo />
         <nav className="main-tabs">
           <button
             className={tab === "calculation" ? "active" : ""}
             onClick={() => setTab("calculation")}
           >
-            <UiIcon name="cloud" />
+            <MainTabIcon kind="plume" />
             Расчёт АХОВ
           </button>
           <button
             className={tab === "goods" ? "active" : ""}
-            onClick={() => setTab("goods")}
+            onClick={() => { setGoodsQuery(""); setTab("goods"); }}
           >
-            <UiIcon name="cargo" />
+            <MainTabIcon kind="placard" />
             Опасный груз
           </button>
         </nav>
         <div className="file-actions">
-          <button className="new-calculation" onClick={newCalculation}>
+          <button className="new-calculation" title="Новый расчёт" onClick={newCalculation}>
             <UiIcon name="new" />
-            Новый расчёт
+            <span className="action-label">Новый расчёт</span>
           </button>
-          <button onClick={() => openFileRef.current?.click()}>
+          <button title="Открыть расчёт" onClick={() => openFileRef.current?.click()}>
             <UiIcon name="open" />
-            Открыть расчёт
+            <span className="action-label">Открыть расчёт</span>
           </button>
-          <button onClick={() => void store()}>
+          <button title="Сохранить расчёт" onClick={() => void store()}>
             <UiIcon name="save" />
-            Сохранить расчёт
+            <span className="action-label">Сохранить расчёт</span>
           </button>
           <button
             className="mobile-access-action"
+            title="Показать QR-код"
+            aria-label="Показать QR-код мобильной версии"
             onClick={() => setMobileOpen(true)}
           >
-            <UiIcon name="mobile" />
-            Мобильная версия
+            <UiIcon name="qr" />
           </button>
           <button
             className="history-action"
@@ -440,18 +457,7 @@ export function App() {
         </div>
       </header>
       {tab === "goods" ? (
-        <DangerousGoodsPanel
-          initialQuery={goodsQuery}
-          onCalculateSubstance={(un) => {
-            const substance = SUBSTANCES.find(
-              (item) => SUBSTANCE_PRESENTATION[item.id]?.un === un,
-            );
-            if (substance === undefined) return;
-            setInput((current) => ({ ...current, substanceId: substance.id }));
-            setGoodsQuery(un);
-            setTab("calculation");
-          }}
-        />
+        <DangerousGoodsPanel initialQuery={goodsQuery} />
       ) : (
         <>
           <div className="workspace">
@@ -618,6 +624,7 @@ export function App() {
                 verification={verification}
                 error={calculation.error}
                 calculationStarted={calculationStarted}
+                reportBusy={reportBusy}
                 onOpenTrace={() => setTraceOpen(true)}
                 onOpenReport={() => setReportOpen(true)}
               />

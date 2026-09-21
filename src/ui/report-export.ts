@@ -75,8 +75,13 @@ function saveBlob(blob: Blob, name: string): void {
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = name;
+  anchor.style.display = 'none';
+  document.body.append(anchor);
   anchor.click();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+  anchor.remove();
+  // Electron starts the download asynchronously. Immediate revocation can
+  // cancel PDF/DOCX before the save operation obtains the blob.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 function imageBytes(dataUrl: string): Uint8Array {

@@ -7,6 +7,7 @@ const adr = JSON.parse(readFileSync(resolve('public/data/adr-2025-hazard-labels.
 const index = JSON.parse(readFileSync(resolve('public/data/emergency-cards/dangerous-goods-index-2026.json'), 'utf8'));
 const profiles = JSON.parse(readFileSync(resolve('public/data/emergency-cards/dangerous-goods-profiles-2026.json'), 'utf8'));
 const cardUns = new Set(index.map((item) => item.un));
+const adrUns = new Set(adr.rows.map((item) => item.un));
 const samples = new Map();
 for (const row of adr.rows) {
   if (!cardUns.has(row.un)) continue;
@@ -14,7 +15,7 @@ for (const row of adr.rows) {
 }
 samples.set('2.1', '1972');
 const representativeByCard = new Map();
-for (const item of index) if (!representativeByCard.has(item.emergencyCardNumber)) representativeByCard.set(item.emergencyCardNumber, item.un);
+for (const item of index) if (adrUns.has(item.un) && !representativeByCard.has(item.emergencyCardNumber)) representativeByCard.set(item.emergencyCardNumber, item.un);
 const targets = [...new Set([...representativeByCard.values(), ...profiles.map((profile) => profile.un), ...samples.values()])];
 const port = 9800 + Math.floor(Math.random() * 100);
 const delay = (ms) => new Promise((resolveDelay) => setTimeout(resolveDelay, ms));
@@ -55,7 +56,9 @@ try {
   await command('Runtime.enable');
   await delay(1800);
   await command('Runtime.evaluate', { expression: `(() => [...document.querySelectorAll('button')].find((button) => button.textContent?.includes('Опасный груз'))?.click())()` });
-  await delay(800);
+  // The offline databases are large and slower devices need time to parse them
+  // before the first search. Later records reuse the loaded repository.
+  await delay(3500);
 
   const problems = [];
   for (const theme of ['light', 'dark']) {
@@ -67,10 +70,11 @@ try {
         const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
         setter.call(input, '${un}');
         input.dispatchEvent(new Event('input', { bubbles: true }));
-        await wait(20);
+        await wait(45);
         document.querySelector('.goods-search-results button')?.click();
-        await wait(20);
+        await wait(45);
         const root = document.querySelector('.emergency-sheet-scroll');
+        if (!root) return { overflow: [], columnOverflow: false, missing: true };
         const nodes = [...root.querySelectorAll('h1,h2,h3,p,li,strong,small,em')];
         const overflow = nodes.filter((node) => node.clientWidth > 0 && node.scrollWidth > node.clientWidth + 1)
           .map((node) => ({ tag: node.tagName, cls: node.className, text: node.textContent.trim().slice(0, 100), client: node.clientWidth, scroll: node.scrollWidth }));
@@ -79,10 +83,14 @@ try {
         return { overflow, columnOverflow, title: root.querySelector('.goods-hero h1')?.textContent };
       })()`, awaitPromise: true, returnByValue: true });
       const value = result.result.value;
-      if (value.overflow.length || value.columnOverflow) problems.push({ theme, un, ...value });
+      if (value.missing || value.overflow.length || value.columnOverflow) problems.push({ theme, un, ...value });
       if (un === '1972') {
         const shot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
         writeFileSync(resolve('artifacts', `ui-methane-${theme}.png`), Buffer.from(shot.data, 'base64'));
+      }
+      if (un === '1824' && theme === 'dark') {
+        const shot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+        writeFileSync(resolve('artifacts', 'ui-class-8-dark.png'), Buffer.from(shot.data, 'base64'));
       }
     }
   }

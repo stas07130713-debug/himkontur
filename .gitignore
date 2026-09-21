@@ -2,6 +2,16 @@ node_modules/
 dist/
 release/
 build/.electron-data/
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/public/
 .edge-check/
+.edge-map-render/
+.edge-map-render2/
+artifacts/
+tmp/
 *.tsbuildinfo
 ui-*.png
+edge-*.png
+tile-*

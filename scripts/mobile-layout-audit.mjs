@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const pageUrl = process.argv[2] ?? 'http://127.0.0.1:4180/';
+const pageUrl = process.argv[2] ?? 'http://127.0.0.1:5173/';
 const port = 9980 + Math.floor(Math.random() * 15);
 const delay = (ms) => new Promise((done) => setTimeout(done, ms));
 const edge = spawn('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', [
@@ -42,7 +42,15 @@ try {
         mobileButton: visible('.mobile-access-action'),
         left: visible('.left-column'),
         map: visible('.map-column'),
-        right: visible('.right-column'),
+        right: visible('.right-column .results') && visible('.right-column .control-palette'),
+        mobileOrder: (() => {
+          const result = document.querySelector('.right-column .results');
+          const map = document.querySelector('.map-column');
+          const controls = document.querySelector('.right-column .control-palette');
+          if (!result || !map || !controls) return false;
+          const pageTop = (node) => node.getBoundingClientRect().top + scrollY;
+          return pageTop(result) < pageTop(map) && pageTop(map) < pageTop(controls);
+        })(),
         calculate: visible('.calculate-button'),
         mapTiles: [...document.querySelectorAll('.basemap-tile-layer img')].length,
         loadedMapTiles: [...document.querySelectorAll('.basemap-tile-layer img')].filter((image) => image.complete && image.naturalWidth > 0).length,
@@ -66,11 +74,11 @@ try {
       await evaluate(`document.querySelectorAll('.main-tabs button')[0]?.click()`);
     }
   }
-  const failures = cases.filter((item) => item.scrollWidth > item.viewport + 1 || !item.tabs || !item.mobileButton || !item.left || !item.map || !item.right || !item.calculate);
+  const failures = cases.filter((item) => item.scrollWidth > item.viewport + 1 || !item.tabs || !item.mobileButton || !item.left || !item.map || !item.right || !item.mobileOrder || !item.calculate);
   const report = { passed: failures.length === 0, cases, failures };
   writeFileSync(resolve('artifacts', 'mobile-layout-audit.json'), JSON.stringify(report, null, 2));
   if (failures.length) throw new Error(`Мобильная компоновка не прошла проверку: ${JSON.stringify(failures)}`);
-  console.log(`Мобильная компоновка проверена на ${cases.map((item) => `${item.width}×${item.height}`).join(' и ')}: горизонтального сдвига нет, вкладки, обе панели, карта и кнопка расчёта доступны.`);
+  console.log(`Мобильная компоновка проверена на ${cases.map((item) => `${item.width}×${item.height}`).join(' и ')}: горизонтального сдвига нет; после ввода следуют результаты, карта и контрольные точки.`);
   socket.close();
 } finally {
   edge.kill();

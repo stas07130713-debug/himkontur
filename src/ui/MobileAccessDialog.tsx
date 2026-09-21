@@ -64,7 +64,7 @@ export function MobileAccessDialog({ open, onClose }: Props) {
         <div className="mobile-dialog-heading">
           <span className="mobile-dialog-icon">▣</span>
           <div>
-            <h2 id="mobile-access-title">Мобильная версия</h2>
+            <h2 id="mobile-access-title">Поделиться QR-кодом</h2>
             <p>
               Откройте ХИМКОНТУР на телефоне и закрепите его как приложение.
             </p>

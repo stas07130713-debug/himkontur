@@ -6,11 +6,12 @@ type Props = Readonly<{
   verification: VerificationResult | null;
   error: string | null;
   calculationStarted: boolean;
+  reportBusy: boolean;
   onOpenTrace: () => void;
   onOpenReport: () => void;
 }>;
 
-export function ResultsPanel({ result, verification, error, calculationStarted, onOpenTrace, onOpenReport }: Props) {
+export function ResultsPanel({ result, verification, error, calculationStarted, reportBusy, onOpenTrace, onOpenReport }: Props) {
   if (error !== null) return <section className="result-error"><strong>Расчет не выполнен</strong><p>{error}</p></section>;
   if (result === null || verification === null) return calculationStarted ? null : <section className="results result-placeholder"><strong>Итоговый расчёт</strong><span>Заполните исходные данные и нажмите «Рассчитать».</span></section>;
   const evaporationMinutes = Number.isFinite(result.evaporationHours) ? Math.round(result.evaporationHours * 60) : null;
@@ -29,6 +30,6 @@ export function ResultsPanel({ result, verification, error, calculationStarted, 
       </div>
     </div>
     {result.warnings.map((warning) => <p className="warning" key={warning}>{warning}</p>)}
-    <div className="result-actions"><button type="button" onClick={onOpenTrace}>Проверить расчёт</button><button type="button" className="primary" onClick={onOpenReport}>Сформировать отчёт</button></div>
+    <div className="result-actions"><button type="button" onClick={onOpenTrace}>Проверить расчёт</button><button type="button" className="primary" disabled={reportBusy} onClick={onOpenReport}>{reportBusy ? 'Формируется…' : 'Сформировать отчёт'}</button></div>
   </section>;
 }

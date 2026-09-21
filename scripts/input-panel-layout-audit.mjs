@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const pageUrl = process.argv[2] ?? 'http://127.0.0.1:5178/';
+const pageUrl = process.argv[2] ?? 'http://127.0.0.1:5173/';
 const port = 9900 + Math.floor(Math.random() * 80);
 const delay = (ms) => new Promise((resolveDelay) => setTimeout(resolveDelay, ms));
 const edge = spawn('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', [
@@ -42,6 +42,8 @@ try {
   const evaluate = async (expression) => (await command('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true })).result.value;
   const labels = await evaluate(`(async () => {
     const wait = (ms) => new Promise((resolveWait) => setTimeout(resolveWait, ms));
+    [...document.querySelectorAll('.main-tabs button')].find((button) => button.textContent?.includes('Расчёт АХОВ'))?.click();
+    await wait(100);
     document.querySelector('.substance-picker-button')?.click();
     await wait(30);
     const values = [...document.querySelectorAll('.substance-options button')].map((button) => button.textContent?.trim() ?? '');
@@ -49,8 +51,9 @@ try {
     return values;
   })()`);
   const cases = [];
-  for (const height of [900, 1080]) {
-    await command('Emulation.setDeviceMetricsOverride', { width: 1920, height, deviceScaleFactor: 1, mobile: false });
+  const viewports = [{ width: 1366, height: 768 }, { width: 1440, height: 900 }, { width: 1440, height: 920 }, { width: 1440, height: 950 }, { width: 1600, height: 1000 }, { width: 1920, height: 1080 }];
+  for (const { width, height } of viewports) {
+    await command('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
     for (let index = 0; index < labels.length; index += 1) {
       const value = await evaluate(`(async () => {
         const wait = (ms) => new Promise((resolveWait) => setTimeout(resolveWait, ms));
@@ -68,6 +71,7 @@ try {
         const collapsed = { panelOverflowY: getComputedStyle(panel).overflowY, scrollOverflowY: getComputedStyle(scroll).overflowY,
           noScrollNeeded: scroll.scrollHeight <= scroll.clientHeight + 1,
           clientHeight: scroll.clientHeight, scrollHeight: scroll.scrollHeight,
+          cardHeights: [...scroll.querySelectorAll('.input-section-card')].map((card) => Math.round(card.getBoundingClientRect().height)),
           buttonVisible: button.getBoundingClientRect().bottom <= panel.getBoundingClientRect().bottom + 1,
           detailsCollapsed: details === null || !details.open };
         if (details) details.open = true;
@@ -78,11 +82,11 @@ try {
         if (details) details.open = false;
         return { collapsed, expanded };
       })()`);
-      cases.push({ height, substance: labels[index], ...value });
+      cases.push({ width, height, substance: labels[index], ...value });
     }
   }
-  const failures = cases.filter((item) => item.collapsed.panelOverflowY !== 'hidden' || item.collapsed.scrollOverflowY !== 'auto' || !item.collapsed.noScrollNeeded || !item.collapsed.buttonVisible || !item.collapsed.detailsCollapsed || item.expanded.panelOverflowY !== 'hidden' || item.expanded.scrollOverflowY !== 'auto' || !item.expanded.buttonReachable);
-  const result = { checked: cases.length, substances: labels.length, heights: [900, 1080], failures, passed: failures.length === 0 };
+  const failures = cases.filter((item) => item.collapsed.panelOverflowY !== 'hidden' || !['hidden', 'auto'].includes(item.collapsed.scrollOverflowY) || !item.collapsed.noScrollNeeded || !item.collapsed.buttonVisible || !item.collapsed.detailsCollapsed || item.expanded.panelOverflowY !== 'hidden' || item.expanded.scrollOverflowY !== 'auto' || !item.expanded.buttonReachable);
+  const result = { checked: cases.length, substances: labels.length, viewports, failures, passed: failures.length === 0 };
   mkdirSync(resolve('artifacts'), { recursive: true });
   writeFileSync(resolve('artifacts', 'input-panel-layout-audit.json'), JSON.stringify(result, null, 2));
   await command('Emulation.setDeviceMetricsOverride', { width: 1920, height: 1080, deviceScaleFactor: 1, mobile: false });
@@ -101,7 +105,7 @@ try {
   const expandedShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
   writeFileSync(resolve('artifacts', 'input-panel-ammonia-expanded.png'), Buffer.from(expandedShot.data, 'base64'));
   if (!result.passed) throw new Error(`Проверка левой панели не пройдена: ${JSON.stringify(result)}`);
-  console.log(`Левая панель: проверено ${result.checked} состояний (${result.substances} веществ × ${result.heights.length} высоты); свернутый режим помещается, раскрытый прокручивается, кнопка расчёта доступна.`);
+  console.log(`Левая панель: проверено ${result.checked} состояний (${result.substances} веществ × ${result.viewports.length} экрана); свернутый режим помещается, раскрытый прокручивается, кнопка расчёта доступна.`);
   socket.close();
 } finally {
   edge.kill();

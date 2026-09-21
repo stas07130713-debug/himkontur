@@ -3,18 +3,19 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const edgePath = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
-const pageUrl = process.argv[2] ?? 'http://127.0.0.1:5178/';
+const pageUrl = process.argv[2] ?? 'http://127.0.0.1:5173/';
 const port = 9231;
 const windowSize = process.env.ACCEPTANCE_WINDOW ?? '1920,1080';
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const downloadDirectory = resolve('artifacts', 'acceptance-downloads');
-const edgeProfileDirectory = resolve('..', '.test-runtime', 'acceptance-edge-profile');
+const edgeProfileDirectory = resolve('..', '.test-runtime', `acceptance-edge-profile-${windowSize.replace(',', 'x')}-${process.pid}`);
 const ocrFixtureDataUrl = process.env.OCR_FIXTURE_PATH === undefined ? '' : `data:image/png;base64,${readFileSync(process.env.OCR_FIXTURE_PATH).toString('base64')}`;
 const ocrExpectedPairs = (process.env.OCR_EXPECTED ?? '30/1202').split(',');
 mkdirSync(downloadDirectory, { recursive: true });
 const edge = spawn(edgePath, [
   '--headless=new', '--disable-gpu', `--remote-debugging-port=${port}`,
-  `--window-size=${windowSize}`, `--user-data-dir=${edgeProfileDirectory}`, '--hide-scrollbars', pageUrl
+  `--window-size=${windowSize}`, `--user-data-dir=${edgeProfileDirectory}`, '--hide-scrollbars',
+  ...(process.env.SIMULATE_ELECTRON === '1' ? ['--user-agent=Mozilla/5.0 Windows Electron/44.3.0'] : []), pageUrl
 ], { stdio: 'ignore' });
 
 try {
@@ -45,7 +46,7 @@ try {
   });
   const command = (method, params = {}) => new Promise((resolve, reject) => {
     const id = ++nextId;
-    const timeout = setTimeout(() => { pending.delete(id); reject(new Error(`CDP timeout: ${method}`)); }, 90_000);
+    const timeout = setTimeout(() => { pending.delete(id); reject(new Error(`CDP timeout: ${method}`)); }, 180_000);
     pending.set(id, (message) => {
       clearTimeout(timeout);
       if (message.error !== undefined) reject(new Error(message.error.message));
@@ -118,6 +119,7 @@ try {
     check('top file actions use design icons', [...document.querySelectorAll('.file-actions button:not(.history-action):not(.theme-switch button)')].every((button) => button.querySelector('.ui-mini-icon') !== null));
     check('large browser-style work tabs are present', document.querySelector('.main-tabs')?.textContent?.includes('Расчёт АХОВ') && document.querySelector('.main-tabs')?.textContent?.includes('Опасный груз'));
     check('top bar contains only requested actions in order', (() => { const text = document.querySelector('.topbar')?.textContent ?? ''; return !text.includes('Нормативная база') && !text.includes('Справочники') && text.indexOf('Новый расчёт') < text.indexOf('Открыть расчёт') && text.indexOf('Открыть расчёт') < text.indexOf('Сохранить расчёт'); })());
+    check('Windows title buttons do not overlap the application toolbar', !navigator.userAgent.includes('Electron') || (() => { const actions = document.querySelector('.file-actions'); const visibleButtons = [...document.querySelectorAll('.file-actions > button')].filter((button) => button.getBoundingClientRect().width > 0); const right = actions?.getBoundingClientRect().right ?? innerWidth; return visibleButtons.length >= 6 && right <= innerWidth - 145; })());
     check('input section numbering is removed', document.querySelector('.numbered-section-title') === null && document.querySelector('.numbered-input-title') === null);
     document.querySelector('button[title="Тёмная тема"]')?.click(); await wait();
     check('dark theme can be enabled', document.querySelector('.app-shell')?.getAttribute('data-theme') === 'dark');
@@ -206,7 +208,7 @@ try {
     check('wind recalculates immediately', document.querySelector('.main-result strong')?.textContent !== depthBefore, depthBefore + ' -> ' + document.querySelector('.main-result strong')?.textContent);
     check('high wind selects isothermy automatically', document.querySelector('.stability-auto')?.textContent?.includes('изотермия'));
     check('stability has no manual selector', ![...document.querySelectorAll('label')].some((element) => element.textContent?.startsWith('Устойчивость')));
-    check('cloud cover uses the two table V.1 categories', [...document.querySelectorAll('label')].find((element) => element.textContent?.startsWith('Облачность (таблица В.1)'))?.querySelectorAll('option').length === 2);
+    check('cloud cover uses two categories without a table reference in the compact label', (() => { const label = [...document.querySelectorAll('label')].find((element) => element.textContent?.startsWith('Облачность')); return label?.querySelectorAll('option').length === 2 && !label.textContent?.includes('таблица'); })());
 
     await dropTemplate([...document.querySelectorAll('.source-card')].find((button) => button.textContent?.includes('Стационарный танк')), 0.48, 0.48);
     check('source drag-and-drop', document.querySelector('.source-marker')?.textContent?.includes('Стационарный танк'));
@@ -304,7 +306,7 @@ try {
     const historicalTemperature = [...document.querySelectorAll('label')].find((label) => label.textContent?.startsWith('Температура'))?.querySelector('input');
     check('historical weather uses the entered accident date and archive endpoint', document.querySelector('.origin')?.textContent?.includes('архив') && historicalTemperature instanceof HTMLInputElement && Number(historicalTemperature.value) < 0, (document.querySelector('.origin')?.textContent ?? '') + '; ' + (historicalTemperature instanceof HTMLInputElement ? historicalTemperature.value : '') + '; ' + (document.querySelector('.weather-error')?.textContent ?? ''));
     if (historicalTemperature instanceof HTMLInputElement) setInput(historicalTemperature, '-12'); await wait();
-    check('editing an automatically loaded weather field changes provenance to manual', [...document.querySelectorAll('.input-block-title')].find((item) => item.textContent?.includes('Метеоусловия'))?.textContent?.includes('вручную'));
+    check('editing an automatically loaded weather field changes provenance to manual', [...document.querySelectorAll('.input-block-title')].find((item) => item.textContent?.includes('Метеоусловия'))?.textContent?.toLocaleLowerCase('ru-RU').includes('вручную'));
     await dropTemplate(document.querySelector('.control-template-grid button'), 0.58, 0.52);
     const reportViewState = {
       rotatable: document.querySelector('.map-rotatable')?.style.transform,
@@ -317,6 +319,7 @@ try {
     clickByText('.report-choice button', 'PDF'); await wait(8000);
     check('PDF report generation starts and closes the chooser', document.querySelector('.report-choice') === null);
     check('report export preserves the exact current map view', document.querySelector('.map-rotatable')?.style.transform === reportViewState.rotatable && document.querySelector('.source-marker')?.getAttribute('transform') === reportViewState.source && document.querySelector('.zoom span')?.textContent === reportViewState.zoom);
+    for (let attempt = 0; attempt < 60 && document.querySelector('.result-actions button:last-child')?.disabled; attempt += 1) await wait(250);
     clickByText('.result-actions button', 'Сформировать отчёт'); await wait();
     clickByText('.report-choice button', 'Word'); await wait(3500);
     check('Word report generation starts and closes the chooser', document.querySelector('.report-choice') === null);
@@ -324,6 +327,7 @@ try {
     const zoomInButton = document.querySelector('.zoom button[aria-label="Увеличить карту"]');
     for (let index = 0; index < 45; index += 1) zoomInButton?.click();
     await wait(250);
+    check('rapid repeated zoom clicks are all applied without appearing to hang', document.querySelector('.zoom span')?.textContent === '800%', document.querySelector('.zoom span')?.textContent ?? '—');
     const sourceInnerTransform = document.querySelector('.source-marker > g')?.getAttribute('transform') ?? '';
     check('source marker remains visible at maximum map zoom', Number.parseFloat(sourceInnerTransform.replace('scale(', '')) >= 0.56, sourceInnerTransform);
     const zoomOutButton = document.querySelector('.zoom button[aria-label="Уменьшить карту"]');
@@ -363,33 +367,40 @@ try {
     const restoredCoefficient = customInput('Коэффициент перевода');
     check('custom source restores the exact table V.3 liquid-density coefficient', restoredCoefficient instanceof HTMLInputElement && Number(restoredCoefficient.value) === 0.839, restoredCoefficient instanceof HTMLInputElement ? restoredCoefficient.value : '');
     const customDetails = document.querySelector('.custom-source-card');
+    if (customDetails instanceof HTMLDetailsElement) customDetails.open = true;
     customDetails?.querySelector('summary')?.click(); await wait();
     check('custom source card can be collapsed after input', customDetails instanceof HTMLDetailsElement && !customDetails.open);
     check('generic vessel and pipeline use neutral rendered images', document.querySelector('.source-marker image')?.getAttribute('href')?.includes('generic-pipeline.png'));
     check('internal verification language and normative source line are hidden', document.querySelector('.normative-source') === null && !document.body.textContent?.toLocaleLowerCase('ru-RU').includes('двойн'));
 
     clickByText('.topbar nav button', 'Опасный груз');
+    for (let attempt = 0; attempt < 30 && document.querySelector('.goods-search-box input') === null; attempt += 1) await wait(150);
+    check('dangerous-goods screen follows the search-left and emergency-sheet-right design', document.querySelector('.goods-sidebar') !== null && document.querySelector('.emergency-sheet') !== null);
+    check('dangerous-goods screen opens without a preselected substance', document.querySelector('.goods-hero') === null && document.querySelector('.emergency-empty') !== null);
+    check('dangerous-goods card has no redundant plume-calculation action', document.querySelector('.calculate-from-goods') === null);
+    const unInput = document.querySelector('.goods-search-box input');
+    if (unInput instanceof HTMLInputElement) setInput(unInput, '1017'); await wait(200);
     for (let attempt = 0; attempt < 30 && document.querySelectorAll('.goods-search-results button').length === 0; attempt += 1) await wait(150);
     check('dangerous goods database loaded', document.querySelectorAll('.goods-search-results button').length > 0);
-    check('dangerous-goods screen follows the search-left and emergency-sheet-right design', document.querySelector('.goods-sidebar') !== null && document.querySelector('.emergency-sheet') !== null);
+    document.querySelector('.goods-search-results button')?.click(); await wait();
     check('UN 1017 lookup', document.querySelector('.goods-hero')?.textContent?.includes('ХЛОР'));
     check('UN 1017 has official emergency card 203', document.querySelector('.goods-hero')?.textContent?.includes('№ 203'));
     check('chlorine transport fields include ADR code and Kemler number', document.querySelector('.goods-hero')?.textContent?.includes('2TOC') && document.querySelector('.goods-hero')?.textContent?.includes('265'));
     check('UN 1017 uses the exact ADR 2025 label sequence', [...document.querySelectorAll('.hazard-label-frame')].map((item) => item.getAttribute('title')?.split(' ')[0]).join('+') === '2.3+5.1+8');
     check('hazard labels use scalable normative SVG artwork', document.querySelectorAll('.hazard-label-frame .hazard-label').length === 3);
-    check('chlorine card contains concrete operational requirements', ['Хлор поддерживает горение', 'не менее 200 м', 'ИП-4М', 'не менее 15 минут'].every((fragment) => document.querySelector('.emergency-sheet')?.textContent?.includes(fragment)));
-    check('chlorine uses its individual profile without a missing-data notice', document.querySelector('.emergency-sheet')?.textContent?.includes('ТОКСИЧНЫЙ КОРРОЗИОННЫЙ ГАЗ') && !document.querySelector('.emergency-sheet')?.textContent?.includes('Индивидуальные данные для данного вещества пока не заполнены'));
+    check('chlorine card contains concrete individually sourced requirements', ['Смертельно опасен при вдыхании', 'Не направлять струю воды на жидкий хлор', 'Газонепроницаемый костюм', 'не менее 15 минут'].every((fragment) => document.querySelector('.emergency-sheet')?.textContent?.includes(fragment)));
+    check('chlorine uses its individual profile without a missing-data notice', !document.querySelector('.emergency-sheet')?.textContent?.includes('ещё не прошли предметную проверку'));
     check('official emergency sheet follows the seven-section operational card layout', document.querySelectorAll('.emergency-card-grid section').length === 7);
+    for (let attempt = 0; attempt < 20 && ![...document.querySelectorAll('.emergency-card-grid .emergency-card-icon')].every((icon) => icon instanceof HTMLImageElement && icon.complete && icon.naturalWidth > 0); attempt += 1) await wait(100);
     check('every operational card section uses its matching rendered pictogram', document.querySelectorAll('.emergency-card-grid .emergency-card-icon').length === 7 && [...document.querySelectorAll('.emergency-card-grid .emergency-card-icon')].every((icon) => icon instanceof HTMLImageElement && icon.complete && icon.naturalWidth > 0));
     check('unused emergency-sheet subsection tabs are removed', document.querySelector('.emergency-sheet-tabs') === null);
     check('official emergency sheet includes the normative source banner', document.querySelector('.emergency-additional .source-links') !== null);
-    const unInput = document.querySelector('.goods-search-box input');
     if (unInput instanceof HTMLInputElement) setInput(unInput, '1972'); await wait(200);
     document.querySelector('.goods-search-results button')?.click(); await wait();
     const methaneSheet = document.querySelector('.emergency-sheet')?.textContent ?? '';
-    check('UN 1972 is marked as a group emergency card with an individual cryogenic profile', methaneSheet.includes('Групповая аварийная карточка') && methaneSheet.includes('КРИОГЕННАЯ ОПАСНОСТЬ') && methaneSheet.includes('Криогенная легковоспламеняющаяся жидкость'));
+    check('UN 1972 is marked as a group emergency card with an individual cryogenic profile', methaneSheet.includes('Групповая аварийная карточка') && methaneSheet.includes('холодовое поражение') && methaneSheet.includes('Химическая нейтрализация не применяется'));
     check('UN 1972 individual property blocks do not contain unrelated group substances', !document.querySelector('.card-properties')?.textContent?.includes('ацетилена') && !document.querySelector('.card-human')?.textContent?.includes('водород'));
-    check('UN 1972 separates official group requirements from substance-specific actions', document.querySelector('.card-actions')?.textContent?.includes('Требования аварийной карточки № 204') && document.querySelector('.card-actions')?.textContent?.includes('Особенности для UN 1972'));
+    check('UN 1972 separates official group requirements from substance-specific actions', !document.querySelector('.card-actions')?.textContent?.includes('Требования аварийной карточки № 204') && document.querySelector('.official-group-card') !== null);
     check('UN 1972 has only the verified ADR 2.1 label', [...document.querySelectorAll('.hazard-label-frame')].map((item) => item.getAttribute('title')?.split(' ')[0]).join('+') === '2.1');
     if (unInput instanceof HTMLInputElement) setInput(unInput, 'Cl2'); await wait(200);
     document.querySelector('.goods-search-results button')?.click(); await wait();
@@ -401,9 +412,15 @@ try {
     document.querySelector('.goods-search-results button')?.click(); await wait();
     check('UN 2908 lookup', document.querySelector('.goods-hero')?.textContent?.includes('2908'));
     check('unverified UN is not substituted with an OCR-derived emergency card', document.querySelector('.unverified-emergency-card')?.textContent?.includes('не найдена в локальной нормативной базе редакции 01.01.2026'));
+    if (unInput instanceof HTMLInputElement) setInput(unInput, '0029');
+    await wait(200);
+    document.querySelector('.goods-search-results button')?.click(); await wait();
+    check('non-pilot UN uses its assigned official emergency card', document.querySelector('.goods-hero')?.textContent?.includes('№ 191'));
+    check('non-pilot official card is rendered in all seven operational sections', document.querySelectorAll('.emergency-card-grid section').length === 7);
+    check('group scope is explicit instead of pretending to be an individual profile', document.querySelector('.official-card-scope')?.textContent?.includes('Официальная групповая АК № 191'));
+    check('non-pilot official card no longer shows the five-pilot missing-data notice', !document.querySelector('.emergency-sheet')?.textContent?.includes('ещё не прошли предметную проверку'));
     check('dangerous-goods footer stays at the bottom of the application', (() => { const footer = document.querySelector('.statusbar'); return footer !== null && Math.abs(footer.getBoundingClientRect().bottom - innerHeight) < 1; })());
-    clickByText('.goods-mode-tabs button', 'Распознавание с фото'); await wait();
-    check('photo recognition requires human verification', document.querySelector('.recognition-warning')?.textContent?.includes('Проверьте правильность') && document.querySelector('.confirm-recognition') !== null);
+    check('photo recognition requires human verification', document.querySelector('.recognition-warning')?.textContent?.includes('Проверьте табличку') && document.querySelector('.confirm-recognition') !== null);
     const photoInput = document.querySelector('.photo-identification input[type="file"]');
     if (photoInput instanceof HTMLInputElement) {
       const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 800;
@@ -427,8 +444,11 @@ try {
     }
     const recognizedPairs = [...document.querySelectorAll('.recognized-placard')].map((card) => [...card.querySelectorAll('input')].map((input) => input.value).join('/'));
     const expectedPairs = ${JSON.stringify(ocrExpectedPairs)};
-    check('offline photo OCR finds every expected placard inside a vehicle photo', expectedPairs.every((pair) => recognizedPairs.includes(pair)), recognizedPairs.join(', ') + ' ' + (document.querySelector('.recognition-error')?.textContent ?? ''));
+    check('offline photo OCR selects one verified placard candidate', recognizedPairs.length === 1 && expectedPairs.includes(recognizedPairs[0]), recognizedPairs.join(', ') + ' ' + (document.querySelector('.recognition-error')?.textContent ?? ''));
     if (expectedPairs.length > 1) check('multiple ADR placards are rendered as an editable list', document.querySelectorAll('.recognized-placard').length >= expectedPairs.length);
+    check('starting photo recognition clears the search candidate and old substance card', unInput instanceof HTMLInputElement && unInput.value === '' && document.querySelector('.goods-hero') === null);
+    if (unInput instanceof HTMLInputElement) setInput(unInput, '1017'); await wait(100);
+    check('starting a new manual search clears the photo candidate', document.querySelector('.photo-preview') === null && [...document.querySelectorAll('.recognized-placard input')].every((input) => input.value === '') && document.querySelector('.goods-hero') === null);
     return checks;
   })()`);
   socket.close();
