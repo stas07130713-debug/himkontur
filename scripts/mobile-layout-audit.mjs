@@ -31,7 +31,7 @@ try {
   await delay(3000);
   mkdirSync(resolve('artifacts'), { recursive: true });
   const cases = [];
-  for (const size of [{ width: 390, height: 844 }, { width: 430, height: 932 }]) {
+  for (const size of [{ width: 390, height: 844 }, { width: 430, height: 932 }, { width: 844, height: 390 }]) {
     await command('Emulation.setDeviceMetricsOverride', { ...size, deviceScaleFactor: 1, mobile: true });
     await delay(800);
     const layout = await evaluate(`(() => {
@@ -79,12 +79,16 @@ try {
       writeFileSync(resolve('artifacts', 'mobile-dangerous-goods-390.png'), Buffer.from(goodsShot.data, 'base64'));
       await evaluate(`document.querySelectorAll('.main-tabs button')[0]?.click()`);
     }
+    if (size.width === 844) {
+      const shot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
+      writeFileSync(resolve('artifacts', 'mobile-calculation-landscape-844.png'), Buffer.from(shot.data, 'base64'));
+    }
   }
   const failures = cases.filter((item) => item.scrollWidth > item.viewport + 1 || !item.tabs || !item.mobileButton || !item.themeSwitch || !item.themeDoesNotOverlapTabs || !item.left || !item.map || !item.right || !item.mobileOrder || !item.calculate);
   const report = { passed: failures.length === 0, cases, failures };
   writeFileSync(resolve('artifacts', 'mobile-layout-audit.json'), JSON.stringify(report, null, 2));
   if (failures.length) throw new Error(`Мобильная компоновка не прошла проверку: ${JSON.stringify(failures)}`);
-  console.log(`Мобильная компоновка проверена на ${cases.map((item) => `${item.width}×${item.height}`).join(' и ')}: горизонтального сдвига нет; после ввода следуют результаты, карта и контрольные точки.`);
+  console.log(`Мобильная компоновка проверена на ${cases.map((item) => `${item.width}×${item.height}`).join(', ')}: горизонтального сдвига нет; после ввода следуют результаты, карта и контрольные точки.`);
   socket.close();
 } finally {
   edge.kill();

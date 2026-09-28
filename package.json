@@ -4,6 +4,7 @@
   "version": "0.2.1",
   "description": "Автономная система поддержки решений при химической аварии",
   "author": "Проект АХОВ",
+  "repository": "https://github.com/stas07130713-debug/himkontur.git",
   "main": "desktop/main.mjs",
   "type": "module",
   "scripts": {
@@ -16,20 +17,25 @@
     "test:mobile-layout": "node scripts/mobile-layout-audit.mjs",
     "test:watch": "vitest",
     "data:emergency-cards": "node scripts/build-structured-emergency-cards.mjs",
-    "data:complete-hazmat": "node scripts/build-complete-hazmat-database.mjs",
+    "data:workplace-pdk": "node scripts/build-workplace-pdk.mjs",
     "audit:card-coverage": "node scripts/audit-card-coverage.mjs",
+    "audit:workplace-pdk": "node --experimental-strip-types scripts/audit-workplace-pdk.mjs",
     "lint": "eslint . --max-warnings 0",
     "check": "npm run lint && npm run test && npm run build",
     "icon:generate": "electron scripts/generate-icon.mjs",
     "desktop:dir": "npm run build && npm run icon:generate && electron-builder --dir --win",
     "desktop:win": "npm run build && npm run icon:generate && electron-builder --win",
     "android:sync": "npm run build && cap sync android",
-    "android:apk": "npm run android:sync && cd android && gradlew.bat assembleDebug"
+    "android:apk": "npm run android:sync && cd android && gradlew.bat assembleDebug",
+    "release:check": "node scripts/check-release-version.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^8.5.1",
+    "@capacitor/filesystem": "^8.1.3",
+    "@capacitor/share": "^8.0.2",
     "@protomaps/basemaps": "^5.7.2",
     "docx": "^9.5.1",
+    "electron-updater": "^6.8.9",
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
     "maplibre-gl": "^6.9.1",
@@ -112,6 +118,12 @@
     },
     "portable": {
       "artifactName": "HIMKONTUR-${version}-${arch}-Portable.${ext}"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "stas07130713-debug",
+      "repo": "himkontur",
+      "releaseType": "release"
     }
   }
 }

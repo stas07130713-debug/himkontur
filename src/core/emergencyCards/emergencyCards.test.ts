@@ -23,36 +23,25 @@ const chlorineCard = database.cards[0];
 if (chlorineEntry === undefined || chlorineCard === undefined) throw new Error('Некорректная тестовая база.');
 
 describe('локальная база аварийных карточек', () => {
-  it('полная автономная база CAMEO/ERG покрывает каждый UN без пустых карточек', () => {
+  it('рабочая автономная база содержит только российские аварийные карточки', () => {
     const directory = resolve(process.cwd(), 'public/data/emergency-cards');
     const full: EmergencyCardsDatabase = {
-      index: [
-        ...(JSON.parse(readFileSync(resolve(directory, 'dangerous-goods-index-2026.json'), 'utf8')) as EmergencyCardsDatabase['index']),
-        ...(JSON.parse(readFileSync(resolve(directory, 'erg-dangerous-goods-index-2024.json'), 'utf8')) as EmergencyCardsDatabase['index']),
-      ],
-      cards: [
-        ...(JSON.parse(readFileSync(resolve(directory, 'emergency-cards-2026.json'), 'utf8')) as EmergencyCardsDatabase['cards']),
-        ...(JSON.parse(readFileSync(resolve(directory, 'erg-emergency-cards-2024.json'), 'utf8')) as EmergencyCardsDatabase['cards']),
-      ],
-      profiles: [
-        ...(JSON.parse(readFileSync(resolve(directory, 'dangerous-goods-profiles-2026.json'), 'utf8')) as NonNullable<EmergencyCardsDatabase['profiles']>),
-        ...(JSON.parse(readFileSync(resolve(directory, 'cameo-profiles-3.1.0.json'), 'utf8')) as NonNullable<EmergencyCardsDatabase['profiles']>),
-      ],
+      index: JSON.parse(readFileSync(resolve(directory, 'dangerous-goods-index-2026.json'), 'utf8')) as EmergencyCardsDatabase['index'],
+      cards: JSON.parse(readFileSync(resolve(directory, 'emergency-cards-2026.json'), 'utf8')) as EmergencyCardsDatabase['cards'],
+      profiles: [],
       meta: JSON.parse(readFileSync(resolve(directory, 'emergency-cards-meta.json'), 'utf8')) as EmergencyCardsDatabase['meta'],
     };
     const report = validateEmergencyCardsDatabase(full);
     expect(report.errors).toEqual([]);
-    expect(new Set(full.profiles?.map((profile) => profile.un)).size).toBe(2323);
-    const helium = full.profiles?.find((profile) => profile.un === '1963');
-    expect(JSON.stringify(helium)).toMatch(/обморож/iu);
-    expect(JSON.stringify(helium)).not.toMatch(/ещ[её] не прошли|сюда не подставляется/iu);
+    expect(full.cards.every((card) => /mintrans\.gov\.ru/iu.test(card.source.sourceUrl))).toBe(true);
+    expect(JSON.stringify(full.cards)).not.toMatch(/911|°F|Fahrenheit|ERG 2024|CAMEO|NOAA|NIOSH/iu);
   });
   it('рабочие JSON-файлы читаются и проходят валидацию без ошибок', () => {
     const directory = resolve(process.cwd(), 'public/data/emergency-cards');
     const actual: EmergencyCardsDatabase = {
       index: JSON.parse(readFileSync(resolve(directory, 'dangerous-goods-index-2026.json'), 'utf8')) as EmergencyCardsDatabase['index'],
       cards: JSON.parse(readFileSync(resolve(directory, 'emergency-cards-2026.json'), 'utf8')) as EmergencyCardsDatabase['cards'],
-      profiles: JSON.parse(readFileSync(resolve(directory, 'dangerous-goods-profiles-2026.json'), 'utf8')) as NonNullable<EmergencyCardsDatabase['profiles']>,
+      profiles: [],
       meta: JSON.parse(readFileSync(resolve(directory, 'emergency-cards-meta.json'), 'utf8')) as EmergencyCardsDatabase['meta'],
     };
     expect(validateEmergencyCardsDatabase(actual).errors).toEqual([]);
@@ -71,15 +60,14 @@ describe('локальная база аварийных карточек', () =
     const actual: EmergencyCardsDatabase = {
       index: JSON.parse(readFileSync(resolve(directory, 'dangerous-goods-index-2026.json'), 'utf8')) as EmergencyCardsDatabase['index'],
       cards: JSON.parse(readFileSync(resolve(directory, 'emergency-cards-2026.json'), 'utf8')) as EmergencyCardsDatabase['cards'],
-      profiles: JSON.parse(readFileSync(resolve(directory, 'dangerous-goods-profiles-2026.json'), 'utf8')) as NonNullable<EmergencyCardsDatabase['profiles']>,
+      profiles: [],
       meta: JSON.parse(readFileSync(resolve(directory, 'emergency-cards-meta.json'), 'utf8')) as EmergencyCardsDatabase['meta'],
     };
     const result = getEmergencyCardByUN(EmergencyCardRepository.fromDatabase(actual), '1972');
     expect(result?.cardNumber).toBe('204');
     expect(result?.cardType).toBe('group');
     expect(result?.cardUNNumbers.length).toBeGreaterThan(1);
-    expect(result?.profile?.hazardMarker).toBe('КРИОГЕННАЯ ОПАСНОСТЬ');
-    expect(result?.profile?.mainProperties.join(' ')).not.toMatch(/ацетилен|этилен|водород/iu);
+    expect(result?.profile).toBeUndefined();
     expect(result?.name).toMatch(/МЕТАН ОХЛАЖДЕННЫЙ ЖИДКИЙ/u);
     expect(result?.card.actions.fire).toMatch(/Не приближаться к емкостям/u);
   });
@@ -89,15 +77,14 @@ describe('локальная база аварийных карточек', () =
     const actual: EmergencyCardsDatabase = {
       index: JSON.parse(readFileSync(resolve(directory, 'dangerous-goods-index-2026.json'), 'utf8')) as EmergencyCardsDatabase['index'],
       cards: JSON.parse(readFileSync(resolve(directory, 'emergency-cards-2026.json'), 'utf8')) as EmergencyCardsDatabase['cards'],
-      profiles: JSON.parse(readFileSync(resolve(directory, 'dangerous-goods-profiles-2026.json'), 'utf8')) as NonNullable<EmergencyCardsDatabase['profiles']>,
+      profiles: [],
       meta: JSON.parse(readFileSync(resolve(directory, 'emergency-cards-meta.json'), 'utf8')) as EmergencyCardsDatabase['meta'],
     };
     const result = getEmergencyCardByUN(EmergencyCardRepository.fromDatabase(actual), '1824');
     expect(result?.cardNumber).toBe('809');
     expect(result?.cardType).toBe('group');
-    expect(result?.profile?.name).toBe('НАТРИЯ ГИДРОКСИДА РАСТВОР');
-    expect(JSON.stringify(result?.profile)).not.toMatch(/аммиак|нашатыр/iu);
-    expect(result?.profile?.mainProperties.join(' ')).toMatch(/сильная щелочь/iu);
+    expect(result?.profile).toBeUndefined();
+    expect(JSON.stringify(result)).not.toMatch(/NOAA|NIOSH|CAMEO|911|°F/iu);
   });
 
   it('предупреждает, если групповая карточка не имеет индивидуального профиля UN', () => {
@@ -114,7 +101,7 @@ describe('локальная база аварийных карточек', () =
     const actual: EmergencyCardsDatabase = {
       index: JSON.parse(readFileSync(resolve(directory, 'dangerous-goods-index-2026.json'), 'utf8')) as EmergencyCardsDatabase['index'],
       cards: JSON.parse(readFileSync(resolve(directory, 'emergency-cards-2026.json'), 'utf8')) as EmergencyCardsDatabase['cards'],
-      profiles: JSON.parse(readFileSync(resolve(directory, 'dangerous-goods-profiles-2026.json'), 'utf8')) as NonNullable<EmergencyCardsDatabase['profiles']>,
+      profiles: [],
       meta: JSON.parse(readFileSync(resolve(directory, 'emergency-cards-meta.json'), 'utf8')) as EmergencyCardsDatabase['meta'],
     };
     const repository = EmergencyCardRepository.fromDatabase(actual);

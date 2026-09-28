@@ -3,6 +3,9 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import { vfs } from 'pdfmake/build/vfs_fonts';
 import type { Content } from 'pdfmake/interfaces';
 import type { CalculationResult, VerificationResult } from '../core/types';
+import { Capacitor } from '@capacitor/core';
+import { Directory, Filesystem } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 pdfMake.vfs = vfs;
 
@@ -70,7 +73,37 @@ function summary(result: CalculationResult, context: ReportContext): string[] {
   ];
 }
 
-function saveBlob(blob: Blob, name: string): void {
+function blobAsBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error ?? new Error('Не удалось подготовить файл отчёта.'));
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') {
+        reject(new Error('Не удалось преобразовать файл отчёта.'));
+        return;
+      }
+      resolve(reader.result.split(',')[1] ?? '');
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function saveBlob(blob: Blob, name: string): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    const saved = await Filesystem.writeFile({
+      path: `reports/${name}`,
+      data: await blobAsBase64(blob),
+      directory: Directory.Cache,
+      recursive: true,
+    });
+    await Share.share({
+      title: 'Отчёт ХИМКОНТУР',
+      text: 'Сохранить или отправить сформированный отчёт',
+      url: saved.uri,
+      dialogTitle: 'Отчёт ХИМКОНТУР',
+    });
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
@@ -139,7 +172,7 @@ export async function exportCalculationPdf(result: CalculationResult, verificati
     content
   });
   const blob = await new Promise<Blob>((resolve) => pdf.getBlob(resolve));
-  saveBlob(blob, filename('pdf'));
+  await saveBlob(blob, filename('pdf'));
 }
 
 export async function exportCalculationWord(result: CalculationResult, verification: VerificationResult, context: ReportContext): Promise<void> {
@@ -194,5 +227,5 @@ export async function exportCalculationWord(result: CalculationResult, verificat
       { properties: { page: { size: { orientation: PageOrientation.LANDSCAPE }, margin: { top: 540, right: 540, bottom: 540, left: 540 } } }, children: appendix }
     ]
   }));
-  saveBlob(blob, filename('docx'));
+  await saveBlob(blob, filename('docx'));
 }

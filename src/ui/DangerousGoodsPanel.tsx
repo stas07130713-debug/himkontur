@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { getEmergencyCardByUN } from '../core/emergencyCards/emergencyCardLookup';
 import { EmergencyCardRepository } from '../core/emergencyCards/emergencyCardRepository';
 import { SUBSTANCES } from '../core/reference-data';
@@ -6,6 +6,9 @@ import { SUBSTANCE_PRESENTATION } from './substance-display';
 import { prepareOcrCandidates } from './photo-ocr';
 import { HazardLabel, type HazardLabelData } from './HazardLabel';
 import { getPublishedSubstanceByUN } from '../core/substances/substanceDataPipeline';
+import { OPERATIONAL_FACTS_CATALOG, type WaterCompatibility } from '../core/substances/operationalFactsCatalog';
+import { resolveWorkplacePdk, workplacePdkUnavailableText, type WorkplacePdkDatabase } from '../core/substances/workplacePdk';
+import { ADDITIONAL_FORMULA_BY_UN } from '../core/substances/transportFormulaCatalog';
 
 type DangerousGood = Readonly<{ description: string; un: string; className: string; classificationCode: string; hazardNumber: string; packingGroup: string; transportCategory: string; formula: string; hazardLabels: readonly HazardLabelData[] }>;
 type HazardLabelRow = Readonly<{ rowIndex: number; un: string; description: string; hazardLabels: readonly HazardLabelData[]; verificationStatus: 'verified-adr-2025' | 'not-matched-in-adr-2025' }>;
@@ -13,11 +16,24 @@ type HazardLabelDatabase = Readonly<{ rows: readonly HazardLabelRow[] }>;
 type Status = 'manual' | 'preliminary' | 'confirmed';
 type RecognizedPlacard = Readonly<{ id: number; hazard: string; un: string }>;
 
-const FORMULA_BY_UN = Object.values(SUBSTANCE_PRESENTATION).reduce<Record<string, string>>((result, item) => { if (item.un.length > 0 && result[item.un] === undefined) result[item.un] = item.formula; return result; }, {});
+const FORMULA_BY_UN = Object.values(SUBSTANCE_PRESENTATION).reduce<Record<string, string>>((result, item) => { if (item.un.length > 0 && result[item.un] === undefined) result[item.un] = item.formula; return result; }, { ...ADDITIONAL_FORMULA_BY_UN });
 const SEARCH_ALIASES_BY_UN = SUBSTANCES.reduce<Record<string, string>>((result, substance) => { const un = SUBSTANCE_PRESENTATION[substance.id]?.un; if (un !== undefined && un.length > 0) result[un] = `${result[un] ?? ''} ${substance.name}`; return result; }, {});
 const SUBSCRIPT_DIGITS: Readonly<Record<string, string>> = { '₀': '0', '₁': '1', '₂': '2', '₃': '3', '₄': '4', '₅': '5', '₆': '6', '₇': '7', '₈': '8', '₉': '9' };
+let emergencyRepositoryPromise: Promise<EmergencyCardRepository> | null = null;
+
+function loadEmergencyRepository(): Promise<EmergencyCardRepository> {
+  emergencyRepositoryPromise ??= EmergencyCardRepository.load().catch((error: unknown) => {
+    emergencyRepositoryPromise = null;
+    throw error;
+  });
+  return emergencyRepositoryPromise;
+}
 
 function normalized(value: string): string { return value.toLocaleLowerCase('ru-RU').replace(/[₀-₉]/gu, (character) => SUBSCRIPT_DIGITS[character] ?? character).replace(/ё/gu, 'е').replace(/[^a-zа-я0-9]+/gu, ''); }
+function displayFormula(value: string): string {
+  const subscripts: Readonly<Record<string, string>> = { '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉' };
+  return value.replace(/\s+/gu, '').replace(/\d/gu, (digit) => subscripts[digit] ?? digit);
+}
 function parseDatabase(text: string, labelDatabase: HazardLabelDatabase): readonly DangerousGood[] {
   const parsed = text.replace(/^\uFEFF/u, '').split(/\r?\n/u).slice(1).flatMap((line, rowIndex) => {
     const columns = line.split('\t');
@@ -26,7 +42,6 @@ function parseDatabase(text: string, labelDatabase: HazardLabelDatabase): readon
     if (description === undefined || un === undefined || !/^\d{4}$/u.test(un)) return [];
     const labels = labelDatabase.rows[rowIndex];
     const labelsMatch = labels?.rowIndex === rowIndex && labels.un === un && labels.description === description;
-    if (!labelsMatch || labels.hazardLabels.length === 0) console.warn(`[HAZMAT LABEL WARNING] UN ${un} has no verified hazard labels.`);
     return [{
       description, un,
       className: columns[2] ?? '', classificationCode: columns[3] ?? '', hazardNumber: columns[4] ?? '',
@@ -36,13 +51,50 @@ function parseDatabase(text: string, labelDatabase: HazardLabelDatabase): readon
   });
   return parsed.filter((item, index, all) => all.findIndex((candidate) => candidate.un === item.un && candidate.description === item.description && candidate.classificationCode === item.classificationCode && candidate.hazardNumber === item.hazardNumber) === index);
 }
-function sentences(value = ''): readonly string[] { return value.split(/(?<=[.!?])\s+/u).map((item) => item.trim()).filter((item) => item.length > 2); }
-function sourceText(value: string | null): string { const text = value?.trim(); return text === undefined || text.length === 0 ? 'Раздел не предусмотрен в опубликованной аварийной карточке.' : text; }
-function SourceList({ value }: Readonly<{ value: string | null }>) { const items = sentences(value ?? ''); return items.length > 1 ? <ul>{items.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul> : <p>{sourceText(value)}</p>; }
-function TextItems({ items }: Readonly<{ items: readonly string[] | undefined }>) { return items !== undefined && items.length > 0 ? <ul>{items.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul> : null; }
-function CardIcon({ name, alt }: Readonly<{ name: string; alt: string }>) { return <img className="emergency-card-icon" src={new URL(`assets/emergency-card-icons/${name}.png`, document.baseURI).href} alt={alt}/>; }
+function cleanEmergencyText(value = ''): string {
+  return value
+    .replace(/^.*(?:Руководств[ао]\s+ERG|CAMEO|NOAA|NIOSH|CHEMTREC|ПОЗВОНИТЕ\s+911).*$/gimu, '')
+    .replace(/\s*\(\s*-?\d+(?:[.,]\d+)?\s*°?F\s*\)/giu, '')
+    .replace(/-?\d+(?:[.,]\d+)?\s*°?F\b/giu, '')
+    .replace(/Если транспортная бумага\s+недоступен/giu, 'Если транспортный документ недоступен')
+    .replace(/в закрытых или закрытых помещениях/giu, 'в закрытых или плохо проветриваемых помещениях')
+    .replace(/\b([А-Яа-яЁё]{3,})\s+\1\b/giu, '$1')
+    .replace(/\s+/gu, ' ')
+    .trim();
+}
+function sentences(value = ''): readonly string[] { return cleanEmergencyText(value).split(/(?<=[.!?])\s+/u).map((item) => item.trim()).filter((item) => item.length > 2); }
+function DocumentParagraph({ label, value }: Readonly<{ label: string; value: string | null }>) {
+  const text = cleanEmergencyText(value ?? '');
+  return text.length > 0 ? <p><strong>{label}</strong> {text}</p> : null;
+}
 function ocrNumbers(text: string): readonly string[] { return [...new Set([...text.split(/\r?\n/u).map((line) => line.replace(/\D/gu, '')).filter((value) => /^\d{2,4}$/u.test(value)), ...(text.match(/\d{2,4}/gu) ?? [])])]; }
 function hazardDigits(value: string): string { return value.replace(/\D/gu, ''); }
+
+function transportPhysicalState(good: DangerousGood | null): string | undefined {
+  if (good === null) return undefined;
+  const name = good.description.toLocaleUpperCase('ru-RU').replace(/Ё/gu, 'Е');
+  if (good.className === '2') {
+    if (/ОХЛАЖДЕНН\w*\s+ЖИДК\w*|СЖИЖЕНН\w*\s+ПЕРЕОХЛАЖДЕНИ/iu.test(name)) return 'Охлаждённый сжиженный газ (криогенная жидкость)';
+    if (/СЖИЖЕНН/iu.test(name)) return 'Сжиженный газ под давлением';
+    if (/СЖАТ/iu.test(name)) return 'Сжатый газ под давлением';
+    if (/РАСТВОРЕНН/iu.test(name)) return 'Газ, растворённый под давлением';
+    if (/АДСОРБИРОВАНН/iu.test(name)) return 'Адсорбированный газ под давлением';
+    const transportForm = /^([1-8])/u.exec(good.classificationCode.trim())?.[1];
+    if (transportForm === '1') return 'Сжатый газ под давлением';
+    if (transportForm === '2') return 'Сжиженный газ под давлением';
+    if (transportForm === '3') return 'Охлаждённый сжиженный газ (криогенная жидкость)';
+    if (transportForm === '4') return 'Газ, растворённый под давлением';
+    if (transportForm === '5') return 'Аэрозоль';
+    if (transportForm === '7') return 'Адсорбированный газ под давлением';
+    if (transportForm === '8') return 'Химический продукт под давлением';
+    return 'Газ под давлением; точная форма перевозки определяется транспортным наименованием и тарой';
+  }
+  if (/РАСПЛАВЛЕНН/iu.test(name)) return 'Расплав (жидкое состояние при перевозке)';
+  if (/РАСТВОР/iu.test(name)) return 'Раствор (жидкость)';
+  if (good.className === '3') return 'Жидкость';
+  if (/^4(?:\.|$)/u.test(good.className)) return 'Твёрдое вещество или материал';
+  return undefined;
+}
 
 function derivedPrimaryLabel(good: DangerousGood): HazardLabelData | undefined {
   const className = good.className.trim();
@@ -61,11 +113,31 @@ function HazardSigns({ good }: Readonly<{ good: DangerousGood }>) {
   return <div className="hazard-signs" aria-label="Знаки опасности">{labels.map((label) => <HazardLabel label={label} key={`${label.code}-${label.primary ? 'primary' : 'subsidiary'}`}/>)}</div>;
 }
 
+function transportFireSummary(good: DangerousGood | null): string {
+  if (good === null) return '';
+  if (good.className === '2' && good.classificationCode.includes('F')) return 'Воспламеняющийся газ. Пожароопасные свойства подтверждены транспортным классом 2.1.';
+  if (good.className === '3') return 'Легковоспламеняющаяся жидкость. Пожароопасные свойства подтверждены транспортным классом 3.';
+  if (/^4(?:\.|$)/u.test(good.className)) return `Пожароопасный груз класса ${good.className}. Условия тушения уточняют по паспорту безопасности конкретного продукта.`;
+  if (good.className === '5.1') return 'Окисляющее вещество: может усиливать горение других материалов.';
+  return 'Отдельная характеристика горючести по транспортному классу не установлена.';
+}
+
+function transportChemicalHazardSummary(good: DangerousGood | null): string {
+  if (good === null) return '';
+  if (good.className === '2' && good.classificationCode.includes('T')) return 'Токсичный газ. Опасен при вдыхании.';
+  if (good.className === '6.1') return 'Токсичное вещество. Пути воздействия уточняют по паспорту безопасности конкретного продукта.';
+  if (good.className === '8') return 'Коррозионное вещество. Опасно при контакте с кожей и глазами.';
+  if (good.className === '5.1') return 'Окисляющее вещество. Опасно при контакте с горючими и восстановительными материалами.';
+  if (good.className === '4.3') return 'При соприкосновении с водой выделяет воспламеняющиеся газы.';
+  return `Опасность определяется транспортным классом ${good.className || 'не указан'} и паспортом безопасности конкретного продукта.`;
+}
+
 type Props = Readonly<{ initialQuery?: string }>;
 
 export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
   const [query, setQuery] = useState(initialQuery);
   const [database, setDatabase] = useState<readonly DangerousGood[]>([]);
+  const [workplacePdkDatabase, setWorkplacePdkDatabase] = useState<WorkplacePdkDatabase | null>(null);
   const [cardRepository, setCardRepository] = useState<EmergencyCardRepository | null>(null);
   const [selected, setSelected] = useState<DangerousGood | null>(null);
   const [status, setStatus] = useState<Status>('manual');
@@ -76,14 +148,24 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
   const [recognitionProgress, setRecognitionProgress] = useState(0);
   const [recognitionError, setRecognitionError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const cardLoadStarted = useRef(false);
 
-  useEffect(() => { const controller = new AbortController(); void Promise.all([
-    Promise.all([
+  useEffect(() => { const controller = new AbortController();
+    void Promise.all([
       fetch(new URL('data/dangerous-goods.tsv', document.baseURI), { signal: controller.signal }).then(async (response) => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.text(); }),
       fetch(new URL('data/adr-2025-hazard-labels.json', document.baseURI), { signal: controller.signal }).then(async (response) => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json() as Promise<HazardLabelDatabase>; }),
-    ]).then(([text, labels]) => parseDatabase(text, labels)),
-    EmergencyCardRepository.load(controller.signal)
-  ]).then(([goods, repository]) => { setDatabase(goods); setCardRepository(repository); }).catch((error: unknown) => { if (!controller.signal.aborted) setLoadError(error instanceof Error ? error.message : 'неизвестная ошибка'); }); return () => controller.abort(); }, []);
+      fetch(new URL('data/workplace-pdk-sanpin-1.2.3685-21.json', document.baseURI), { signal: controller.signal }).then(async (response) => { if (!response.ok) throw new Error(`HTTP ${response.status}`); return response.json() as Promise<WorkplacePdkDatabase>; }),
+    ]).then(([text, labels, pdkDatabase]) => { setDatabase(parseDatabase(text, labels)); setWorkplacePdkDatabase(pdkDatabase); }).catch((error: unknown) => { if (!controller.signal.aborted) setLoadError(error instanceof Error ? error.message : 'неизвестная ошибка'); });
+    return () => controller.abort();
+  }, []);
+  useEffect(() => {
+    if (cardRepository !== null || cardLoadStarted.current) return;
+    cardLoadStarted.current = true;
+    void loadEmergencyRepository().then(setCardRepository).catch((error: unknown) => {
+      cardLoadStarted.current = false;
+      setLoadError(error instanceof Error ? error.message : 'неизвестная ошибка');
+    });
+  }, [cardRepository]);
   useEffect(() => {
     if (initialQuery === '') { setSelected(null); return; }
     setQuery(initialQuery);
@@ -112,10 +194,10 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
     return database.map((item, index) => ({ item, index, score: score(item) })).filter((entry) => entry.score > 0).sort((left, right) => right.score - left.score || left.index - right.index).slice(0, 30).map((entry) => entry.item);
   }, [database, query]);
   const emergencyLookup = useMemo(() => selected === null || cardRepository === null ? undefined : getEmergencyCardByUN(cardRepository, selected.un, selected.description, selected.classificationCode), [cardRepository, selected]);
+  const cardRepositoryLoading = selected !== null && cardRepository === null && loadError === null;
   const officialCard = emergencyLookup?.card;
   const substanceProfile = emergencyLookup?.profile;
   const validatedRecord = selected === null ? undefined : getPublishedSubstanceByUN(selected.un);
-  const groupCard = emergencyLookup?.cardType === 'group';
   const chooseGood = (good: DangerousGood, nextStatus: Status = 'manual') => { setSelected(good); setStatus(nextStatus); };
   const clearPhotoIdentification = () => {
     setPreview(null);
@@ -218,19 +300,55 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
   const updatePlacard = (id: number, field: 'hazard' | 'un', value: string) => { setRecognizedPlacards((items) => items.map((item) => item.id === id ? { ...item, [field]: value } : item)); setSelected(null); setQuery(''); setStatus('preliminary'); setRecognitionError(null); };
   const dismissPlacard = (id: number) => setRecognizedPlacards((items) => items.filter((item) => item.id !== id));
   const confirmRecognition = (placard: RecognizedPlacard) => { const good = database.find((item) => item.un === placard.un && hazardDigits(item.hazardNumber) === placard.hazard); if (good !== undefined) { chooseGood(good, 'confirmed'); setQuery(''); } else setRecognitionError('Такая пара номера опасности и номера ООН отсутствует в автономном справочнике ADR. Проверьте обе строки таблички.'); };
-  // Independently verified substance data has priority. Until such a profile
-  // is available, the assigned official railway emergency card supplies the
-  // operational sections instead of leaving warning placeholders.
-  const officialCardAvailable = officialCard !== undefined;
-  const pilotEmergency = validatedRecord?.emergency;
-  const critical = pilotEmergency?.healthHazards.value?.slice(0, 3) ?? substanceProfile?.critical ?? (officialCardAvailable ? [...sentences(officialCard.humanHazard.description ?? '').slice(0, 1), ...sentences(officialCard.actions.general ?? '').slice(0, 3)] : []);
-  const exposureRoutes = pilotEmergency?.exposureRoutes.value ?? substanceProfile?.exposureRoutes ?? (officialCardAvailable ? [officialCard.humanHazard.exposureRoutes.inhalation && 'при вдыхании', officialCard.humanHazard.exposureRoutes.ingestion && 'при проглатывании', officialCard.humanHazard.exposureRoutes.skin && 'при попадании на кожу', officialCard.humanHazard.exposureRoutes.eyes && 'при попадании в глаза'].filter((item): item is string => item !== false) : []);
-  const officialActionItems = officialCardAvailable ? sentences([
-    officialCard.actions.general,
-    officialCard.actions.leakOrSpill,
-    officialCard.actions.fire,
-  ].filter(Boolean).join(' ')) : [];
-  const criticalItems = critical.length > 0 ? critical : officialActionItems.slice(0, 3);
+  const propertyItems = validatedRecord?.emergency.mainProperties.value ?? substanceProfile?.mainProperties ?? sentences(officialCard?.mainProperties ?? '');
+  const fireItems = validatedRecord?.emergency.fireExplosionHazards.value ?? substanceProfile?.fireExplosionHazard ?? sentences(officialCard?.fireExplosionHazard ?? '');
+  const healthItems = validatedRecord?.emergency.healthHazards.value ?? substanceProfile?.humanHazard ?? sentences([officialCard?.humanHazard.description, officialCard?.humanHazard.symptoms].filter(Boolean).join(' '));
+  const declaredFormula = validatedRecord?.chemical.formula.value ?? selected?.formula ?? '';
+  const mixture = /смесь|н\.\s*у\.\s*к\./iu.test(selected?.description ?? '');
+  const physicalState = transportPhysicalState(selected) ?? validatedRecord?.productForm.physicalForm.value ?? propertyItems[0]
+    ?? (selected?.className === '2' ? 'Газ под давлением' : selected?.className === '3' ? 'Жидкость' : /^4(?:\.|$)/u.test(selected?.className ?? '') ? 'Твёрдое вещество' : 'Уточняется по паспорту безопасности конкретного продукта');
+  const pdkSentence = [...propertyItems, ...(substanceProfile?.ppe ?? []), ...sentences(officialCard?.ppe.respiratory ?? '')].find((item) => /ПДК\s*(?:[=:—-]\s*)?\d+(?:[.,]\d+)?\s*(?:мг|г)\s*\/\s*м/iu.test(item));
+  // A group emergency card may contain water restrictions that apply only to
+  // one of its many UN entries (card 801 is a representative example). Such a
+  // sentence must never be promoted to an individual substance fact. Only an
+  // explicitly verified catalog entry or the transport class 4.3 can define
+  // water compatibility here.
+  const waterWarning = selected?.className === '4.3'
+    ? 'Применение воды непосредственно к веществу опасно: при контакте выделяются воспламеняющиеся газы.'
+    : undefined;
+  const derivedWaterCompatibility: WaterCompatibility = waterWarning === undefined ? 'not-stated'
+    : /не применять воду|реагирует с водой|водой разлагается/iu.test(waterWarning) ? 'prohibited'
+      : /не направлять|не допускать/iu.test(waterWarning) ? 'restricted' : 'not-stated';
+  const derivedWaterLabel = derivedWaterCompatibility === 'prohibited' ? 'Применение воды опасно'
+    : derivedWaterCompatibility === 'restricted' ? 'Ограниченно совместимо'
+      : 'Сведения не приведены';
+  const operationalFacts = selected === null ? undefined : OPERATIONAL_FACTS_CATALOG[selected.un];
+  const pdkResolution = selected === null || workplacePdkDatabase === null ? undefined : resolveWorkplacePdk(workplacePdkDatabase.rows, selected.description, declaredFormula);
+  const formula = displayFormula(declaredFormula.length > 0 ? declaredFormula : (pdkResolution?.row.formula ?? ''));
+  const pdkValue = operationalFacts?.workplacePdk.value
+    ?? pdkResolution?.displayValue
+    ?? (pdkSentence === undefined ? workplacePdkUnavailableText(selected?.description ?? '') : cleanEmergencyText(pdkSentence));
+  const pdkSourceUrl = operationalFacts?.workplacePdk.sourceUrl ?? workplacePdkDatabase?.consolidatedSourceUrl;
+  const pdkSource = operationalFacts?.workplacePdk.source ?? (pdkResolution === undefined
+    ? workplacePdkDatabase === null ? undefined : `Проверено по ${workplacePdkDatabase.regulation}, таблица 2.1`
+    : `${workplacePdkDatabase?.regulation}, строка ${pdkResolution.row.rowNumber}`);
+  const conciseChemicalHazard = healthItems
+    .filter((item) => !/(?:мг|г)\s*\/\s*кг|летальн\w*\s+доз|LD\s*50|LC\s*50/iu.test(item))
+    .slice(0, 2)
+    .join(' ');
+  const fireSummary = cleanEmergencyText(fireItems.slice(0, 2).join(' ')) || transportFireSummary(selected);
+  const chemicalHazardSummary = cleanEmergencyText(conciseChemicalHazard) || transportChemicalHazardSummary(selected);
+  const factsSection = selected === null ? null : <section className="substance-facts" aria-label="Основная информация о веществе">
+    <h2>Важно: основные характеристики вещества</h2>
+    <dl>
+      <div className="substance-fact-card fact-formula"><img className="fact-icon" src="./assets/operational-facts/chemical-formula.png" alt="" /><dt>Химическая формула</dt><dd><strong className="fact-value fact-value-primary">{formula || (mixture ? 'Индивидуальная формула неприменима: смесь веществ' : 'Для транспортной позиции не установлена')}</strong></dd></div>
+      <div className="substance-fact-card fact-state"><img className="fact-icon" src="./assets/operational-facts/aggregate-state.png" alt="" /><dt>Агрегатное состояние</dt><dd><strong className="fact-value fact-value-primary">{cleanEmergencyText(physicalState)}</strong></dd></div>
+      <div className="substance-fact-card fact-pdk"><img className="fact-icon" src="./assets/operational-facts/workplace-pdk.png" alt="" /><dt>ПДК в воздухе рабочей зоны</dt><dd><strong className="fact-value fact-value-primary">{pdkValue}</strong>{pdkSourceUrl !== undefined && pdkSource !== undefined && <a className="fact-source" href={pdkSourceUrl} target="_blank" rel="noreferrer">{pdkSource}</a>}</dd></div>
+      <div className={`substance-fact-card fact-water water-${operationalFacts?.water.compatibility ?? derivedWaterCompatibility}`}><img className="fact-icon" src="./assets/operational-facts/water-compatibility.png" alt="" /><dt>Совместимость с водой</dt><dd>{operationalFacts !== undefined ? <><strong className="water-status">{operationalFacts.water.label}</strong><strong className="fact-value">{operationalFacts.water.description}</strong><a className="fact-source" href={operationalFacts.water.sourceUrl} target="_blank" rel="noreferrer">Источник: {operationalFacts.water.source}</a></> : <><strong className="water-status">{derivedWaterLabel}</strong><strong className="fact-value">{cleanEmergencyText(waterWarning) || 'В российских нормативных данных отдельное указание для этой позиции не найдено; применяйте паспорт безопасности конкретного продукта.'}</strong></>}</dd></div>
+      <div className="substance-fact-card fact-fire"><img className="fact-icon" src="./assets/operational-facts/combustibility.png" alt="" /><dt>Горючесть</dt><dd><strong className="fact-value">{fireSummary}</strong></dd></div>
+      <div className="substance-fact-card fact-chemical"><img className="fact-icon" src="./assets/operational-facts/chemical-hazard.png" alt="" /><dt>Химическая опасность</dt><dd><strong className="fact-value">{chemicalHazardSummary}</strong></dd></div>
+    </dl>
+  </section>;
 
   return <main className="goods-page emergency-workspace">
     <aside className="goods-sidebar panel">
@@ -240,7 +358,7 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
           <h2>Или распознайте табличку по фотографии</h2>
           <label className="photo-click-target">
             {preview === null ? <div className="photo-placeholder"><b>Нажмите сюда</b><span>Сделать снимок или выбрать фотографию</span></div> : <><img className="photo-preview" src={preview} alt="Исходная фотография маркировки"/><span className="photo-change-hint">Нажмите, чтобы заменить фотографию</span></>}
-            <input type="file" accept="image/*" capture="environment" onChange={(event) => void selectPhoto(event)}/>
+            <input type="file" accept="image/*" onChange={(event) => void selectPhoto(event)}/>
           </label>
           <h2>Распознанная табличка</h2>
           {recognizing && <div className="recognition-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={recognitionProgress}><div><i style={{ width: `${recognitionProgress}%` }}/></div><span>{recognitionStage || 'Распознавание маркировки'} · {recognitionProgress}%</span></div>}
@@ -262,24 +380,27 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
       {selected === null ? <div className="emergency-empty"><h2>Выберите опасный груз</h2><p>Найдите его по названию, номеру ООН, химической формуле или номеру опасности.</p></div> : <>
         <header className={`identification-status ${status}`}><strong>{status === 'manual' ? '✓ Выбрано из автономного справочника' : status === 'confirmed' ? '✓ Маркировка подтверждена пользователем' : '● Предварительно распознано'}</strong><span>{new Date().toLocaleString('ru-RU')}</span></header>
         <div className="emergency-sheet-scroll">
-          <section className="goods-hero"><div className="goods-formula-large">UN</div><div><h1>{substanceProfile?.name ?? selected.description}</h1>{substanceProfile !== undefined && substanceProfile.aliases.length > 0 && <small className="goods-alias">Также: {substanceProfile.aliases.join('; ')}</small>}<strong>UN {selected.un}</strong><p>Класс: <b>{selected.className === '2' && selected.classificationCode.includes('T') ? '2.3' : selected.className || '—'}</b> <span>Классификационный код: <b>{selected.classificationCode || '—'}</b></span></p><p>№ опасности (Кемлера): <b>{selected.hazardNumber || '—'}</b> <span>Группа упаковки: <b>{selected.packingGroup || '—'}</b></span></p></div><HazardSigns good={selected}/><aside><span>Аварийная карточка</span><strong>№ {officialCard?.cardNumber ?? '—'}</strong>{groupCard && <em className="group-card-label" title={`Карточка № ${officialCard?.cardNumber ?? '—'} применяется к группе опасных грузов. Характеристики конкретного вещества отображаются отдельно.`}>Групповая аварийная карточка</em>}<small>{officialCard === undefined ? 'Не найдена в проверенной локальной базе' : `Редакция: ${officialCard.source.revision}`}</small></aside></section>
-          {officialCard === undefined ? <section className="unverified-emergency-card"><h2>Для UN {selected.un} аварийная карточка не найдена в локальной нормативной базе редакции 01.01.2026</h2><p>Оперативные рекомендации не формируются и не подменяются сведениями похожего вещества. Проверьте груз по наименованию.</p></section> : <>
-            {groupCard && <section className="official-card-scope"><strong>Официальная групповая АК № {officialCard.cardNumber}</strong><span>Назначена грузу UN {selected.un}. Рабочие разделы ниже заполнены сведениями этой аварийной карточки; проверенные сведения конкретного вещества имеют приоритет.</span></section>}
-            <section className="critical-actions"><h2>! Критически важно</h2><ul>{criticalItems.map((item) => <li key={item}>{item}</li>)}</ul></section>
-            <div className="emergency-sections emergency-card-grid">
-              <section className="card-properties"><header><CardIcon name="properties" alt="Лабораторная колба"/><b>01</b><h2>Основные свойства</h2></header><div><TextItems items={pilotEmergency?.mainProperties.value ?? substanceProfile?.mainProperties ?? sentences(officialCard.mainProperties ?? '')}/></div></section>
-              <section className="card-fire"><header><CardIcon name="fire" alt="Пламя"/><b>02</b><h2>Пожаро- и взрывоопасность</h2></header><div><TextItems items={pilotEmergency?.fireExplosionHazards.value ?? substanceProfile?.fireExplosionHazard ?? sentences(officialCard.fireExplosionHazard ?? '')}/></div></section>
-              <section className="card-human"><header><CardIcon name="human-hazard" alt="Опасность для человека"/><b>03</b><h2>Опасность для человека</h2></header><div>{substanceProfile?.hazardMarker && <strong className="specific-hazard-marker">{substanceProfile.hazardMarker}</strong>}<div className="human-hazard-columns"><div><h3>Опасен при:</h3>{exposureRoutes.length > 0 ? <ul className="exposure-routes">{exposureRoutes.map((route) => <li key={route}>☑ {route}</li>)}</ul> : <p>Пути воздействия приведены в описании опасности.</p>}</div><div><h3>Основные проявления:</h3><TextItems items={pilotEmergency?.healthHazards.value ?? substanceProfile?.humanHazard ?? sentences([officialCard.humanHazard.description, officialCard.humanHazard.symptoms].filter(Boolean).join(' '))}/></div></div></div></section>
-              <section className="card-ppe"><header><CardIcon name="ppe" alt="Средства индивидуальной защиты"/><b>04</b><h2>Средства индивидуальной защиты</h2></header><div><TextItems items={pilotEmergency?.ppe.value ?? substanceProfile?.ppe ?? sentences([officialCard.ppe.respiratory, officialCard.ppe.skin, officialCard.ppe.eyes, officialCard.ppe.other].filter(Boolean).join(' '))}/>{substanceProfile?.ppeWarning && <p className="ppe-warning">{substanceProfile.ppeWarning}</p>}</div></section>
-              <section className="card-actions"><header><CardIcon name="actions" alt="Необходимые действия"/><b>05</b><h2>Необходимые действия</h2></header><div>{pilotEmergency?.emergencyActions.value !== null && pilotEmergency?.emergencyActions.value !== undefined ? <TextItems items={pilotEmergency.emergencyActions.value}/> : <>{substanceProfile?.specificActions !== undefined && substanceProfile.specificActions.length > 0 && <><h3>Особенности для UN {selected.un}</h3><TextItems items={substanceProfile.specificActions}/></>}<h3>{groupCard ? `Требования назначенной аварийной карточки № ${officialCard.cardNumber}` : `Требования аварийной карточки № ${officialCard.cardNumber}`}</h3><SourceList value={officialCard.actions.general}/><SourceList value={officialCard.actions.leakOrSpill}/><SourceList value={officialCard.actions.fire}/></>}</div></section>
-              <div className="emergency-card-stack">
-                <section className="card-neutralization"><header><CardIcon name="neutralization" alt="Локализация последствий"/><b>06</b><h2>Локализация и устранение последствий</h2></header><div><TextItems items={pilotEmergency?.consequenceControl.value?.actions ?? substanceProfile?.responseActions ?? sentences(officialCard.neutralization ?? officialCard.actions.leakOrSpill ?? '')}/></div></section>
-                <section className="card-first-aid"><header><CardIcon name="first-aid" alt="Первая помощь"/><b>07</b><h2>Меры первой помощи</h2></header><div><TextItems items={pilotEmergency?.firstAid.value ?? substanceProfile?.firstAid ?? sentences(officialCard.firstAid ?? '')}/></div></section>
+          <section className="goods-hero"><div className="goods-formula-large">UN</div><div><h1>{substanceProfile?.name ?? selected.description}</h1>{substanceProfile !== undefined && substanceProfile.aliases.length > 0 && <small className="goods-alias">Также: {substanceProfile.aliases.join('; ')}</small>}<strong>UN {selected.un}</strong><p>Класс: <b>{selected.className === '2' && selected.classificationCode.includes('T') ? '2.3' : selected.className || '—'}</b> <span>Классификационный код: <b>{selected.classificationCode || '—'}</b></span></p><p>№ опасности (Кемлера): <b>{selected.hazardNumber || '—'}</b> <span>Группа упаковки: <b>{selected.packingGroup || '—'}</b></span></p></div><HazardSigns good={selected}/><aside><span>Аварийная карточка</span><strong>{cardRepositoryLoading ? 'Загрузка…' : `№ ${officialCard?.cardNumber ?? '—'}`}</strong><small>{cardRepositoryLoading ? 'Российская нормативная база' : officialCard === undefined ? 'Не найдена в российской нормативной базе' : `Редакция: ${officialCard.source.revision}`}</small></aside></section>
+          {factsSection}
+          {cardRepositoryLoading ? <section className="emergency-card-loading" aria-live="polite"><span/><p>Загружается российская аварийная карточка…</p></section> : officialCard === undefined ? <section className="unverified-emergency-card"><h2>Для UN {selected.un} российская аварийная карточка не найдена</h2><p>Паспорт основных характеристик выше сформирован по доступным российским нормативным данным и транспортной классификации. Оперативный текст отсутствующей АК не заменяется текстом другого вещества.</p></section> : <>
+            <section className="official-card-document" aria-label={`Проверенные сведения для UN ${selected.un}`}>
+              <header><div><span>Проверенные сведения о веществе</span><h2>UN {selected.un} — {substanceProfile?.name ?? selected.description}</h2></div><strong>Российская аварийная карточка № {officialCard.cardNumber}</strong></header>
+              <div className="official-card-text">
+                <h3>Основные свойства и виды опасности</h3>
+                <DocumentParagraph label="Основные свойства." value={propertyItems.join(' ')}/>
+                <DocumentParagraph label="Пожаро- и взрывоопасность." value={fireItems.join(' ')}/>
+                <DocumentParagraph label="Опасность для человека." value={healthItems.join(' ')}/>
+                <h3>Средства индивидуальной защиты</h3>
+                <DocumentParagraph label="СИЗ." value={(validatedRecord?.emergency.ppe.value ?? substanceProfile?.ppe ?? [officialCard.ppe.respiratory, officialCard.ppe.skin, officialCard.ppe.eyes, officialCard.ppe.other]).filter(Boolean).join(' ')}/>
+                <h3>Необходимые действия</h3>
+                <DocumentParagraph label="Действия." value={(validatedRecord?.emergency.emergencyActions.value ?? substanceProfile?.specificActions ?? [officialCard.actions.general, officialCard.actions.leakOrSpill, officialCard.actions.fire]).filter(Boolean).join(' ')}/>
+                <h3>Локализация последствий и первая помощь</h3>
+                <DocumentParagraph label="Локализация." value={(validatedRecord?.emergency.consequenceControl.value?.actions ?? substanceProfile?.responseActions ?? [officialCard.neutralization]).filter(Boolean).join(' ')}/>
+                <DocumentParagraph label="Первая помощь." value={(validatedRecord?.emergency.firstAid.value ?? substanceProfile?.firstAid ?? [officialCard.firstAid]).filter(Boolean).join(' ')}/>
               </div>
-            </div>
-            {groupCard && <details className="official-group-card"><summary>Официальный текст групповой аварийной карточки № {officialCard.cardNumber}</summary><p>Карточка относится к группе из {emergencyLookup.cardUNNumbers.length} грузов. Её общие требования показаны в рабочих разделах; проверенные индивидуальные сведения для UN {selected.un} имеют приоритет.</p><h3>Основные свойства группы</h3><p>{sourceText(officialCard.mainProperties)}</p><h3>Пожаро- и взрывоопасность группы</h3><p>{sourceText(officialCard.fireExplosionHazard)}</p><h3>Опасность для человека</h3><p>{sourceText(officialCard.humanHazard.description)}</p><h3>СИЗ по карточке</h3><p>{sourceText(officialCard.ppe.respiratory)}</p><h3>Необходимые действия</h3><p>{sourceText(officialCard.actions.general)} {sourceText(officialCard.actions.leakOrSpill)} {sourceText(officialCard.actions.fire)}</p><h3>Нейтрализация</h3><p>{sourceText(officialCard.neutralization)}</p><h3>Первая помощь</h3><p>{sourceText(officialCard.firstAid)}</p></details>}
-            {validatedRecord !== undefined && <section className="transport-data-block"><h2>Транспортные данные</h2><div><p><b>Автомобиль — ДОПОГ 2025:</b> UN {validatedRecord.transport.unNumber.value}; класс {validatedRecord.transport.hazardClass.value}; код {validatedRecord.transport.classificationCode.value}; знаки {validatedRecord.transport.hazardLabels.value?.join(', ')}.</p><p><b>Железная дорога:</b> групповая железнодорожная аварийная карточка № {validatedRecord.transportInstructions.rail.value?.emergencyCardNumber}. Её текст хранится отдельно и не используется как свойства вещества.</p></div></section>}
-            <section className="emergency-additional"><div className="source-mark">▤</div><div><h2>Источники данных</h2><p><b>Сопоставление:</b> UN {selected.un} → АК № {officialCard.cardNumber}{groupCard ? ' (групповая; общие требования дополнены индивидуальными сведениями при их наличии)' : ''}</p><small>{officialCard.source.document}<br/><b>Редакция базы: {officialCard.source.revision}</b> · действует с {new Date(`${officialCard.source.effectiveDate}T00:00:00`).toLocaleDateString('ru-RU')}</small><div className="profile-sources">{validatedRecord !== undefined ? validatedRecord.sources.map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={source.id}>{source.title} · {source.edition}</a>) : substanceProfile?.sources.filter((source) => source.type !== 'emergency-card').map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={source.id}>{source.title} · {source.edition}</a>)}</div></div><div className="source-links"><a className="normative-source-link" href={officialCard.source.sourceUrl} target="_blank" rel="noreferrer">Открыть официальный документ ↗</a>{officialCard.source.amendmentUrl && <a className="normative-source-link secondary" href={officialCard.source.amendmentUrl} target="_blank" rel="noreferrer">Открыть изменение ↗</a>}</div></section>
+            </section>
+            {validatedRecord !== undefined && <section className="transport-data-block"><h2>Транспортные данные</h2><div><p><b>Автомобиль — ДОПОГ 2025:</b> UN {validatedRecord.transport.unNumber.value}; класс {validatedRecord.transport.hazardClass.value}; код {validatedRecord.transport.classificationCode.value}; знаки {validatedRecord.transport.hazardLabels.value?.join(', ')}.</p><p><b>Железная дорога:</b> аварийная карточка № {validatedRecord.transportInstructions.rail.value?.emergencyCardNumber}.</p></div></section>}
+            <section className="emergency-additional"><div className="source-mark">▤</div><div><h2>Источники данных</h2><p><b>Сопоставление:</b> UN {selected.un} → АК № {officialCard.cardNumber}</p><small>{officialCard.source.document}<br/><b>Редакция базы: {officialCard.source.revision}</b> · действует с {new Date(`${officialCard.source.effectiveDate}T00:00:00`).toLocaleDateString('ru-RU')}</small><div className="profile-sources">{validatedRecord !== undefined ? validatedRecord.sources.map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={source.id}>{source.title} · {source.edition}</a>) : substanceProfile?.sources.filter((source) => source.type !== 'emergency-card').map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={source.id}>{source.title} · {source.edition}</a>)}</div></div><div className="source-links"><a className="normative-source-link" href={officialCard.source.sourceUrl} target="_blank" rel="noreferrer">Открыть официальный документ ↗</a>{officialCard.source.amendmentUrl && <a className="normative-source-link secondary" href={officialCard.source.amendmentUrl} target="_blank" rel="noreferrer">Открыть изменение ↗</a>}</div></section>
           </>}
         </div>
       </>}

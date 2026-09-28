@@ -54,6 +54,7 @@ try {
       title: document.title,
       map: Boolean(document.querySelector('.map-column')),
       vector: document.querySelector('.offline-vector-map')?.dataset.mapStatus ?? '',
+      vectorError: document.querySelector('.offline-vector-map')?.dataset.mapError ?? '',
       raster: document.querySelector('.basemap-tile-layer')?.dataset.rasterStatus ?? '',
       failedTilesVisible: [...document.querySelectorAll('.basemap-tile-layer img')].some((image) => image.style.visibility === 'hidden' && getComputedStyle(image.parentElement).visibility === 'visible'),
       zoom: document.querySelector('.zoom span')?.textContent ?? '',

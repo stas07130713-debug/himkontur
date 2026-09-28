@@ -1,24 +1,13 @@
 import html2canvas from 'html2canvas';
 
-const TILE_WAIT_MS = 10_000;
-
-function waitForImage(image: HTMLImageElement): Promise<boolean> {
-  if (image.complete) return Promise.resolve(image.naturalWidth > 0);
-  return new Promise((resolve) => {
-    const cleanup = () => {
-      window.clearTimeout(timeout);
-      image.removeEventListener('load', loaded);
-      image.removeEventListener('error', failed);
-    };
-    const loaded = () => { cleanup(); resolve(true); };
-    const failed = () => { cleanup(); resolve(false); };
-    const timeout = window.setTimeout(() => {
-      cleanup();
-      resolve(false);
-    }, TILE_WAIT_MS);
-    image.addEventListener('load', loaded, { once: true });
-    image.addEventListener('error', failed, { once: true });
-  });
+async function waitForMapFrame(map: HTMLElement): Promise<void> {
+  const offlineMap = map.querySelector<HTMLElement>('.offline-vector-map');
+  if (offlineMap === null) return;
+  const deadline = performance.now() + 5_000;
+  while (!['idle', 'loaded'].includes(offlineMap.dataset.mapStatus ?? '') && performance.now() < deadline) {
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 50));
+  }
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 }
 
 function loadImage(source: string): Promise<HTMLImageElement> {
@@ -68,16 +57,18 @@ function cropCanvas(source: HTMLCanvasElement, x: number, y: number, width: numb
 export async function captureMapForReport(map: HTMLElement, sidePanel?: HTMLElement): Promise<string> {
   const workspace = sidePanel?.closest<HTMLElement>('.workspace') ?? map;
   const normalizeResponsiveLayout = sidePanel !== undefined && workspace.classList.contains('workspace');
+  const liveMapSize = { width: map.getBoundingClientRect().width, height: map.getBoundingClientRect().height };
   if (normalizeResponsiveLayout) workspace.classList.add('report-capture-layout');
   try {
     // ResizeObserver and MapLibre both need a settled frame after the phone
     // layout is temporarily normalized to the report's landscape geometry.
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     await new Promise<void>((resolve) => window.setTimeout(resolve, 250));
-    const tiles = [...map.querySelectorAll<HTMLImageElement>('.basemap-tile-layer img')];
-    // A report remains valid with the bundled vector basemap when raster
-    // imagery is unavailable. If a stable raster frame exists, wait for it.
-    await Promise.all(tiles.map(waitForImage));
+    await waitForMapFrame(map);
+    // MapLibre owns both the autonomous vector map and satellite imagery.
+    // Waiting for its idle frame keeps PDF and Word captures identical to the
+    // live view without maintaining a second, competing HTML tile layer.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     await document.fonts.ready;
     const canvas = await html2canvas(workspace, {
       backgroundColor: '#edf3f2',
@@ -87,7 +78,14 @@ export async function captureMapForReport(map: HTMLElement, sidePanel?: HTMLElem
       logging: false,
       removeContainer: true,
       onclone: (documentClone) => {
-        documentClone.querySelectorAll('.map-context-menu, .basemap-tile-preload').forEach((node) => node.remove());
+        documentClone.querySelectorAll('.map-context-menu').forEach((node) => node.remove());
+        // html2canvas renders SVG <image> inconsistently: in Chromium it can
+        // draw it once itself and then the compatibility pass below adds it a
+        // second time. Exclude these nodes from the cloned pass and restore
+        // each live SVG image exactly once onto the resulting bitmap.
+        documentClone.querySelectorAll<SVGImageElement>('svg image').forEach((image) => {
+          image.style.visibility = 'hidden';
+        });
         documentClone.querySelectorAll<HTMLButtonElement>('.result-actions button').forEach((button) => {
           if (button.textContent.includes('Формируется')) {
             button.textContent = 'Сформировать отчёт';
@@ -108,6 +106,16 @@ export async function captureMapForReport(map: HTMLElement, sidePanel?: HTMLElem
     const bottom = Math.min(workspaceRect.height, Math.max(mapRect.bottom, sideRect.bottom) - workspaceRect.top);
     return cropCanvas(canvas, left * scale, top * scale, (right - left) * scale, (bottom - top) * scale).toDataURL('image/png');
   } finally {
-    if (normalizeResponsiveLayout) workspace.classList.remove('report-capture-layout');
+    if (normalizeResponsiveLayout) {
+      workspace.classList.remove('report-capture-layout');
+      // Let ResizeObserver restore the exact live phone/desktop projection
+      // before report generation reports completion to the caller.
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        const rect = map.getBoundingClientRect();
+        if (Math.abs(rect.width - liveMapSize.width) < 1 && Math.abs(rect.height - liveMapSize.height) < 1) break;
+      }
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    }
   }
 }

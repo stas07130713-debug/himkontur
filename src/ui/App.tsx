@@ -17,6 +17,7 @@ import { SourcePalette } from "./SourcePalette";
 import { TraceDialog } from "./TraceDialog";
 import { ControlPalette, type ControlTemplate } from "./ControlPalette";
 import {
+  defaultSourceForSubstance,
   DEFAULT_SOURCE,
   massFromCapacity,
   massFromSource,
@@ -31,6 +32,7 @@ import { BuildingIcon } from "./BuildingIcon";
 import { evaluateControlPoint } from "../core/geo";
 import { round } from "../core/math";
 import { MobileAccessDialog } from "./MobileAccessDialog";
+import { UpdateCenter } from "./UpdateCenter";
 
 type Tab = "calculation" | "goods";
 type Theme = "light" | "dark";
@@ -59,7 +61,9 @@ export function App() {
   const [source, setSource] = useState<SourceConfiguration>(DEFAULT_SOURCE);
   const [sourcePlaced, setSourcePlaced] = useState(true);
   const [controls, setControls] = useState<readonly ControlPoint[]>([]);
-  const [basemap, setBasemap] = useState<Basemap>("satellite");
+  // The bundled map is the dependable default on every device. Satellite
+  // imagery is an optional online/cached layer selected by the user.
+  const [basemap, setBasemap] = useState<Basemap>("standard");
   const [calculationStarted, setCalculationStarted] = useState(false);
   const [traceOpen, setTraceOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -368,6 +372,7 @@ export function App() {
 
   return (
     <div className="app-shell" data-theme={theme}>
+      <UpdateCenter />
       <header className={`topbar${isElectron ? " electron-topbar" : ""}`}>
         <BrandLogo />
         <nav className="main-tabs">
@@ -486,19 +491,22 @@ export function App() {
                   }
                   if (value.substanceId !== input.substanceId) {
                     setCalculationStarted(false);
-                    if (value.substanceId === "chlorine") {
+                    const preparedSource = defaultSourceForSubstance(value.substanceId);
+                    if (preparedSource !== undefined) {
                       const density =
                         SUBSTANCES.find(
-                          (item) => item.id === DEFAULT_SOURCE.substanceId,
+                          (item) => item.id === preparedSource.substanceId,
                         )?.densityLiquidTPerM3 ?? 0;
-                      setSource(DEFAULT_SOURCE);
+                      setSource(preparedSource);
                       setInput({
                         ...value,
                         massT: massFromCapacity(
-                          DEFAULT_SOURCE.volumeM3,
+                          preparedSource.volumeM3,
                           density,
                         ),
-                        spillKind: DEFAULT_SOURCE.spillKind,
+                        spillKind: preparedSource.spillKind,
+                        bundHeightM: preparedSource.bundHeightM,
+                        commonBundAreaM2: preparedSource.commonBundAreaM2,
                       });
                       return;
                     }
@@ -542,7 +550,6 @@ export function App() {
                 sourceControls={
                   <SourcePalette
                     selected={source}
-                    input={effectiveInput}
                     onSelect={configureSource}
                     onConfigure={configureSource}
                   />
@@ -630,7 +637,14 @@ export function App() {
                 onOpenTrace={() => setTraceOpen(true)}
                 onOpenReport={() => setReportOpen(true)}
               />
-              <ControlPalette>
+              <ControlPalette onAdd={(template) => {
+                const sequence = controls.length + 1;
+                const offset = 0.0022 * sequence;
+                addControl(template, {
+                  latitude: effectiveInput.sourcePoint.latitude - offset * 0.45,
+                  longitude: effectiveInput.sourcePoint.longitude + offset,
+                });
+              }}>
                 {controls.length > 0 && (
                   <div className="controls-list inline-controls-list">
                     <div className="section-heading">

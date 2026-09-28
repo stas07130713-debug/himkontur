@@ -11,7 +11,9 @@ import './ui/styles.css';
 // like an endless loading screen. The service worker remains enabled for the
 // browser/PWA build only.
 const isPackagedDesktop = window.navigator.userAgent.includes('Electron');
-if (!Capacitor.isNativePlatform() && !isPackagedDesktop) {
+if (import.meta.env.DEV && 'serviceWorker' in navigator) {
+  void navigator.serviceWorker.getRegistrations().then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())));
+} else if (!Capacitor.isNativePlatform() && !isPackagedDesktop) {
   registerSW({ immediate: true });
 }
 

@@ -63,6 +63,7 @@ export function validateEmergencyCardsDatabase(database: EmergencyCardsDatabase)
   }
   const profiles = database.profiles ?? [];
   const profileUN = new Set<string>();
+  const indexLinks = new Set(database.index.map((entry) => `${entry.un}\u0000${entry.emergencyCardNumber}`));
   for (const [index, profile] of profiles.entries()) {
     const path = `profiles[${index}]`;
     if (!/^\d{4}$/u.test(profile.un)) errors.push({ code: 'INVALID_PROFILE_UN', message: 'Номер ООН профиля должен состоять из четырёх цифр.', path: `${path}.un` });
@@ -70,7 +71,7 @@ export function validateEmergencyCardsDatabase(database: EmergencyCardsDatabase)
     profileUN.add(profile.un);
     if (profile.name.trim().length === 0) errors.push({ code: 'EMPTY_PROFILE_NAME', message: `Для профиля UN ${profile.un} отсутствует наименование.`, path: `${path}.name` });
     if (!cardNumbers.has(profile.emergencyCardNumber)) errors.push({ code: 'BROKEN_PROFILE_CARD_LINK', message: `Профиль UN ${profile.un} ссылается на отсутствующую АК ${profile.emergencyCardNumber}.`, path: `${path}.emergencyCardNumber` });
-    if (!database.index.some((entry) => entry.un === profile.un && entry.emergencyCardNumber === profile.emergencyCardNumber)) errors.push({ code: 'PROFILE_INDEX_MISMATCH', message: `Связь UN ${profile.un} → АК ${profile.emergencyCardNumber} отсутствует в нормативном индексе.`, path });
+    if (!indexLinks.has(`${profile.un}\u0000${profile.emergencyCardNumber}`)) errors.push({ code: 'PROFILE_INDEX_MISMATCH', message: `Связь UN ${profile.un} → АК ${profile.emergencyCardNumber} отсутствует в нормативном индексе.`, path });
     if (profile.mainProperties.length === 0 || profile.fireExplosionHazard.length === 0 || profile.humanHazard.length === 0) errors.push({ code: 'INCOMPLETE_SUBSTANCE_PROFILE', message: `Индивидуальный профиль UN ${profile.un} не содержит обязательные сведения об опасности.`, path });
     if (profile.sources.length === 0) errors.push({ code: 'MISSING_PROFILE_SOURCE', message: `Для индивидуального профиля UN ${profile.un} не указан источник.`, path: `${path}.sources` });
     for (const [sourceIndex, source] of profile.sources.entries()) try { new URL(source.url); } catch { errors.push({ code: 'INVALID_PROFILE_SOURCE_URL', message: `Для UN ${profile.un} указана некорректная ссылка на источник.`, path: `${path}.sources[${sourceIndex}].url` }); }

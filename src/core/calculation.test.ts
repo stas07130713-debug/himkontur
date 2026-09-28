@@ -80,6 +80,17 @@ describe('calculation core', () => {
     expect(source('cylinder')).toBe(0.06);
     expect(source('truck')).toBe(0);
     expect(source('process')).toBe(0);
+    const stationary = SOURCE_LIBRARY.find((item) => item.id === 'tank');
+    expect(stationary?.bundHeightM).toBe(2.7);
+    expect(stationary?.commonBundAreaM2).toBeCloseTo(5.2 * 13.4, 10);
+    expect((stationary?.commonBundAreaM2 ?? 0) * (stationary?.bundHeightM ?? 0)).toBeCloseTo(188.136, 3);
+  });
+
+  it('contains the approved hydrochloric acid storage and rail standards', () => {
+    const storage = SOURCE_LIBRARY.find((item) => item.id === 'hydrochloric-storage');
+    const rail = SOURCE_LIBRARY.find((item) => item.id === 'hydrochloric-rail');
+    expect(storage).toMatchObject({ substanceId: 'hydrochloric-acid', unitVolumeM3: 200, unitCount: 1, maxUnitCount: 4, bundHeightM: 0.7, imageDataUrl: '/assets/sources/generic-vessel.png' });
+    expect(rail).toMatchObject({ substanceId: 'hydrochloric-acid', volumeM3: 50 });
   });
 
   it('recalculates the supplied 50 t chlorine case without the unsupported K7 value', () => {

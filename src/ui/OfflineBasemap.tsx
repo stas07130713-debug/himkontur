@@ -1,13 +1,52 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Map as MapLibreMap, addProtocol, setWorkerUrl, type StyleSpecification } from 'maplibre-gl';
 import mapWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-import { PMTiles } from 'pmtiles';
+import { FetchSource, PMTiles, type RangeResponse, type Source } from 'pmtiles';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { GeoPoint } from '../core/types';
+import type { Basemap } from './MapCanvas';
 
 let protocolRegistered = false;
 let offlineArchivePromise: Promise<PMTiles> | null = null;
 setWorkerUrl(mapWorkerUrl);
+
+class OfflineReadyPmtilesSource implements Source {
+  private readonly rangedSource: FetchSource;
+  private completeArchive: Promise<ArrayBuffer> | null = null;
+
+  constructor(private readonly url: string) {
+    this.rangedSource = new FetchSource(url);
+  }
+
+  getKey(): string {
+    return this.url;
+  }
+
+  private loadCompleteArchive(): Promise<ArrayBuffer> {
+    this.completeArchive ??= fetch(this.url, { cache: 'force-cache' }).then(async (response) => {
+      if (!response.ok) throw new Error(`Локальный архив карты недоступен: ${response.status}`);
+      return response.arrayBuffer();
+    });
+    return this.completeArchive;
+  }
+
+  async getBytes(offset: number, length: number, signal?: AbortSignal, etag?: string): Promise<RangeResponse> {
+    if (this.completeArchive === null) {
+      try {
+        return await this.rangedSource.getBytes(offset, length, signal, etag);
+      } catch {
+        // A service worker serves a precached PMTiles file as a complete 200
+        // response. PMTiles normally expects HTTP byte ranges, so offline PWA
+        // mode falls back to the same bundled archive held in memory and
+        // returns the requested slice locally.
+      }
+    }
+    const archive = await this.loadCompleteArchive();
+    if (offset < 0 || length < 0 || offset + length > archive.byteLength)
+      throw new Error('Запрошенный фрагмент выходит за границы локальной карты.');
+    return { data: archive.slice(offset, offset + length) };
+  }
+}
 
 function getOfflineArchive(): Promise<PMTiles> {
   if (offlineArchivePromise !== null) return offlineArchivePromise;
@@ -15,7 +54,7 @@ function getOfflineArchive(): Promise<PMTiles> {
   // PMTiles reads only the header, directory and currently visible tiles via
   // byte ranges. Loading the whole archive here blocked the reference cards
   // and looked like an endless application startup on slower devices.
-  offlineArchivePromise = Promise.resolve(new PMTiles(archiveUrl));
+  offlineArchivePromise = Promise.resolve(new PMTiles(new OfflineReadyPmtilesSource(archiveUrl)));
   return offlineArchivePromise;
 }
 
@@ -32,11 +71,33 @@ function ensurePmtilesProtocol() {
   protocolRegistered = true;
 }
 
-export function OfflineBasemap({ center, zoom }: Readonly<{ center: GeoPoint; zoom: number }>) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<MapLibreMap | null>(null);
-  const initialViewRef = useRef({ center, zoom });
-  const style = useMemo<StyleSpecification>(() => ({
+function satelliteTileTemplate(): string {
+  const local = navigator.userAgent.includes('Electron') ||
+    (['localhost', '127.0.0.1', '::1'].includes(window.location.hostname) && window.location.port !== '');
+  return local
+    ? '/map-tiles/esri/{z}/{y}/{x}'
+    : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+}
+
+function basemapStyle(basemap: Basemap): StyleSpecification {
+  if (basemap === 'satellite') return {
+    version: 8,
+    sources: {
+      satellite: {
+        type: 'raster',
+        tiles: [satelliteTileTemplate()],
+        tileSize: 256,
+        minzoom: 0,
+        maxzoom: 19,
+        attribution: 'Источник снимков: Esri World Imagery',
+      },
+    },
+    layers: [
+      { id: 'satellite-background', type: 'background', paint: { 'background-color': '#263d3a' } },
+      { id: 'satellite-imagery', type: 'raster', source: 'satellite', paint: { 'raster-fade-duration': 0 } },
+    ],
+  };
+  return {
     version: 8,
     sources: {
       protomaps: {
@@ -47,9 +108,6 @@ export function OfflineBasemap({ center, zoom }: Readonly<{ center: GeoPoint; zo
         attribution: '© Protomaps © OpenStreetMap contributors',
       },
     },
-    // Deliberately self-contained: no glyphs, sprites, fonts or network URLs.
-    // The compact style also remains compatible with every PMTiles build used
-    // by the desktop, PWA and Android packages.
     layers: [
       { id: 'background', type: 'background', paint: { 'background-color': '#edf1ea' } },
       { id: 'earth', type: 'fill', source: 'protomaps', 'source-layer': 'earth', paint: { 'fill-color': '#f2efe6' } },
@@ -61,7 +119,16 @@ export function OfflineBasemap({ center, zoom }: Readonly<{ center: GeoPoint; zo
       { id: 'roads', type: 'line', source: 'protomaps', 'source-layer': 'roads', paint: { 'line-color': '#fffdf8', 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.25, 15, 3] } },
       { id: 'boundaries', type: 'line', source: 'protomaps', 'source-layer': 'boundaries', paint: { 'line-color': '#8b9a94', 'line-width': 0.8, 'line-dasharray': [3, 2] } },
     ],
-  }), []);
+  };
+}
+
+export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: GeoPoint; zoom: number; basemap: Basemap }>) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<MapLibreMap | null>(null);
+  const initialViewRef = useRef({ center, zoom });
+  const initialStyleRef = useRef(basemapStyle(basemap));
+  const appliedBasemapRef = useRef(basemap);
+  const style = useMemo(() => basemapStyle(basemap), [basemap]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -73,6 +140,7 @@ export function OfflineBasemap({ center, zoom }: Readonly<{ center: GeoPoint; zo
       container,
       center: [initialView.center.longitude, initialView.center.latitude],
       zoom: initialView.zoom,
+      style: initialStyleRef.current,
       interactive: false,
       attributionControl: false,
       fadeDuration: 0,
@@ -88,7 +156,6 @@ export function OfflineBasemap({ center, zoom }: Readonly<{ center: GeoPoint; zo
       container.dataset.mapError = event.error.message;
       container.dataset.mapStatus = 'error';
     });
-    map.setStyle(style);
     const auditTimer = window.setInterval(() => {
       container.dataset.styleLoaded = String(map.isStyleLoaded());
       container.dataset.mapZoom = map.getZoom().toFixed(2);
@@ -102,11 +169,25 @@ export function OfflineBasemap({ center, zoom }: Readonly<{ center: GeoPoint; zo
       map.remove();
       mapRef.current = null;
     };
-  }, [style]);
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (map === null || appliedBasemapRef.current === basemap) return;
+    appliedBasemapRef.current = basemap;
+    const container = containerRef.current;
+    if (container !== null) {
+      container.dataset.mapStatus = 'loading';
+      container.dataset.mapError = '';
+      container.dataset.basemap = basemap;
+    }
+    map.setStyle(style, { diff: false });
+  }, [basemap, style]);
 
   useEffect(() => {
     mapRef.current?.jumpTo({ center: [center.longitude, center.latitude], zoom });
   }, [center.latitude, center.longitude, zoom]);
 
-  return <div className="offline-vector-map" ref={containerRef} aria-hidden="true" />;
+  const tileSource = basemap === 'satellite' ? satelliteTileTemplate() : 'local-pmtiles';
+  return <div className="offline-vector-map" ref={containerRef} data-basemap={basemap} data-tile-source={tileSource} aria-hidden="true" />;
 }

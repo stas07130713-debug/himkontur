@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 const pageUrl = process.argv[2] ?? 'http://127.0.0.1:5178/';
 const adr = JSON.parse(readFileSync(resolve('public/data/adr-2025-hazard-labels.json'), 'utf8'));
 const index = JSON.parse(readFileSync(resolve('public/data/emergency-cards/dangerous-goods-index-2026.json'), 'utf8'));
-const profiles = JSON.parse(readFileSync(resolve('public/data/emergency-cards/dangerous-goods-profiles-2026.json'), 'utf8'));
+const profiles = [];
 const cardUns = new Set(index.map((item) => item.un));
 const adrUns = new Set(adr.rows.map((item) => item.un));
 const samples = new Map();

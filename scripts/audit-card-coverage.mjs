@@ -4,20 +4,10 @@ import { join } from 'node:path';
 const root = process.cwd();
 const dataDirectory = join(root, 'public', 'data', 'emergency-cards');
 const reportDirectory = join(root, 'reports');
-const index = [
-  ...JSON.parse(readFileSync(join(dataDirectory, 'dangerous-goods-index-2026.json'), 'utf8')),
-  ...JSON.parse(readFileSync(join(dataDirectory, 'erg-dangerous-goods-index-2024.json'), 'utf8')),
-];
-const cards = [
-  ...JSON.parse(readFileSync(join(dataDirectory, 'emergency-cards-2026.json'), 'utf8')),
-  ...JSON.parse(readFileSync(join(dataDirectory, 'erg-emergency-cards-2024.json'), 'utf8')),
-];
-const profiles = [
-  ...JSON.parse(readFileSync(join(dataDirectory, 'dangerous-goods-profiles-2026.json'), 'utf8')),
-  ...JSON.parse(readFileSync(join(dataDirectory, 'cameo-profiles-3.1.0.json'), 'utf8')),
-];
-const validatedPilotSource = readFileSync(join(root, 'src', 'core', 'substances', 'validatedSubstancesPilot.ts'), 'utf8');
-const validatedPilotUN = new Set([...validatedPilotSource.matchAll(/pilot\(\{\s*un:\s*'(?<un>\d{4})'/gu)].map((match) => match.groups?.un).filter(Boolean));
+const index = JSON.parse(readFileSync(join(dataDirectory, 'dangerous-goods-index-2026.json'), 'utf8'));
+const cards = JSON.parse(readFileSync(join(dataDirectory, 'emergency-cards-2026.json'), 'utf8'));
+const profiles = [];
+const validatedPilotUN = new Set();
 const transportLines = readFileSync(join(root, 'public', 'data', 'dangerous-goods.tsv'), 'utf8').replace(/^\uFEFF/u, '').split(/\r?\n/u).slice(1).filter(Boolean);
 const transportRows = transportLines.map((line) => { const columns = line.split('\t'); return { name: columns[0] ?? '', un: columns[1] ?? '', classificationCode: columns[3] ?? '' }; }).filter((row) => /^\d{4}$/u.test(row.un));
 const cardsByNumber = new Map(cards.map((card) => [card.cardNumber, card]));
@@ -27,6 +17,8 @@ for (const row of index) unByCard.set(row.emergencyCardNumber, new Set([...(unBy
 
 const text = (value) => String(value ?? '').replace(/\s+/gu, ' ').trim();
 const normalized = (value) => text(value).toLocaleLowerCase('ru-RU').replace(/ё/gu, 'е');
+const nameTokens = (value) => new Set(normalized(value).replace(/токсич\w*/gu, 'ядовитая').match(/[а-яa-z]{4,}/gu)?.filter((token) => !['такая', 'смесь', 'номер'].includes(token)) ?? []);
+const tokenSimilarity = (left, right) => { const a = nameTokens(left); const b = nameTokens(right); if (a.size === 0 || b.size === 0) return 0; return [...a].filter((token) => b.has(token)).length / Math.max(a.size, b.size); };
 const listText = (values) => values.map(text).filter(Boolean).join(' ');
 const uniqueRows = [...new Map(index.map((row) => [`${row.un}\u0000${row.name}\u0000${row.emergencyCardNumber}`, row])).values()];
 const indexByUN = new Map();
@@ -38,6 +30,10 @@ const resolveTransport = (row) => {
   if (new Set(byCode.map((item) => item.emergencyCardNumber)).size === 1) return byCode[0];
   const exact = candidates.filter((item) => normalized(item.name) === normalized(row.name));
   if (new Set(exact.map((item) => item.emergencyCardNumber)).size === 1) return exact[0];
+  const ranked = candidates.map((item) => ({ item, score: tokenSimilarity(item.name, row.name) })).sort((left, right) => right.score - left.score);
+  const bestScore = ranked[0]?.score ?? 0;
+  const byTokens = ranked.filter((item) => item.score === bestScore && item.score >= 0.6).map((item) => item.item);
+  if (new Set(byTokens.map((item) => item.emergencyCardNumber)).size === 1) return byTokens[0];
   return undefined;
 };
 const unmatchedTransportRows = transportRows.filter((row) => resolveTransport(row) === undefined);

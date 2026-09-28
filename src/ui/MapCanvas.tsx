@@ -25,16 +25,6 @@ export type ControlPoint = Readonly<{
   kind?: ControlTemplate["kind"];
 }>;
 export type Basemap = "standard" | "satellite";
-type RasterTile = Readonly<{
-  key: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  tileX: number;
-  tileY: number;
-  zoom: number;
-}>;
 type Props = Readonly<{
   result: CalculationResult | null;
   calculationStarted: boolean;
@@ -109,29 +99,19 @@ const CONTROL_IMAGE_PATHS: Readonly<Record<ControlTemplate["kind"], string>> = {
 function isSourceKind(value: string): value is SourceKind {
   return SOURCE_KINDS.some((kind) => kind === value);
 }
-function mapTileUrl(basemap: Basemap, zoom: number, tileX: number, tileY: number): string {
-  const local = navigator.userAgent.includes("Electron") ||
-    (["localhost", "127.0.0.1", "::1"].includes(window.location.hostname) && window.location.port !== "");
-  if (local) return basemap === "standard" ? `/map-tiles/osm/${zoom}/${tileX}/${tileY}.png` : `/map-tiles/esri/${zoom}/${tileY}/${tileX}`;
-  return basemap === "standard"
-    ? `https://tile.openstreetmap.org/${zoom}/${tileX}/${tileY}.png`
-    : `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${tileY}/${tileX}`;
+function worldCoordinate(point: GeoPoint): Readonly<{ x: number; y: number }> {
+  const radians = (Math.max(-85.05112878, Math.min(85.05112878, point.latitude)) * Math.PI) / 180;
+  return {
+    x: (point.longitude + 180) / 360,
+    y: (1 - Math.asinh(Math.tan(radians)) / Math.PI) / 2,
+  };
 }
-function longitudeToTile(longitude: number, zoom: number): number {
-  return ((longitude + 180) / 360) * 2 ** zoom;
-}
-function latitudeToTile(latitude: number, zoom: number): number {
-  const radians = (latitude * Math.PI) / 180;
-  return ((1 - Math.asinh(Math.tan(radians)) / Math.PI) / 2) * 2 ** zoom;
-}
-function tileToLongitude(tile: number, zoom: number): number {
-  return (tile / 2 ** zoom) * 360 - 180;
-}
-function tileToLatitude(tile: number, zoom: number): number {
-  return (
-    (Math.atan(Math.sinh(Math.PI * (1 - (2 * tile) / 2 ** zoom))) * 180) /
-    Math.PI
-  );
+function geoFromWorld(x: number, y: number): GeoPoint {
+  const normalizedY = Math.max(0, Math.min(1, y));
+  return {
+    longitude: x * 360 - 180,
+    latitude: (Math.atan(Math.sinh(Math.PI * (1 - 2 * normalizedY))) * 180) / Math.PI,
+  };
 }
 function windName(degrees: number): string {
   return (
@@ -270,8 +250,6 @@ export function MapCanvas(props: Props) {
   const [showSecondary, setShowSecondary] = useState(true);
   const [objectsLocked, setObjectsLocked] = useState(false);
   const [online, setOnline] = useState(() => navigator.onLine);
-  const [rasterTileStatus, setRasterTileStatus] = useState<Readonly<Record<string, "loaded" | "failed">>>({});
-  const [committedRasterTiles, setCommittedRasterTiles] = useState<Readonly<Record<Basemap, readonly RasterTile[]>>>({ standard: [], satellite: [] });
   const [draggingSource, setDraggingSource] = useState(false);
   const [panning, setPanning] = useState(false);
   const [contextMenu, setContextMenu] = useState<
@@ -307,50 +285,47 @@ export function MapCanvas(props: Props) {
     const scale =
       zoom * Math.min(viewWidth / BASE_WIDTH_KM, viewHeight / BASE_HEIGHT_KM);
     const visibleWidthKm = viewWidth / scale;
-    const project = (point: GeoPoint) => ({
-      x:
-        viewWidth / 2 +
-        (point.longitude - mapCenter.longitude) *
-          KM_PER_LONGITUDE_DEGREE *
-          scale,
-      y:
-        viewHeight / 2 -
-        (point.latitude - mapCenter.latitude) * KM_PER_LATITUDE_DEGREE * scale,
-    });
-    const unproject = (x: number, y: number): GeoPoint => ({
-      longitude:
-        mapCenter.longitude +
-        (x - viewWidth / 2) / scale / KM_PER_LONGITUDE_DEGREE,
-      latitude:
-        mapCenter.latitude -
-        (y - viewHeight / 2) / scale / KM_PER_LATITUDE_DEGREE,
-    });
-    return { scale, visibleWidthKm, project, unproject };
+    const centerWorld = worldCoordinate(mapCenter);
+    const circumferenceAtCenterKm = 40_075 * Math.cos((mapCenter.latitude * Math.PI) / 180);
+    const worldPixels = scale * circumferenceAtCenterKm;
+    const project = (point: GeoPoint) => {
+      const world = worldCoordinate(point);
+      return {
+        x: viewWidth / 2 + (world.x - centerWorld.x) * worldPixels,
+        y: viewHeight / 2 + (world.y - centerWorld.y) * worldPixels,
+      };
+    };
+    const unproject = (x: number, y: number): GeoPoint => geoFromWorld(
+      centerWorld.x + (x - viewWidth / 2) / worldPixels,
+      centerWorld.y + (y - viewHeight / 2) / worldPixels,
+    );
+    return { scale, visibleWidthKm, worldPixels, project, unproject };
   }, [mapCenter, viewHeight, viewWidth, zoom]);
   const changeZoom = useCallback(
     (factor: number, anchor?: GeoPoint) => {
       setZoom((currentZoom) => {
-        const nextZoom = Math.max(0.2, Math.min(8, currentZoom * factor));
+        const nextZoom = Math.max(online ? 0.2 : 0.5, Math.min(24, currentZoom * factor));
         const appliedFactor = nextZoom / currentZoom;
         if (anchor !== undefined)
-          setMapCenter((current) => ({
-            longitude:
-              anchor.longitude -
-              (anchor.longitude - current.longitude) / appliedFactor,
-            latitude:
-              anchor.latitude -
-              (anchor.latitude - current.latitude) / appliedFactor,
-          }));
+          setMapCenter((current) => {
+            const anchorWorld = worldCoordinate(anchor);
+            const currentWorld = worldCoordinate(current);
+            return geoFromWorld(
+              anchorWorld.x - (anchorWorld.x - currentWorld.x) / appliedFactor,
+              anchorWorld.y - (anchorWorld.y - currentWorld.y) / appliedFactor,
+            );
+          });
         return nextZoom;
       });
     },
-    [],
+    [online],
   );
   useEffect(() => {
     const stage = stageRef.current;
     if (stage === null) return;
     const observer = new ResizeObserver(([entry]) => {
       if (entry === undefined) return;
+      if (stage.closest('.report-capture-layout') !== null) return;
       setViewSize({
         width: Math.max(1, Math.round(entry.contentRect.width)),
         height: Math.max(1, Math.round(entry.contentRect.height)),
@@ -373,7 +348,7 @@ export function MapCanvas(props: Props) {
     const safeDiameterKm = Math.max(0.5, depth * 2.35);
     setZoom(
       Math.max(
-        0.2,
+        online ? 0.2 : 0.5,
         Math.min(
           1,
           BASE_WIDTH_KM / safeDiameterKm,
@@ -381,76 +356,11 @@ export function MapCanvas(props: Props) {
         ),
       ),
     );
-  }, [props.result?.finalDepthKm]);
-  const tileZoom = useMemo(() => {
-    const circumference =
-      40_075 * Math.cos((mapCenter.latitude * Math.PI) / 180);
-    return Math.max(
-      10,
-      Math.min(
-        18,
-        Math.round(Math.log2((projection.scale * circumference) / 256)),
-      ),
-    );
-  }, [mapCenter.latitude, projection.scale]);
-  const tiles = useMemo(() => {
-    const nw = projection.unproject(0, 0);
-    const se = projection.unproject(viewWidth, viewHeight);
-    const output: RasterTile[] = [];
-    for (
-      let tileY = Math.floor(latitudeToTile(nw.latitude, tileZoom));
-      tileY <= Math.floor(latitudeToTile(se.latitude, tileZoom));
-      tileY += 1
-    )
-      for (
-        let tileX = Math.floor(longitudeToTile(nw.longitude, tileZoom));
-        tileX <= Math.floor(longitudeToTile(se.longitude, tileZoom));
-        tileX += 1
-      ) {
-        const a = projection.project({
-          longitude: tileToLongitude(tileX, tileZoom),
-          latitude: tileToLatitude(tileY, tileZoom),
-        });
-        const b = projection.project({
-          longitude: tileToLongitude(tileX + 1, tileZoom),
-          latitude: tileToLatitude(tileY + 1, tileZoom),
-        });
-        output.push({
-          key: `${tileZoom}-${tileX}-${tileY}`,
-          x: a.x,
-          y: a.y,
-          width: b.x - a.x,
-          height: b.y - a.y,
-          tileX,
-          tileY,
-          zoom: tileZoom,
-        });
-      }
-    return output;
-  }, [projection, tileZoom, viewHeight, viewWidth]);
-  const rasterLayerReady = tiles.length > 0 && tiles.every(
-    (tile) => rasterTileStatus[`${props.basemap}:${tile.key}`] === "loaded",
+  }, [online, props.result?.finalDepthKm]);
+  const mapLibreZoom = useMemo(
+    () => Math.max(0, Math.min(22, Math.log2(projection.worldPixels / 512))),
+    [projection.worldPixels],
   );
-  const rasterTileSignature = tiles.map((tile) => tile.key).join('|');
-  useEffect(() => {
-    if (!rasterLayerReady) return;
-    setCommittedRasterTiles((current) => {
-      const previous = current[props.basemap];
-      if (previous.map((tile) => tile.key).join('|') === rasterTileSignature) return current;
-      return { ...current, [props.basemap]: tiles };
-    });
-  }, [props.basemap, rasterLayerReady, rasterTileSignature, tiles]);
-  const visibleRasterTiles = committedRasterTiles[props.basemap];
-  const rasterPosition = (tile: RasterTile) => {
-    const a = projection.project({ longitude: tileToLongitude(tile.tileX, tile.zoom), latitude: tileToLatitude(tile.tileY, tile.zoom) });
-    const b = projection.project({ longitude: tileToLongitude(tile.tileX + 1, tile.zoom), latitude: tileToLatitude(tile.tileY + 1, tile.zoom) });
-    return {
-      left: `${(a.x / viewWidth) * 100}%`,
-      top: `${(a.y / viewHeight) * 100}%`,
-      width: `${((b.x - a.x + 1) / viewWidth) * 100}%`,
-      height: `${((b.y - a.y + 1) / viewHeight) * 100}%`,
-    };
-  };
   const rotationRadians = (rotation * Math.PI) / 180;
   const rotationCoverScale =
     Math.abs(Math.cos(rotationRadians)) + Math.abs(Math.sin(rotationRadians));
@@ -525,7 +435,7 @@ export function MapCanvas(props: Props) {
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    if (event.button !== 0 || objectsLocked) return;
+    if (event.button !== 0) return;
     props.onControlDragStart?.(control);
     controlPointerRef.current = { pointerId: event.pointerId, id: control.id };
     svgRef.current?.setPointerCapture(event.pointerId);
@@ -556,6 +466,8 @@ export function MapCanvas(props: Props) {
         longPressRef.current = null; panRef.current = null; setPanning(false);
         const [first, second] = [...touchPointsRef.current.values()];
         if (first !== undefined && second !== undefined) pinchRef.current = { distance: Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY) };
+        svgRef.current?.setPointerCapture(event.pointerId);
+        return;
       }
     }
     panRef.current = {
@@ -612,20 +524,11 @@ export function MapCanvas(props: Props) {
       event.clientX - pan.clientX,
       event.clientY - pan.clientY,
     );
-    setMapCenter({
-      longitude:
-        pan.center.longitude -
-        ((delta.x / rotationCoverScale) * viewWidth) /
-          rect.width /
-          projection.scale /
-          KM_PER_LONGITUDE_DEGREE,
-      latitude:
-        pan.center.latitude +
-        ((delta.y / rotationCoverScale) * viewHeight) /
-          rect.height /
-          projection.scale /
-          KM_PER_LATITUDE_DEGREE,
-    });
+    const startWorld = worldCoordinate(pan.center);
+    setMapCenter(geoFromWorld(
+      startWorld.x - ((delta.x / rotationCoverScale) * viewWidth) / rect.width / projection.worldPixels,
+      startWorld.y - ((delta.y / rotationCoverScale) * viewHeight) / rect.height / projection.worldPixels,
+    ));
   };
   const finishPointer = (event: ReactPointerEvent<SVGSVGElement>) => {
     if (longPressRef.current?.pointerId === event.pointerId) { window.clearTimeout(longPressRef.current.timer); longPressRef.current = null; }
@@ -871,46 +774,7 @@ export function MapCanvas(props: Props) {
             }}
           >
             <div className="offline-map-fallback" aria-hidden="true"><span>АВТОНОМНАЯ КООРДИНАТНАЯ ПОДЛОЖКА</span></div>
-            <OfflineBasemap center={mapCenter} zoom={tileZoom - 1} />
-            <div
-              className={`basemap-tile-layer${visibleRasterTiles.length > 0 ? " ready" : ""}`}
-              aria-hidden="true"
-              data-raster-status={visibleRasterTiles.length > 0 ? (rasterLayerReady ? "ready" : "stable") : "loading"}
-            >
-              {visibleRasterTiles.map((tile) => (
-                <img
-                  key={`${props.basemap}:${tile.key}`}
-                  alt=""
-                  draggable={false}
-                  style={rasterPosition(tile)}
-                  src={mapTileUrl(props.basemap, tile.zoom, tile.tileX, tile.tileY)}
-                  crossOrigin="anonymous"
-                />
-              ))}
-            </div>
-            <div className="basemap-tile-preload" aria-hidden="true">
-              {tiles.map((tile) => (
-                <img
-                  key={`preload:${props.basemap}:${tile.key}`}
-                  alt=""
-                  draggable={false}
-                  src={mapTileUrl(props.basemap, tile.zoom, tile.tileX, tile.tileY)}
-                  crossOrigin="anonymous"
-                  onLoad={() => {
-                    const key = `${props.basemap}:${tile.key}`;
-                    setRasterTileStatus((current) => current[key] === "loaded"
-                      ? current
-                      : { ...current, [key]: "loaded" });
-                  }}
-                  onError={() => {
-                    const key = `${props.basemap}:${tile.key}`;
-                    setRasterTileStatus((current) => current[key] === "failed"
-                      ? current
-                      : { ...current, [key]: "failed" });
-                  }}
-                />
-              ))}
-            </div>
+            <OfflineBasemap center={mapCenter} zoom={mapLibreZoom} basemap={props.basemap} />
             <svg
               ref={svgRef}
               className={panning ? "panning" : ""}
@@ -1215,7 +1079,7 @@ export function MapCanvas(props: Props) {
               })}
             </svg>
           </div>
-          {!online && <div className="offline-map-status">Без интернета · автономная карта доступна</div>}
+          {!online && <div className="offline-map-status">{props.basemap === "standard" ? "Без интернета · автономная карта доступна" : "Спутник требует интернет · выберите «Карта»"}</div>}
           {contextMenu !== null && contextMenu.target === "map" && (
             <div
               className="map-context-menu add-control-menu"

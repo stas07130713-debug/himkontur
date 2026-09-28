@@ -5,24 +5,13 @@ const root = process.cwd();
 const dataDirectory = join(root, 'public', 'data', 'emergency-cards');
 const reportDirectory = join(root, 'reports');
 const reportDate = new Date().toISOString().slice(0, 10);
-const index = [
-  ...JSON.parse(readFileSync(join(dataDirectory, 'dangerous-goods-index-2026.json'), 'utf8')),
-  ...JSON.parse(readFileSync(join(dataDirectory, 'erg-dangerous-goods-index-2024.json'), 'utf8')),
-];
-const cards = [
-  ...JSON.parse(readFileSync(join(dataDirectory, 'emergency-cards-2026.json'), 'utf8')),
-  ...JSON.parse(readFileSync(join(dataDirectory, 'erg-emergency-cards-2024.json'), 'utf8')),
-];
-const profiles = [
-  ...JSON.parse(readFileSync(join(dataDirectory, 'dangerous-goods-profiles-2026.json'), 'utf8')),
-  ...JSON.parse(readFileSync(join(dataDirectory, 'cameo-profiles-3.1.0.json'), 'utf8')),
-];
-const sourceRecords = JSON.parse(readFileSync(join(dataDirectory, 'cameo-source-records-3.1.0.json'), 'utf8'));
+const index = JSON.parse(readFileSync(join(dataDirectory, 'dangerous-goods-index-2026.json'), 'utf8'));
+const cards = JSON.parse(readFileSync(join(dataDirectory, 'emergency-cards-2026.json'), 'utf8'));
+const profiles = [];
 const transportRows = readFileSync(join(root, 'public', 'data', 'dangerous-goods.tsv'), 'utf8').replace(/^\uFEFF/u, '').split(/\r?\n/u).slice(1).map((line) => line.split('\t'));
 
 const cardByNumber = new Map(cards.map((card) => [card.cardNumber, card]));
 const profileByUN = new Map(profiles.map((profile) => [profile.un, profile]));
-const sourceRecordByUN = new Map(sourceRecords.map((record) => [record.un, record]));
 const classByUN = new Map(transportRows.filter((row) => /^\d{4}$/u.test(row[1] ?? '')).map((row) => [row[1], row[2] ?? '']));
 const entriesByCard = new Map();
 for (const entry of index) entriesByCard.set(entry.emergencyCardNumber, [...(entriesByCard.get(entry.emergencyCardNumber) ?? []), entry]);
@@ -72,7 +61,6 @@ for (const entry of index) {
   const linkedUN = uniqueUNByCard.get(entry.emergencyCardNumber) ?? [];
   const group = linkedUN.length > 1;
   const profile = profileByUN.get(entry.un);
-  const sourceMapping = sourceRecordByUN.get(entry.un)?.mapping;
   // Presentation policy mirrors DangerousGoodsPanel: group-card wording is
   // audited as source data but is not treated as an individual UN profile.
   const currentMain = profile ? textOfProfile(profile, 'mainProperties') : group ? '' : textOfCard(card, 'mainProperties');
@@ -97,7 +85,7 @@ for (const entry of index) {
         ? 'В индивидуальном профиле названо другое вещество как продукт реакции; требуется ручная проверка контекста, но это не считается подменой выбранного UN.'
         : 'В индивидуальном профиле встречаются названия других химических веществ.',
       `Обнаружены упоминания: ${profileOtherNames.join(', ')}. ${compact(profileText, 300)}`,
-      isDeclaredReactionProduct ? 'MEDIUM' : sourceMapping === 'exact-chemical' ? 'MEDIUM' : 'HIGH',
+      isDeclaredReactionProduct ? 'MEDIUM' : 'HIGH',
     );
   }
 

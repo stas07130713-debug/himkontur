@@ -1,4 +1,5 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import electronUpdater from 'electron-updater';
 import { createServer } from 'node:http';
 import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
@@ -7,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.HIMKONTUR_LOCAL_PORT ?? '32174');
 const CURRENT_DIRECTORY = resolve(fileURLToPath(new URL('.', import.meta.url)));
+const { autoUpdater } = electronUpdater;
 const WEB_ROOT = resolve(CURRENT_DIRECTORY, '..', 'dist');
 const MIME = Object.freeze({
   '.css': 'text/css; charset=utf-8',
@@ -23,6 +25,53 @@ let mainWindow = null;
 let localServer = null;
 let pendingScenario = null;
 let tileCacheRoot = null;
+let updateTimer = null;
+
+function sendUpdateStatus(status) {
+  if (mainWindow !== null && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('himkontur:update-status', status);
+  }
+}
+
+function friendlyUpdateError(error) {
+  const raw = error instanceof Error ? error.message : String(error ?? '');
+  if (/net::|network|ENOTFOUND|ETIMEDOUT|ERR_/iu.test(raw)) {
+    return 'Нет связи с сервером обновлений. Программа продолжает работать автономно.';
+  }
+  return 'Не удалось проверить или загрузить обновление. Повторите позднее.';
+}
+
+function configureUpdates() {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.allowPrerelease = false;
+  autoUpdater.on('checking-for-update', () => sendUpdateStatus({ state: 'checking' }));
+  autoUpdater.on('update-available', (info) => sendUpdateStatus({ state: 'available', version: info.version }));
+  autoUpdater.on('update-not-available', (info) => sendUpdateStatus({ state: 'current', version: info.version }));
+  autoUpdater.on('download-progress', (progress) => sendUpdateStatus({
+    state: 'downloading',
+    percent: Math.max(0, Math.min(100, Math.round(progress.percent)))
+  }));
+  autoUpdater.on('update-downloaded', (info) => sendUpdateStatus({ state: 'downloaded', version: info.version }));
+  autoUpdater.on('error', (error) => sendUpdateStatus({ state: 'error', message: friendlyUpdateError(error) }));
+
+  ipcMain.handle('himkontur:update-version', () => app.getVersion());
+  ipcMain.handle('himkontur:update-check', async () => {
+    if (!app.isPackaged) return { state: 'development', version: app.getVersion() };
+    try {
+      await autoUpdater.checkForUpdates();
+      return { state: 'checking' };
+    } catch (error) {
+      const result = { state: 'error', message: friendlyUpdateError(error) };
+      sendUpdateStatus(result);
+      return result;
+    }
+  });
+  ipcMain.handle('himkontur:update-install', () => {
+    autoUpdater.quitAndInstall(false, true);
+    return { state: 'installing' };
+  });
+}
 
 function queueScenario(argumentsList) {
   const path = argumentsList.find((value) => typeof value === 'string' && value.toLowerCase().endsWith('.himkontur') && existsSync(value));
@@ -175,6 +224,7 @@ function createWindow() {
     titleBarOverlay: { color: '#062a3b', symbolColor: '#e8f5f6', height: 32 },
     show: false,
     webPreferences: {
+      preload: join(CURRENT_DIRECTORY, 'preload.mjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
@@ -191,11 +241,16 @@ function createWindow() {
 
 async function bootstrap() {
   await app.whenReady();
+  configureUpdates();
   tileCacheRoot = resolve(app.getPath('userData'), 'map-tile-cache');
   mkdirSync(tileCacheRoot, { recursive: true });
   queueScenario(process.argv);
   await startServer();
   createWindow();
+  if (app.isPackaged) {
+    setTimeout(() => void autoUpdater.checkForUpdates().catch(() => undefined), 8_000);
+    updateTimer = setInterval(() => void autoUpdater.checkForUpdates().catch(() => undefined), 6 * 60 * 60 * 1000);
+  }
 }
 
 if (!app.requestSingleInstanceLock()) {
@@ -209,5 +264,8 @@ if (!app.requestSingleInstanceLock()) {
   });
   void bootstrap();
   app.on('window-all-closed', () => app.quit());
-  app.on('before-quit', () => localServer?.close());
+  app.on('before-quit', () => {
+    if (updateTimer !== null) clearInterval(updateTimer);
+    localServer?.close();
+  });
 }

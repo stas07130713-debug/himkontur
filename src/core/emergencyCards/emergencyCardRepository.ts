@@ -7,6 +7,16 @@ function normalized(value: string): string {
   return value.toLocaleLowerCase('ru-RU').replace(/ё/gu, 'е').replace(/\s+/gu, ' ').trim();
 }
 
+function nameTokens(value: string): ReadonlySet<string> {
+  return new Set(normalized(value).replace(/токсич\w*/gu, 'ядовитая').match(/[а-яa-z]{4,}/gu)?.filter((token) => !['такая', 'смесь', 'номер'].includes(token)) ?? []);
+}
+
+function tokenSimilarity(left: string, right: string): number {
+  const a = nameTokens(left); const b = nameTokens(right);
+  if (a.size === 0 || b.size === 0) return 0;
+  return [...a].filter((token) => b.has(token)).length / Math.max(a.size, b.size);
+}
+
 function dataUrl(name: string): URL { return new URL(`${DATA_DIRECTORY}${name}`, document.baseURI); }
 async function loadJson<T>(name: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(dataUrl(name), signal === undefined ? undefined : { signal });
@@ -18,16 +28,14 @@ export class EmergencyCardRepository {
   private constructor(private readonly database: EmergencyCardsDatabase) {}
 
   static async load(signal?: AbortSignal): Promise<EmergencyCardRepository> {
-    const [index, cards, profiles, supplementalIndex, ergCards, cameoProfiles, meta] = await Promise.all([
+    // Runtime policy: Russian emergency cards only. Foreign ERG/CAMEO
+    // datasets must never be merged into operational guidance.
+    const [index, cards, meta] = await Promise.all([
       loadJson<readonly DangerousGoodIndexEntry[]>('dangerous-goods-index-2026.json', signal),
       loadJson<readonly EmergencyCard[]>('emergency-cards-2026.json', signal),
-      loadJson<readonly SubstanceSpecificProfile[]>('dangerous-goods-profiles-2026.json', signal),
-      loadJson<readonly DangerousGoodIndexEntry[]>('erg-dangerous-goods-index-2024.json', signal),
-      loadJson<readonly EmergencyCard[]>('erg-emergency-cards-2024.json', signal),
-      loadJson<readonly SubstanceSpecificProfile[]>('cameo-profiles-3.1.0.json', signal),
       loadJson<EmergencyCardsMeta>('emergency-cards-meta.json', signal),
     ]);
-    return EmergencyCardRepository.fromDatabase({ index: [...index, ...supplementalIndex], cards: [...cards, ...ergCards], profiles: [...profiles, ...cameoProfiles], meta });
+    return EmergencyCardRepository.fromDatabase({ index, cards, profiles: [], meta });
   }
 
   static fromDatabase(database: EmergencyCardsDatabase): EmergencyCardRepository {
@@ -56,6 +64,10 @@ export class EmergencyCardRepository {
       if (new Set(exact.map((entry) => entry.emergencyCardNumber)).size === 1) return exact[0];
       const containing = candidates.filter((entry) => normalized(entry.name).includes(value) || value.includes(normalized(entry.name)));
       if (new Set(containing.map((entry) => entry.emergencyCardNumber)).size === 1) return containing[0];
+      const ranked = candidates.map((entry) => ({ entry, score: tokenSimilarity(entry.name, name) })).sort((left, right) => right.score - left.score);
+      const bestScore = ranked[0]?.score ?? 0;
+      const byTokens = ranked.filter((item) => item.score === bestScore && item.score >= 0.6).map((item) => item.entry);
+      if (new Set(byTokens.map((entry) => entry.emergencyCardNumber)).size === 1) return byTokens[0];
     }
     return undefined;
   }

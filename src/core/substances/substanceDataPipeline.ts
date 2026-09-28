@@ -57,5 +57,6 @@ export const PILOT_SUBSTANCE_DATA = buildSubstanceDataLayers(PILOT_RAW_SOURCE_DA
 
 export function getPublishedSubstanceByUN(unNumber: string): ValidatedSubstanceRecord | undefined {
   const un = unNumber.replace(/\D/gu, '').padStart(4, '0');
-  return PILOT_SUBSTANCE_DATA.published.find((record) => record.transport.unNumber.value === un);
+  return PILOT_SUBSTANCE_DATA.published.find((record) => record.transport.unNumber.value === un
+    && record.sources.filter((source) => source.purpose === 'individual-profile').every((source) => /(?:mintrans\.gov\.ru|mchs\.gov\.ru|rospotrebnadzor\.ru|minzdrav\.gov\.ru|publication\.pravo\.gov\.ru|consultant\.ru|docs\.cntd\.ru|gost\.ru|garant\.ru|rpohv\.ru)/iu.test(source.url)));
 }
