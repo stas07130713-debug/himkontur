@@ -90,7 +90,9 @@ function cropCandidate(bitmap: ImageBitmap, rectangle: Rectangle, label: string,
   const marginX = rectangle.width * .03; const marginY = rectangle.height * .08;
   const sourceX = Math.max(0, rectangle.x - marginX); const sourceY = Math.max(0, rectangle.y - marginY);
   const sourceWidth = Math.min(bitmap.width - sourceX, rectangle.width + marginX * 2); const sourceHeight = Math.min(bitmap.height - sourceY, rectangle.height + marginY * 2);
-  const scale = Math.min(12, Math.max(2, 1200 / Math.max(sourceWidth, 1)));
+  // Для цифр таблички 800 px достаточно; прежние 1200 px заметно замедляли
+  // каждый локальный проход OCR на телефонах без прироста точности.
+  const scale = Math.min(8, Math.max(2, 800 / Math.max(sourceWidth, 1)));
   const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(sourceWidth * scale)); canvas.height = Math.max(1, Math.round(sourceHeight * scale));
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (context === null) return { canvas, label, region, row };
@@ -122,13 +124,11 @@ export async function prepareOcrCandidates(file: File): Promise<readonly OcrCand
     context.drawImage(bitmap, 0, 0, analysis.width, analysis.height);
     const detected = orangeRectangles(context.getImageData(0, 0, analysis.width, analysis.height));
     const rectangles = [...stackedPlacards(detected), ...detected].sort((left, right) => right.score - left.score).slice(0, 10).map((rectangle) => ({ ...rectangle, x: rectangle.x / analysisScale, y: rectangle.y / analysisScale, width: rectangle.width / analysisScale, height: rectangle.height / analysisScale }));
-    const candidates = rectangles.slice(0, 6).flatMap((rectangle, index) => {
+    const candidates = rectangles.slice(0, 2).flatMap((rectangle, index) => {
       const upper = { ...rectangle, height: rectangle.height * .48 };
       const lower = { ...rectangle, y: rectangle.y + rectangle.height * .52, height: rectangle.height * .48 };
       return [
-        cropCandidate(bitmap, upper, `верхняя строка ${index + 1}`, index, 'upper'),
         cropCandidate(bitmap, upper, `контрастная верхняя строка ${index + 1}`, index, 'upper', 0),
-        cropCandidate(bitmap, lower, `нижняя строка ${index + 1}`, index, 'lower'),
         cropCandidate(bitmap, lower, `контрастная нижняя строка ${index + 1}`, index, 'lower', 0),
         cropCandidate(bitmap, rectangle, `оранжевая область ${index + 1}`, index, 'whole')
       ];
@@ -137,9 +137,9 @@ export async function prepareOcrCandidates(file: File): Promise<readonly OcrCand
       const lowerCentre: Rectangle = { x: bitmap.width * .15, y: bitmap.height * .38, width: bitmap.width * .7, height: bitmap.height * .6, score: 0 };
       candidates.push(cropCandidate(bitmap, lowerCentre, 'нижняя центральная часть', -1, 'fallback'));
       candidates.push(cropCandidate(bitmap, lowerCentre, 'контрастная нижняя часть', -1, 'fallback', 0));
-      for (let row = 0; row < 2; row += 1) for (let column = 0; column < 3; column += 1) {
-        const tile: Rectangle = { x: bitmap.width * Math.max(0, column / 3 - .035), y: bitmap.height * Math.max(0, row / 2 - .045), width: bitmap.width * Math.min(.4, 1 - column / 3 + .035), height: bitmap.height * Math.min(.59, 1 - row / 2 + .045), score: 0 };
-        const region = -10 - row * 3 - column;
+      for (let row = 0; row < 2; row += 1) for (let column = 0; column < 2; column += 1) {
+        const tile: Rectangle = { x: bitmap.width * Math.max(0, column / 2 - .04), y: bitmap.height * Math.max(0, row / 2 - .045), width: bitmap.width * Math.min(.56, 1 - column / 2 + .04), height: bitmap.height * Math.min(.59, 1 - row / 2 + .045), score: 0 };
+        const region = -10 - row * 2 - column;
         candidates.push(cropCandidate(bitmap, tile, `контрастный участок ${row + 1}.${column + 1}`, region, 'fallback', 0));
       }
     }

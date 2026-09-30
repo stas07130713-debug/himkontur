@@ -3,11 +3,15 @@ import pdfMake from 'pdfmake/build/pdfmake';
 import { vfs } from 'pdfmake/build/vfs_fonts';
 import type { Content } from 'pdfmake/interfaces';
 import type { CalculationResult, VerificationResult } from '../core/types';
-import { Capacitor } from '@capacitor/core';
-import { Directory, Filesystem } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 
 pdfMake.vfs = vfs;
+
+type NativeReportFiles = {
+  saveReport(options: Readonly<{ filename: string; mimeType: string; data: string }>): Promise<Readonly<{ location: string }>>;
+};
+
+const nativeReportFiles = registerPlugin<NativeReportFiles>('HimkonturFiles');
 
 export type ReportContext = Readonly<{
   weatherSource: string;
@@ -90,17 +94,10 @@ function blobAsBase64(blob: Blob): Promise<string> {
 
 async function saveBlob(blob: Blob, name: string): Promise<void> {
   if (Capacitor.isNativePlatform()) {
-    const saved = await Filesystem.writeFile({
-      path: `reports/${name}`,
+    await nativeReportFiles.saveReport({
+      filename: name,
+      mimeType: blob.type || (name.toLocaleLowerCase('ru-RU').endsWith('.pdf') ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
       data: await blobAsBase64(blob),
-      directory: Directory.Cache,
-      recursive: true,
-    });
-    await Share.share({
-      title: 'Отчёт ХИМКОНТУР',
-      text: 'Сохранить или отправить сформированный отчёт',
-      url: saved.uri,
-      dialogTitle: 'Отчёт ХИМКОНТУР',
     });
     return;
   }

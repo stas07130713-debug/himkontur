@@ -7,6 +7,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(HimkonturUpdaterPlugin.class);
+        registerPlugin(HimkonturFilesPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

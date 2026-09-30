@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import type { Worker } from 'tesseract.js';
 import { getEmergencyCardByUN } from '../core/emergencyCards/emergencyCardLookup';
 import { EmergencyCardRepository } from '../core/emergencyCards/emergencyCardRepository';
 import { SUBSTANCES } from '../core/reference-data';
@@ -20,6 +21,7 @@ const FORMULA_BY_UN = Object.values(SUBSTANCE_PRESENTATION).reduce<Record<string
 const SEARCH_ALIASES_BY_UN = SUBSTANCES.reduce<Record<string, string>>((result, substance) => { const un = SUBSTANCE_PRESENTATION[substance.id]?.un; if (un !== undefined && un.length > 0) result[un] = `${result[un] ?? ''} ${substance.name}`; return result; }, {});
 const SUBSCRIPT_DIGITS: Readonly<Record<string, string>> = { '₀': '0', '₁': '1', '₂': '2', '₃': '3', '₄': '4', '₅': '5', '₆': '6', '₇': '7', '₈': '8', '₉': '9' };
 let emergencyRepositoryPromise: Promise<EmergencyCardRepository> | null = null;
+let ocrWorkerPromise: Promise<Worker> | null = null;
 
 function loadEmergencyRepository(): Promise<EmergencyCardRepository> {
   emergencyRepositoryPromise ??= EmergencyCardRepository.load().catch((error: unknown) => {
@@ -27,6 +29,22 @@ function loadEmergencyRepository(): Promise<EmergencyCardRepository> {
     throw error;
   });
   return emergencyRepositoryPromise;
+}
+
+async function loadOcrWorker(): Promise<Worker> {
+  ocrWorkerPromise ??= import('tesseract.js').then(({ createWorker }) => {
+    const base = new URL('.', document.baseURI);
+    return createWorker('eng', 1, {
+      workerPath: new URL('ocr/worker.min.js', base).href,
+      corePath: new URL('ocr/core', base).href,
+      langPath: new URL('tessdata', base).href,
+      gzip: false,
+    });
+  }).catch((error: unknown) => {
+    ocrWorkerPromise = null;
+    throw error;
+  });
+  return ocrWorkerPromise;
 }
 
 function normalized(value: string): string { return value.toLocaleLowerCase('ru-RU').replace(/[₀-₉]/gu, (character) => SUBSCRIPT_DIGITS[character] ?? character).replace(/ё/gu, 'е').replace(/[^a-zа-я0-9]+/gu, ''); }
@@ -222,11 +240,10 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
     const input = event.currentTarget;
     const file = input.files?.[0]; if (file === undefined) return;
     if (preview !== null) URL.revokeObjectURL(preview); const url = URL.createObjectURL(file); setQuery(''); setSelected(null); setPreview(url); setRecognizing(true); setRecognitionProgress(3); setRecognitionStage('Подготовка фотографии'); setRecognitionError(null); setRecognizedPlacards([]); setStatus('preliminary');
-    let worker: Tesseract.Worker | undefined;
+    let worker: Worker | undefined;
     try {
-      const { createWorker, PSM } = await import('tesseract.js');
-      const base = new URL('.', document.baseURI);
-      worker = await createWorker('eng', 1, { workerPath: new URL('ocr/worker.min.js', base).href, corePath: new URL('ocr/core', base).href, langPath: new URL('tessdata', base).href, gzip: false });
+      const { PSM } = await import('tesseract.js');
+      worker = await loadOcrWorker();
       const candidates = await prepareOcrCandidates(file);
       type OcrRead = Readonly<{ region: number; row: 'upper' | 'lower' | 'whole' | 'fallback'; label: string; numbers: readonly string[]; confidence: number }>;
       const reads: OcrRead[] = [];
@@ -256,20 +273,24 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
           }
         }
       }
-      setRecognitionStage('Проверка результата'); setRecognitionProgress(86);
-      await worker.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: PSM.SPARSE_TEXT });
-      const spatialResult = await worker.recognize(file, {}, { blocks: true, text: true });
-      const words = (spatialResult.data.blocks ?? []).flatMap((block) => block.paragraphs.flatMap((paragraph) => paragraph.lines.flatMap((line) => line.words))).map((word) => ({ value: word.text.replace(/\D/gu, ''), confidence: word.confidence, bbox: word.bbox }));
-      let spatialRegion = 1000;
-      for (const hazardWord of words.filter((word) => (word.value.length === 2 || word.value.length === 3) && word.confidence >= 25)) for (const unWord of words.filter((word) => word.value.length === 4 && word.confidence >= 25)) {
-        const hazardX = (hazardWord.bbox.x0 + hazardWord.bbox.x1) / 2; const hazardY = (hazardWord.bbox.y0 + hazardWord.bbox.y1) / 2;
-        const unX = (unWord.bbox.x0 + unWord.bbox.x1) / 2; const unY = (unWord.bbox.y0 + unWord.bbox.y1) / 2;
-        const characterHeight = Math.max(hazardWord.bbox.y1 - hazardWord.bbox.y0, unWord.bbox.y1 - unWord.bbox.y0, 1);
-        if (unY <= hazardY || unY - hazardY > characterHeight * 3.2 || Math.abs(unX - hazardX) > characterHeight * 2.4) continue;
-        const good = database.find((item) => item.un === unWord.value && hazardDigits(item.hazardNumber) === hazardWord.value);
-        if (good === undefined) continue;
-        const region = spatialRegion++; const key = `${region}:${hazardWord.value}:${unWord.value}`;
-        evidence.set(key, { good, hazard: good.hazardNumber || hazardWord.value, un: unWord.value, region, votes: 2, score: (hazardWord.confidence + unWord.confidence) / 25 });
+      // Полный снимок заметно медленнее подготовленных областей. Запускаем этот
+      // резервный проход только тогда, когда быстрый поиск таблички ничего не дал.
+      if (evidence.size === 0) {
+        setRecognitionStage('Дополнительная проверка'); setRecognitionProgress(86);
+        await worker.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: PSM.SPARSE_TEXT });
+        const spatialResult = await worker.recognize(file, {}, { blocks: true, text: true });
+        const words = (spatialResult.data.blocks ?? []).flatMap((block) => block.paragraphs.flatMap((paragraph) => paragraph.lines.flatMap((line) => line.words))).map((word) => ({ value: word.text.replace(/\D/gu, ''), confidence: word.confidence, bbox: word.bbox }));
+        let spatialRegion = 1000;
+        for (const hazardWord of words.filter((word) => (word.value.length === 2 || word.value.length === 3) && word.confidence >= 25)) for (const unWord of words.filter((word) => word.value.length === 4 && word.confidence >= 25)) {
+          const hazardX = (hazardWord.bbox.x0 + hazardWord.bbox.x1) / 2; const hazardY = (hazardWord.bbox.y0 + hazardWord.bbox.y1) / 2;
+          const unX = (unWord.bbox.x0 + unWord.bbox.x1) / 2; const unY = (unWord.bbox.y0 + unWord.bbox.y1) / 2;
+          const characterHeight = Math.max(hazardWord.bbox.y1 - hazardWord.bbox.y0, unWord.bbox.y1 - unWord.bbox.y0, 1);
+          if (unY <= hazardY || unY - hazardY > characterHeight * 3.2 || Math.abs(unX - hazardX) > characterHeight * 2.4) continue;
+          const good = database.find((item) => item.un === unWord.value && hazardDigits(item.hazardNumber) === hazardWord.value);
+          if (good === undefined) continue;
+          const region = spatialRegion++; const key = `${region}:${hazardWord.value}:${unWord.value}`;
+          evidence.set(key, { good, hazard: good.hazardNumber || hazardWord.value, un: unWord.value, region, votes: 2, score: (hazardWord.confidence + unWord.confidence) / 25 });
+        }
       }
       const recognized = [...new Set([...reads.map((read) => read.region), ...[...evidence.values()].map((item) => item.region)])].flatMap((region) => {
         const ranked = [...evidence.values()].filter((item) => item.region === region).sort((left, right) => right.votes - left.votes || right.score - left.score);
@@ -288,10 +309,11 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
         setRecognitionError('Маркировка не распознана с достаточной достоверностью. Программа уже увеличила найденные области автоматически. Сделайте более прямой снимок либо введите оба номера вручную. Случайные варианты программа не подставляет.');
       }
     } catch (error: unknown) {
+      await worker?.terminate().catch(() => undefined);
+      ocrWorkerPromise = null;
       const detail = error instanceof Error ? error.message : String(error);
       setRecognitionError(`Не удалось обработать фотографию автономно: ${detail || 'ошибка модуля распознавания'}.`);
     } finally {
-      await worker?.terminate().catch(() => undefined);
       setRecognizing(false);
       setRecognitionStage('');
       setRecognitionProgress(0);
