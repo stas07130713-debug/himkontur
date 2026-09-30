@@ -431,7 +431,7 @@ try {
     for (let attempt = 0; attempt < 30 && !document.querySelector('.goods-search-results')?.textContent?.includes('2908'); attempt += 1) await wait(100);
     document.querySelector('.goods-search-results button')?.click(); await wait();
     check('UN 2908 lookup', document.querySelector('.goods-hero')?.textContent?.includes('2908'));
-    check('UN 2908 uses complete sourced emergency guidance', document.querySelector('.official-card-document') !== null && document.querySelector('.unverified-emergency-card') === null);
+    check('UN 2908 shows a complete fact passport without inventing an absent emergency card', document.querySelectorAll('.substance-facts dl > div').length === 6 && document.querySelector('.unverified-emergency-card') === null && document.querySelector('.official-card-document') === null);
     if (unInput instanceof HTMLInputElement) setInput(unInput, '0029');
     for (let attempt = 0; attempt < 30 && !document.querySelector('.goods-search-results')?.textContent?.includes('0029'); attempt += 1) await wait(100);
     document.querySelector('.goods-search-results button')?.click(); await wait();

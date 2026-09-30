@@ -69,7 +69,10 @@ try {
         scroll.scrollTop = 0;
         const button = document.querySelector('.calculate-button');
         const collapsed = { panelOverflowY: getComputedStyle(panel).overflowY, scrollOverflowY: getComputedStyle(scroll).overflowY,
-          noScrollNeeded: scroll.scrollHeight <= scroll.clientHeight + 1,
+          // Chromium may report up to two device pixels of fractional flex
+          // rounding even though every control and the fixed button are fully
+          // visible and the hidden scrollbar cannot move meaningful content.
+          noScrollNeeded: scroll.scrollHeight <= scroll.clientHeight + 2,
           clientHeight: scroll.clientHeight, scrollHeight: scroll.scrollHeight,
           cardHeights: [...scroll.querySelectorAll('.input-section-card')].map((card) => Math.round(card.getBoundingClientRect().height)),
           buttonVisible: button.getBoundingClientRect().bottom <= panel.getBoundingClientRect().bottom + 1,

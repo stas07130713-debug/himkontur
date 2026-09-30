@@ -59,10 +59,23 @@ try {
   const inspect = () => evaluate(`(() => {
     const host = document.querySelector('.offline-vector-map');
     const canvas = host?.querySelector('canvas');
+    let canvasSignature = '';
+    if (canvas instanceof HTMLCanvasElement && canvas.width > 0 && canvas.height > 0) {
+      const sample = document.createElement('canvas');
+      sample.width = 32; sample.height = 32;
+      const context = sample.getContext('2d', { willReadFrequently: true });
+      context?.drawImage(canvas, 0, 0, 32, 32);
+      const pixels = context?.getImageData(0, 0, 32, 32).data ?? [];
+      let hash = 2166136261;
+      for (const value of pixels) hash = Math.imul(hash ^ value, 16777619);
+      canvasSignature = (hash >>> 0).toString(16);
+    }
     return {
       status: host?.dataset.mapStatus ?? 'missing',
       error: host?.dataset.mapError ?? '',
       basemap: host?.dataset.basemap ?? '',
+      satelliteLoaded: host?.dataset.satelliteLoaded ?? '',
+      canvasSignature,
       sourceReady: host?.dataset.sourceReady ?? '',
       styleLoaded: host?.dataset.styleLoaded ?? '',
       zoom: host?.dataset.mapZoom ?? '',
@@ -96,6 +109,19 @@ try {
     const afterPan = await inspect();
     cases.push({ name: 'pan-control', ...afterPan, changed: afterPan.center !== afterZoom.center });
   }
+  const standardBeforeSatellite = await inspect();
+  await evaluate(`document.querySelector('.map-toolbar .segmented button:nth-child(2)')?.click()`);
+  await delay(3500);
+  const onlineSatellite = await inspect();
+  cases.push({
+    name: 'online-satellite-switch',
+    ...onlineSatellite,
+    changed: onlineSatellite.canvasSignature !== standardBeforeSatellite.canvasSignature,
+  });
+  await evaluate(`document.querySelector('.map-toolbar .segmented button:nth-child(1)')?.click()`);
+  await delay(1200);
+  const standardAgain = await inspect();
+  cases.push({ name: 'online-standard-switch-back', ...standardAgain, changed: standardAgain.basemap === 'standard' });
   await command('Network.emulateNetworkConditions', {
     offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0,
   });
@@ -116,10 +142,18 @@ try {
     offline: false, latency: 20, downloadThroughput: 5_000_000, uploadThroughput: 1_000_000,
   });
   await evaluate(`window.dispatchEvent(new Event('online'))`);
-  await delay(2500);
-  cases.push({ name: 'online-satellite', ...(await inspect()) });
+  await delay(800);
+  const beforeRecoverySwitch = await inspect();
+  await evaluate(`document.querySelector('.map-toolbar .segmented button:nth-child(2)')?.click()`);
+  await delay(3500);
+  const recoveredSatellite = await inspect();
+  cases.push({
+    name: 'online-satellite-recovery-switch',
+    ...recoveredSatellite,
+    changed: recoveredSatellite.canvasSignature !== beforeRecoverySwitch.canvasSignature,
+  });
 
-  const failures = cases.filter((item) => item.status === 'missing' || item.status === 'error' || item.canvasWidth < 100 || item.canvasHeight < 100 || (item.name.endsWith('-control') && item.changed !== true));
+  const failures = cases.filter((item) => item.status === 'missing' || item.status === 'error' || item.canvasWidth < 100 || item.canvasHeight < 100 || ((item.name.endsWith('-control') || item.name.includes('-switch')) && item.changed !== true) || (item.name.includes('online-satellite') && item.satelliteLoaded !== 'true'));
   const report = { passed: failures.length === 0 && consoleErrors.length === 0, serviceWorkerReady, cases, consoleErrors, failures };
   writeFileSync(resolve('artifacts', 'map-runtime-audit.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));

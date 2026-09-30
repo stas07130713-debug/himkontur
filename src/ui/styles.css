@@ -1206,13 +1206,73 @@ button.wide { width: 100%; margin-top: 10px; }
 .input-panel-scroll::-webkit-scrollbar { width: 0; height: 0; }
 .input-panel-scroll:has(.source-editor[open], .custom-source-card[open]) { justify-content: flex-start; scrollbar-width: auto; }
 .input-panel-scroll:has(.source-editor[open], .custom-source-card[open])::-webkit-scrollbar { width: 8px; }
-.input-panel .input-section-card { padding-block: 2px; }
+.input-panel .input-section-card { padding-block: 1px; }
 .input-panel .plain-section-title { margin-bottom: 0; }
 .input-panel .section-heading { margin-block: 0; }
 .input-panel .weather-location { display: none; }
 .input-panel .forecast-title h3 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .input-panel .forecast-offset { padding-block: 0 1px; }
 .input-panel .absolute-forecast { margin-bottom: 0; padding-block: 2px; }
+
+/* The collapsed desktop form must fit between the toolbar and the fixed
+   Calculate button for every source preset.  Cards may share a few pixels of
+   shrinkage, while the hydrochloric-acid reservoir selector stays on one
+   compact row.  Expanded source details remain the only scrollable state. */
+@media (min-width: 721px) {
+  .input-panel { gap: 1px; padding-block: 4px; }
+  .input-panel .calculate-button { min-height: 30px; }
+  .input-panel-scroll:not(:has(.source-editor[open], .custom-source-card[open])) { gap: 0; }
+  .input-panel-scroll:not(:has(.source-editor[open], .custom-source-card[open])) .input-section-card {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-bottom: -1px;
+  }
+  .input-panel .reservoir-count-selector {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 4px;
+    align-items: center;
+    margin: 2px 0;
+    padding: 1px 4px;
+  }
+  .input-panel .reservoir-count-selector legend { display: none; }
+  .input-panel .reservoir-count-selector label {
+    display: contents;
+    margin: 0;
+  }
+  .input-panel .reservoir-count-selector label::before {
+    content: "Резервуары";
+    color: inherit;
+    font-size: inherit;
+    font-weight: 750;
+  }
+  .input-panel .reservoir-count-selector select {
+    min-height: 19px;
+    padding-block: 0;
+    font-size: 10px;
+  }
+  .input-panel .embedded-source-palette:has(.reservoir-count-selector) {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(116px, .75fr);
+    gap: 4px;
+    align-items: center;
+  }
+  .input-panel .embedded-source-palette:has(.reservoir-count-selector) > .source-selector,
+  .input-panel .embedded-source-palette:has(.reservoir-count-selector) > .reservoir-count-selector {
+    min-width: 0;
+  }
+  .input-panel .embedded-source-palette:has(.reservoir-count-selector) > .source-editor {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
+  .input-panel .embedded-source-palette:has(.reservoir-count-selector) > .source-editor > summary { padding-block: 0; }
+  .input-panel .embedded-source-palette:has(.reservoir-count-selector) > .source-selector > summary {
+    min-height: 31px;
+  }
+  .input-panel .embedded-source-palette:has(.reservoir-count-selector) > .source-selector > summary .source-photo {
+    height: 29px;
+  }
+}
 
 @media (min-height: 940px) and (min-width: 721px) {
   .input-panel-scroll { gap: 5px; }

@@ -94,14 +94,6 @@ function basemapStyle(): StyleSpecification {
         maxzoom: 15,
         attribution: '© Protomaps © OpenStreetMap contributors',
       },
-      satellite: {
-        type: 'raster',
-        tiles: [satelliteTileTemplate()],
-        tileSize: 256,
-        minzoom: 0,
-        maxzoom: 19,
-        attribution: 'Источник снимков: Esri World Imagery',
-      },
     },
     layers: [
       { id: 'background', type: 'background', paint: { 'background-color': '#edf1ea' } },
@@ -113,15 +105,13 @@ function basemapStyle(): StyleSpecification {
       { id: 'roads-casing', type: 'line', source: 'protomaps', 'source-layer': 'roads', paint: { 'line-color': '#c8bcae', 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.5, 15, 5] } },
       { id: 'roads', type: 'line', source: 'protomaps', 'source-layer': 'roads', paint: { 'line-color': '#fffdf8', 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.25, 15, 3] } },
       { id: 'boundaries', type: 'line', source: 'protomaps', 'source-layer': 'boundaries', paint: { 'line-color': '#8b9a94', 'line-width': 0.8, 'line-dasharray': [3, 2] } },
-      {
-        id: 'satellite-imagery',
-        type: 'raster',
-        source: 'satellite',
-        layout: { visibility: 'none' },
-        paint: { 'raster-fade-duration': 0, 'raster-opacity': 1 },
-      },
     ],
   };
+}
+
+function removeSatelliteLayer(map: MapLibreMap) {
+  if (map.getLayer('satellite-imagery') !== undefined) map.removeLayer('satellite-imagery');
+  if (map.getSource('satellite') !== undefined) map.removeSource('satellite');
 }
 
 function applyBasemap(map: MapLibreMap, basemap: Basemap, container: HTMLDivElement | null) {
@@ -132,13 +122,29 @@ function applyBasemap(map: MapLibreMap, basemap: Basemap, container: HTMLDivElem
   for (const layerId of LOCAL_LAYER_IDS) {
     if (map.getLayer(layerId) !== undefined) map.setLayoutProperty(layerId, 'visibility', 'visible');
   }
-  if (map.getLayer('satellite-imagery') !== undefined) {
-    map.setLayoutProperty('satellite-imagery', 'visibility', satellite ? 'visible' : 'none');
+  removeSatelliteLayer(map);
+  if (satellite) {
+    map.addSource('satellite', {
+      type: 'raster',
+      tiles: [satelliteTileTemplate()],
+      tileSize: 256,
+      minzoom: 0,
+      maxzoom: 19,
+      attribution: 'Источник снимков: Esri World Imagery',
+    });
+    map.addLayer({
+      id: 'satellite-imagery',
+      type: 'raster',
+      source: 'satellite',
+      paint: { 'raster-fade-duration': 0, 'raster-opacity': 1 },
+    });
   }
   if (container !== null) {
     container.dataset.basemap = basemap;
     container.dataset.satelliteRequested = String(satellite);
+    container.dataset.satelliteLoaded = 'false';
   }
+  map.triggerRepaint();
 }
 
 export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: GeoPoint; zoom: number; basemap: Basemap }>) {
@@ -173,6 +179,7 @@ export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: Geo
     map.on('idle', () => { container.dataset.mapIdle = 'true'; container.dataset.mapStatus = 'idle'; });
     map.on('sourcedata', (event) => {
       if (event.isSourceLoaded) container.dataset.sourceReady = 'true';
+      if (event.sourceId === 'satellite' && event.isSourceLoaded) container.dataset.satelliteLoaded = 'true';
     });
     map.on('error', (event) => {
       const message = event.error.message;
@@ -188,10 +195,17 @@ export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: Geo
       container.dataset.mapCenter = `${currentCenter.lng.toFixed(6)},${currentCenter.lat.toFixed(6)}`;
     }, 500);
     mapRef.current = map;
+    const retrySatellite = () => {
+      if (appliedBasemapRef.current === 'satellite' && map.isStyleLoaded()) {
+        applyBasemap(map, 'satellite', container);
+      }
+    };
+    window.addEventListener('online', retrySatellite);
     const observer = new ResizeObserver(() => map.resize());
     observer.observe(container);
     return () => {
       observer.disconnect();
+      window.removeEventListener('online', retrySatellite);
       window.clearInterval(auditTimer);
       map.remove();
       mapRef.current = null;
