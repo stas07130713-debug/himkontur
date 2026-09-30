@@ -80,7 +80,7 @@ jobs:
           HIMKONTUR_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           HIMKONTUR_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           HIMKONTUR_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease
+        run: chmod +x gradlew && ./gradlew assembleRelease
       - name: Подготовить имя APK
         run: cp android/app/build/outputs/apk/release/app-release.apk HIMKONTUR-Android.apk
       - name: Сохранить APK
