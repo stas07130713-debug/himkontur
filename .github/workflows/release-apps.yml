@@ -28,6 +28,12 @@ jobs:
           CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
           CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: npm run desktop:win -- --publish never
+      - name: Подготовить постоянную ссылку Windows
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem "release/windows/HIMKONTUR-*-Setup.exe" | Select-Object -First 1
+          if ($null -eq $setup) { throw "Установщик Windows не найден" }
+          Copy-Item -LiteralPath $setup.FullName -Destination "release/windows/HIMKONTUR-Windows-Setup.exe" -Force
       - name: Сохранить файлы Windows
         uses: actions/upload-artifact@v4
         with:

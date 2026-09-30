@@ -1188,22 +1188,16 @@ button.wide { width: 100%; margin-top: 10px; }
 .input-panel .checkbox-field input { box-shadow: none !important; accent-color: #078d99; }
 .input-panel .origin { max-width: 118px; overflow: hidden; border: 1px solid; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Desktop title-bar overlay must never cover theme controls. */
+/* The Windows build uses the native title bar, so the application toolbar
+   keeps the same four-column layout as the web build. */
 @media (min-width: 721px) {
   .topbar.electron-topbar {
-    grid-template-columns: max-content max-content minmax(0, 1fr) auto 205px;
-    padding-right: 0;
+    grid-template-columns: max-content max-content minmax(0, 1fr) auto;
+    padding-right: 14px;
   }
   .topbar.electron-topbar .file-actions { grid-column: 3; padding-right: 0; }
   .topbar.electron-topbar > .theme-switch { grid-column: 4; position: static; }
-  .topbar.electron-topbar::after {
-    content: "";
-    grid-column: 5;
-    width: 205px;
-    min-width: 205px;
-    height: 100%;
-    pointer-events: none;
-  }
+  .topbar.electron-topbar::after { content: none; }
 }
 
 /* The normal collapsed input form fits without a visible scrollbar. Expanded
@@ -1392,6 +1386,8 @@ button.wide { width: 100%; margin-top: 10px; }
 .mobile-qr-frame { width: min(300px, 76vw); aspect-ratio: 1; margin: 14px auto 4px; display: grid; place-items: center; padding: 12px; border: 1px solid #a8d0d4; border-radius: 14px; background: #fff; }
 .mobile-qr-frame img { width: 100%; height: 100%; display: block; }
 .mobile-download-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.application-update-check { width: 100%; min-height: 40px; margin-top: 10px; border: 1px solid #078c98; border-radius: 9px; background: #078c98; color: #fff; font-weight: 800; }
+.application-update-check:hover { background: #056e78; }
 .branded-download-progress { display: grid; justify-items: center; gap: 8px; color: #39707a; font-size: 10px; }
 .branded-download-progress svg { width: 58px; height: 58px; animation: branded-download-pulse 1.1s ease-in-out infinite; }
 .application-download { min-height: 58px; padding: 8px 10px; display: flex; align-items: center; justify-content: center; gap: 9px; border: 1px solid #078894; border-radius: 10px; background: linear-gradient(180deg, #079ba8, #05717e); color: #fff; text-decoration: none; box-shadow: 0 5px 16px #006f7c30; }

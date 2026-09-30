@@ -61,6 +61,12 @@ const BASE_WIDTH_KM =
   (MAP_BOUNDS.east - MAP_BOUNDS.west) * KM_PER_LONGITUDE_DEGREE;
 const BASE_HEIGHT_KM =
   (MAP_BOUNDS.north - MAP_BOUNDS.south) * KM_PER_LATITUDE_DEGREE;
+const OFFLINE_MAP_BOUNDS = {
+  west: 31.515,
+  south: 67.495,
+  east: 34.215,
+  north: 68.355,
+} as const;
 const SOURCE_KINDS: readonly SourceKind[] = [
   "rail",
   "truck",
@@ -123,6 +129,20 @@ function niceScale(value: number): number {
   const exponent = 10 ** Math.floor(Math.log10(value));
   const normalized = value / exponent;
   return (normalized >= 5 ? 5 : normalized >= 2 ? 2 : 1) * exponent;
+}
+function clampMapCenter(point: GeoPoint, width: number, height: number, zoom: number): GeoPoint {
+  const scale = zoom * Math.min(width / BASE_WIDTH_KM, height / BASE_HEIGHT_KM);
+  const halfLongitude = width / scale / KM_PER_LONGITUDE_DEGREE / 2;
+  const halfLatitude = height / scale / KM_PER_LATITUDE_DEGREE / 2;
+  const clampAxis = (value: number, minimum: number, maximum: number, margin: number) => {
+    const low = minimum + margin;
+    const high = maximum - margin;
+    return low > high ? (minimum + maximum) / 2 : Math.max(low, Math.min(high, value));
+  };
+  return {
+    longitude: clampAxis(point.longitude, OFFLINE_MAP_BOUNDS.west, OFFLINE_MAP_BOUNDS.east, halfLongitude),
+    latitude: clampAxis(point.latitude, OFFLINE_MAP_BOUNDS.south, OFFLINE_MAP_BOUNDS.north, halfLatitude),
+  };
 }
 function readableLineAngle(
   x1: number,
@@ -310,15 +330,15 @@ export function MapCanvas(props: Props) {
           setMapCenter((current) => {
             const anchorWorld = worldCoordinate(anchor);
             const currentWorld = worldCoordinate(current);
-            return geoFromWorld(
+            return clampMapCenter(geoFromWorld(
               anchorWorld.x - (anchorWorld.x - currentWorld.x) / appliedFactor,
               anchorWorld.y - (anchorWorld.y - currentWorld.y) / appliedFactor,
-            );
+            ), viewWidth, viewHeight, nextZoom);
           });
         return nextZoom;
       });
     },
-    [online],
+    [online, viewHeight, viewWidth],
   );
   useEffect(() => {
     const stage = stageRef.current;
@@ -339,6 +359,9 @@ export function MapCanvas(props: Props) {
     window.addEventListener('online', update); window.addEventListener('offline', update);
     return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); };
   }, []);
+  useEffect(() => {
+    setMapCenter((current) => clampMapCenter(current, viewWidth, viewHeight, zoom));
+  }, [viewHeight, viewWidth, zoom]);
   useEffect(() => {
     setObjectsLocked(props.calculationStarted);
   }, [props.calculationStarted]);
@@ -525,10 +548,10 @@ export function MapCanvas(props: Props) {
       event.clientY - pan.clientY,
     );
     const startWorld = worldCoordinate(pan.center);
-    setMapCenter(geoFromWorld(
+    setMapCenter(clampMapCenter(geoFromWorld(
       startWorld.x - ((delta.x / rotationCoverScale) * viewWidth) / rect.width / projection.worldPixels,
       startWorld.y - ((delta.y / rotationCoverScale) * viewHeight) / rect.height / projection.worldPixels,
-    ));
+    ), viewWidth, viewHeight, zoom));
   };
   const finishPointer = (event: ReactPointerEvent<SVGSVGElement>) => {
     if (longPressRef.current?.pointerId === event.pointerId) { window.clearTimeout(longPressRef.current.timer); longPressRef.current = null; }
@@ -746,7 +769,7 @@ export function MapCanvas(props: Props) {
           title="Вернуться к точке аварии и приблизить карту"
           disabled={!props.sourcePlaced}
           onClick={() => {
-            setMapCenter(props.sourcePoint);
+            setMapCenter(clampMapCenter(props.sourcePoint, viewWidth, viewHeight, 3));
             setZoom(3);
           }}
         />
@@ -1079,7 +1102,7 @@ export function MapCanvas(props: Props) {
               })}
             </svg>
           </div>
-          {!online && <div className="offline-map-status">{props.basemap === "standard" ? "Без интернета · автономная карта доступна" : "Спутник требует интернет · выберите «Карта»"}</div>}
+          {!online && <div className="offline-map-status">{props.basemap === "standard" ? "Без интернета · автономная карта" : "Без интернета · под спутником показана автономная карта"}</div>}
           {contextMenu !== null && contextMenu.target === "map" && (
             <div
               className="map-context-menu add-control-menu"
@@ -1166,7 +1189,7 @@ export function MapCanvas(props: Props) {
               : "Источник не размещён"}
           </div>
           <div className="map-attribution-html">
-            {props.basemap === "standard"
+            {props.basemap === "standard" || !online
               ? "© OpenStreetMap contributors"
               : "Источник снимков: Esri World Imagery"}
           </div>

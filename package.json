@@ -1,7 +1,7 @@
 {
   "name": "ahov-decision-support",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.5",
   "description": "Автономная система поддержки решений при химической аварии",
   "author": "Проект АХОВ",
   "repository": "https://github.com/stas07130713-debug/himkontur.git",
@@ -15,6 +15,7 @@
     "test:acceptance": "node scripts/acceptance-test.mjs",
     "test:input-layout": "node scripts/input-panel-layout-audit.mjs",
     "test:mobile-layout": "node scripts/mobile-layout-audit.mjs",
+    "test:map-runtime": "node scripts/map-runtime-audit.mjs",
     "test:watch": "vitest",
     "data:emergency-cards": "node scripts/build-structured-emergency-cards.mjs",
     "data:workplace-pdk": "node scripts/build-workplace-pdk.mjs",
@@ -23,8 +24,8 @@
     "lint": "eslint . --max-warnings 0",
     "check": "npm run lint && npm run test && npm run build",
     "icon:generate": "electron scripts/generate-icon.mjs",
-    "desktop:dir": "npm run build && npm run icon:generate && electron-builder --dir --win",
-    "desktop:win": "npm run build && npm run icon:generate && electron-builder --win",
+    "desktop:dir": "npm run build && electron-builder --dir --win",
+    "desktop:win": "npm run build && electron-builder --win",
     "android:sync": "npm run build && cap sync android",
     "android:apk": "npm run android:sync && cd android && gradlew.bat assembleDebug",
     "release:check": "node scripts/check-release-version.mjs"

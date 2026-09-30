@@ -211,7 +211,7 @@ function startServer() {
   });
 }
 
-function createWindow() {
+async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 940,
@@ -220,8 +220,11 @@ function createWindow() {
     backgroundColor: '#edf1ef',
     icon: join(CURRENT_DIRECTORY, '..', 'build', 'icon.png'),
     autoHideMenuBar: true,
-    titleBarStyle: 'hidden',
-    titleBarOverlay: { color: '#062a3b', symbolColor: '#e8f5f6', height: 32 },
+    // Use the native Windows title bar. Overlay controls were drawn inside the
+    // application toolbar and could cover the theme/history buttons at some
+    // display scales. The native frame keeps the system controls in their own
+    // non-client area at every DPI and window width.
+    titleBarStyle: 'default',
     show: false,
     webPreferences: {
       preload: join(CURRENT_DIRECTORY, 'preload.mjs'),
@@ -234,8 +237,18 @@ function createWindow() {
     if (/^https?:\/\//iu.test(url)) void shell.openExternal(url);
     return { action: 'deny' };
   });
+  // Older desktop builds registered the PWA service worker on the same local
+  // origin. It can survive an application update and keep serving the old UI
+  // from Cache Storage even though the executable and dist files are newer.
+  // The desktop build is already fully local, so it must never use the PWA
+  // cache. Clear the legacy worker/cache before the first navigation.
+  await mainWindow.webContents.session.clearStorageData({
+    origin: `http://${HOST}:${PORT}`,
+    storages: ['serviceworkers', 'cachestorage']
+  });
+  await mainWindow.webContents.session.clearCache();
   mainWindow.once('ready-to-show', () => mainWindow?.show());
-  void mainWindow.loadURL(`http://${HOST}:${PORT}/${pendingScenario === null ? '' : '?scenario=1'}`);
+  await mainWindow.loadURL(`http://${HOST}:${PORT}/${pendingScenario === null ? '' : '?scenario=1'}`);
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
@@ -246,7 +259,7 @@ async function bootstrap() {
   mkdirSync(tileCacheRoot, { recursive: true });
   queueScenario(process.argv);
   await startServer();
-  createWindow();
+  await createWindow();
   if (app.isPackaged) {
     setTimeout(() => void autoUpdater.checkForUpdates().catch(() => undefined), 8_000);
     updateTimer = setInterval(() => void autoUpdater.checkForUpdates().catch(() => undefined), 6 * 60 * 60 * 1000);
