@@ -74,6 +74,7 @@ try {
       status: host?.dataset.mapStatus ?? 'missing',
       error: host?.dataset.mapError ?? '',
       basemap: host?.dataset.basemap ?? '',
+      archiveMode: host?.dataset.archiveMode ?? '',
       satelliteLoaded: host?.dataset.satelliteLoaded ?? '',
       canvasSignature,
       sourceReady: host?.dataset.sourceReady ?? '',
@@ -143,6 +144,8 @@ try {
   });
   await evaluate(`window.dispatchEvent(new Event('online'))`);
   await delay(800);
+  await evaluate(`document.querySelector('.map-toolbar .segmented button:nth-child(1)')?.click()`);
+  await delay(1200);
   const beforeRecoverySwitch = await inspect();
   await evaluate(`document.querySelector('.map-toolbar .segmented button:nth-child(2)')?.click()`);
   await delay(3500);

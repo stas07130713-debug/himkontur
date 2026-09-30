@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { Map as MapLibreMap, addProtocol, setWorkerUrl, type StyleSpecification } from 'maplibre-gl';
 import mapWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { FetchSource, PMTiles, type RangeResponse, type Source } from 'pmtiles';
@@ -8,14 +9,25 @@ import type { Basemap } from './MapCanvas';
 
 let protocolRegistered = false;
 let offlineArchivePromise: Promise<PMTiles> | null = null;
-setWorkerUrl(mapWorkerUrl);
+setWorkerUrl(new URL(mapWorkerUrl, document.baseURI).href);
+
+function isNativeMobileRuntime(): boolean {
+  return Capacitor.isNativePlatform();
+}
 
 class OfflineReadyPmtilesSource implements Source {
   private readonly rangedSource: FetchSource;
   private completeArchive: Promise<ArrayBuffer> | null = null;
+  private readonly useCompleteArchive: boolean;
 
   constructor(private readonly url: string) {
     this.rangedSource = new FetchSource(url);
+    // Android WebView serves packaged assets through Capacitor's local HTTPS
+    // server. Byte-range responses for compressed APK assets are not reliable
+    // on every Android version. The bundled Monchegorsk archive is small
+    // enough to read once and slice in memory, which makes the offline map
+    // deterministic on phones while browsers keep efficient range requests.
+    this.useCompleteArchive = isNativeMobileRuntime();
   }
 
   getKey(): string {
@@ -31,7 +43,7 @@ class OfflineReadyPmtilesSource implements Source {
   }
 
   async getBytes(offset: number, length: number, signal?: AbortSignal, etag?: string): Promise<RangeResponse> {
-    if (this.completeArchive === null) {
+    if (!this.useCompleteArchive && this.completeArchive === null) {
       try {
         return await this.rangedSource.getBytes(offset, length, signal, etag);
       } catch {
@@ -41,6 +53,7 @@ class OfflineReadyPmtilesSource implements Source {
         // returns the requested slice locally.
       }
     }
+    if (signal?.aborted === true) throw new DOMException('Операция отменена.', 'AbortError');
     const archive = await this.loadCompleteArchive();
     if (offset < 0 || length < 0 || offset + length > archive.byteLength)
       throw new Error('Запрошенный фрагмент выходит за границы локальной карты.');
@@ -159,6 +172,7 @@ export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: Geo
     if (container === null) return;
     ensurePmtilesProtocol();
     container.dataset.mapStatus = 'starting';
+    container.dataset.archiveMode = isNativeMobileRuntime() ? 'complete-local-archive' : 'http-range';
     const initialView = initialViewRef.current;
     const map = new MapLibreMap({
       container,
