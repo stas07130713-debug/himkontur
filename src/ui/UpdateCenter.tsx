@@ -2,10 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 import packageInformation from "../../package.json";
 
-const RELEASE_API = "https://api.github.com/repos/stas07130713-debug/himkontur/releases/latest";
+const AUTOMATIC_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1_000;
 
 type AndroidUpdater = Readonly<{
   getVersion: () => Promise<{ version: string; code: number }>;
+  checkUpdate: () => Promise<Release>;
   requestInstallPermission: () => Promise<{ allowed: boolean }>;
   installUpdate: (options: { url: string; version: string }) => Promise<{ started: boolean }>;
   addListener: (event: "downloadProgress", callback: (event: { percent: number }) => void) => Promise<PluginListenerHandle>;
@@ -43,19 +44,21 @@ function isNewer(candidate: string, current: string): boolean {
 export function UpdateCenter() {
   const [state, setState] = useState<State>({ mode: "hidden", text: "" });
   const automaticCheck = useRef(true);
+  const lastAutomaticCheck = useRef(0);
   const isAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
 
   const checkAndroid = useCallback(async (manual = false) => {
     if (!isAndroid) return;
+    const now = Date.now();
+    if (!manual && now - lastAutomaticCheck.current < AUTOMATIC_CHECK_INTERVAL_MS) return;
+    if (!manual) lastAutomaticCheck.current = now;
     automaticCheck.current = !manual;
     if (manual) setState({ mode: "checking", text: "Проверяем обновления…" });
     try {
-      const [{ version: installedVersion }, response] = await Promise.all([
+      const [{ version: installedVersion }, release] = await Promise.all([
         androidUpdater.getVersion(),
-        fetch(RELEASE_API, { headers: { Accept: "application/vnd.github+json" }, cache: "no-store" }),
+        androidUpdater.checkUpdate(),
       ]);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const release = await response.json() as Release;
       const version = release.tag_name.replace(/^v/iu, "");
       const asset = release.assets.find((item) => /HIMKONTUR.*Android.*\.apk$/iu.test(item.name));
       if (isNewer(version, installedVersion) && asset !== undefined) {
@@ -82,12 +85,19 @@ export function UpdateCenter() {
   useEffect(() => {
     if (!isAndroid) return;
     const timeout = window.setTimeout(() => void checkAndroid(false), 8_000);
+    const interval = window.setInterval(() => void checkAndroid(false), AUTOMATIC_CHECK_INTERVAL_MS);
+    const checkWhenVisible = () => {
+      if (document.visibilityState === "visible") void checkAndroid(false);
+    };
+    document.addEventListener("visibilitychange", checkWhenVisible);
     let listener: PluginListenerHandle | undefined;
     void androidUpdater.addListener("downloadProgress", ({ percent }) => {
       setState({ mode: "downloading", text: "Загрузка обновления Android", ...(percent < 0 ? {} : { percent }) });
     }).then((handle) => { listener = handle; });
     return () => {
       window.clearTimeout(timeout);
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", checkWhenVisible);
       void listener?.remove();
     };
   }, [checkAndroid, isAndroid]);

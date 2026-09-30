@@ -16,19 +16,71 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 @CapacitorPlugin(name = "HimkonturUpdater")
 public class HimkonturUpdaterPlugin extends Plugin {
+    private static final String RELEASE_API = "https://api.github.com/repos/stas07130713-debug/himkontur/releases/latest";
+
     @PluginMethod
     public void getVersion(PluginCall call) {
         JSObject result = new JSObject();
         result.put("version", installedVersion());
         result.put("code", installedVersionCode());
         call.resolve(result);
+    }
+
+    @PluginMethod
+    public void checkUpdate(PluginCall call) {
+        getBridge().execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                connection = (HttpURLConnection) new URL(RELEASE_API).openConnection();
+                connection.setConnectTimeout(15_000);
+                connection.setReadTimeout(30_000);
+                connection.setRequestProperty("Accept", "application/vnd.github+json");
+                connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
+                connection.setRequestProperty("User-Agent", "HIMKONTUR-Android/" + installedVersion());
+                connection.connect();
+                int status = connection.getResponseCode();
+                if (status < 200 || status >= 300) throw new IllegalStateException("HTTP " + status);
+
+                StringBuilder body = new StringBuilder();
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) body.append(line);
+                }
+                JSONObject release = new JSONObject(body.toString());
+                JSONArray sourceAssets = release.getJSONArray("assets");
+                JSONArray assets = new JSONArray();
+                for (int index = 0; index < sourceAssets.length(); index++) {
+                    JSONObject sourceAsset = sourceAssets.getJSONObject(index);
+                    String name = sourceAsset.optString("name", "");
+                    if (!name.matches("(?iu)HIMKONTUR.*Android.*\\.apk")) continue;
+                    JSONObject asset = new JSONObject();
+                    asset.put("name", name);
+                    asset.put("browser_download_url", sourceAsset.getString("browser_download_url"));
+                    assets.put(asset);
+                }
+                JSObject result = new JSObject();
+                result.put("tag_name", release.getString("tag_name"));
+                result.put("assets", assets);
+                call.resolve(result);
+            } catch (Exception error) {
+                call.reject("Сервер обновлений недоступен. Проверьте подключение к интернету.", error);
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+        });
     }
 
     @PluginMethod
