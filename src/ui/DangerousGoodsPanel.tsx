@@ -115,16 +115,55 @@ function digitConsensus(reads: readonly OcrRead[], length: number): DigitConsens
   return { value, observations: observations.length, weakestAgreement, directVotes: observations.filter((item) => item.value === value).length };
 }
 
+function goodForPlacard(database: readonly DangerousGood[], hazard: string, un: string): DangerousGood | undefined {
+  return database.find((good) => hazardDigits(good.hazardNumber) === hazard && good.un === un);
+}
+
+function singlePassPlacard(read: OcrRead, database: readonly DangerousGood[]): RecognizedPlacard | undefined {
+  if (read.row !== 'whole' || read.confidence < 80) return undefined;
+  const hazards = read.numbers.filter((value) => value.length === 2 || value.length === 3);
+  const uns = read.numbers.filter((value) => value.length === 4);
+  const pairs = hazards.flatMap((hazard) => uns.flatMap((un) => goodForPlacard(database, hazard, un) === undefined ? [] : [{ hazard, un }]));
+  const unique = pairs.filter((pair, index, all) => all.findIndex((item) => item.hazard === pair.hazard && item.un === pair.un) === index);
+  const pair = unique.length === 1 ? unique[0] : undefined;
+  return pair === undefined ? undefined : { id: read.region, hazard: pair.hazard, un: pair.un };
+}
+
+function fastRowPlacard(reads: readonly OcrRead[], database: readonly DangerousGood[]): RecognizedPlacard | undefined {
+  for (const region of [...new Set(reads.map((read) => read.region))]) {
+    const regionReads = reads.filter((read) => read.region === region);
+    const upper = regionReads.filter((read) => read.row === 'upper' && read.confidence >= 42);
+    const whole = regionReads.filter((read) => read.row === 'whole' && read.confidence >= 60);
+    if (upper.length === 0 || whole.length === 0) continue;
+    const hazards = upper.flatMap((read) => read.numbers.filter((value) => value.length === 2 || value.length === 3));
+    const uns = whole.flatMap((read) => read.numbers.filter((value) => value.length === 4));
+    const pairs = hazards.flatMap((hazard) => uns.flatMap((un) => goodForPlacard(database, hazard, un) === undefined ? [] : [{ hazard, un }]));
+    const unique = pairs.filter((pair, index, all) => all.findIndex((item) => item.hazard === pair.hazard && item.un === pair.un) === index);
+    const pair = unique.length === 1 ? unique[0] : undefined;
+    if (pair !== undefined) return { id: region, hazard: pair.hazard, un: pair.un };
+  }
+  return undefined;
+}
+
+function hazardConsensus(reads: readonly OcrRead[], length: number, strict: boolean): DigitConsensus | undefined {
+  const consensus = digitConsensus(reads, length);
+  if (consensus !== undefined) return consensus;
+  const singles = reads.flatMap((read) => read.numbers.filter((value) => value.length === length).map((value) => ({ value, confidence: read.confidence })));
+  const best = singles.sort((left, right) => right.confidence - left.confidence)[0];
+  if (best === undefined || best.confidence < (strict ? 48 : 34)) return undefined;
+  return { value: best.value, observations: 1, weakestAgreement: 1, directVotes: 1 };
+}
+
 function consensusPlacard(reads: readonly OcrRead[], database: readonly DangerousGood[], strict: boolean): RecognizedPlacard | undefined {
   for (const region of [...new Set(reads.map((read) => read.region))]) {
     const regionReads = reads.filter((read) => read.region === region);
     const upperReads = regionReads.filter((read) => read.row === 'upper' || read.row === 'whole');
     const lowerReads = regionReads.filter((read) => read.row === 'lower' || read.row === 'whole');
     const un = digitConsensus(lowerReads, 4);
-    if (un === undefined || un.directVotes < 2 || un.weakestAgreement < (strict ? .72 : .58)) continue;
+    if (un === undefined || un.directVotes < 2 || un.observations < (strict ? 3 : 2) || un.weakestAgreement < (strict ? .68 : .56)) continue;
     for (const length of [2, 3]) {
-      const hazard = digitConsensus(upperReads, length);
-      if (hazard === undefined || hazard.directVotes < (strict ? 2 : 1) || hazard.weakestAgreement < (strict ? .72 : .58)) continue;
+      const hazard = hazardConsensus(upperReads, length, strict);
+      if (hazard === undefined || hazard.directVotes < 1 || hazard.weakestAgreement < (strict ? .68 : .56)) continue;
       // The directory validates a visually established pair; it must never
       // choose the digits merely because a different OCR guess also happens
       // to be a real UN entry.
@@ -322,13 +361,18 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
       worker = loadedWorker;
       if (recognitionRunRef.current !== runId) return;
       const reads: OcrRead[] = [];
+      let fastPlacard: RecognizedPlacard | undefined;
       for (const [index, candidate] of candidates.entries()) {
         if (recognitionRunRef.current !== runId) return;
         setRecognitionStage('Распознавание маркировки');
         setRecognitionProgress(Math.round(8 + ((index + 1) / Math.max(1, candidates.length)) * 72));
-        await worker.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: candidate.row === 'upper' || candidate.row === 'lower' ? PSM.SINGLE_LINE : candidate.row === 'fallback' ? PSM.SPARSE_TEXT : PSM.SINGLE_BLOCK });
+        await worker.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: candidate.row === 'upper' || candidate.row === 'lower' ? PSM.SINGLE_WORD : candidate.row === 'fallback' ? PSM.SPARSE_TEXT : PSM.SINGLE_BLOCK });
         const result = await worker.recognize(candidate.canvas);
-        reads.push({ region: candidate.region, row: candidate.row, label: candidate.label, numbers: ocrNumbers(result.data.text), confidence: result.data.confidence });
+        const read = { region: candidate.region, row: candidate.row, label: candidate.label, numbers: ocrNumbers(result.data.text), confidence: result.data.confidence } as const;
+        reads.push(read);
+        if (import.meta.env.DEV) document.documentElement.dataset.ocrDebug = JSON.stringify(reads);
+        fastPlacard = singlePassPlacard(read, database) ?? fastRowPlacard(reads, database);
+        if (fastPlacard !== undefined) break;
         // Do not stop after two identical guesses: a frame edge can make two
         // threshold variants repeat the same wrong leading digit. Early exit
         // is allowed only after independent upper/lower variants agree.
@@ -403,7 +447,7 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
           evidence.set(key, { good, hazard: good.hazardNumber || hazardWord.value, un: unWord.value, region, votes: 2, sourceVotes: 1, score: (hazardWord.confidence + unWord.confidence) / 25 });
         }
       }
-      const visualConsensus = consensusPlacard(reads, database, false);
+      const visualConsensus = fastPlacard ?? consensusPlacard(reads, database, false);
       const recognized = visualConsensus === undefined ? [...new Set([...reads.map((read) => read.region), ...[...evidence.values()].map((item) => item.region)])].flatMap((region) => {
         // A repeated reading from the two contrast variants is stronger than
         // one raw-crop guess. The old order promoted the raw artefact 1120

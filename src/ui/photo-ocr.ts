@@ -109,9 +109,9 @@ function cropCandidate(bitmap: ImageBitmap, rectangle: Rectangle, label: string,
   const marginX = rectangle.width * .03; const marginY = rectangle.height * .08;
   const sourceX = Math.max(0, rectangle.x - marginX); const sourceY = Math.max(0, rectangle.y - marginY);
   const sourceWidth = Math.min(bitmap.width - sourceX, rectangle.width + marginX * 2); const sourceHeight = Math.min(bitmap.height - sourceY, rectangle.height + marginY * 2);
-  // Для цифр таблички 800 px достаточно; прежние 1200 px заметно замедляли
+  // Для цифр таблички 640 px достаточно; прежние 800/1200 px заметно замедляли
   // каждый локальный проход OCR на телефонах без прироста точности.
-  const scale = Math.min(8, Math.max(2, 800 / Math.max(sourceWidth, 1)));
+  const scale = Math.min(8, Math.max(2, 640 / Math.max(sourceWidth, 1)));
   const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(sourceWidth * scale)); canvas.height = Math.max(1, Math.round(sourceHeight * scale));
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (context === null) return { canvas, label, region, row };
@@ -157,20 +157,28 @@ export async function prepareOcrCandidates(file: File): Promise<readonly OcrCand
     const detected = orangeRectangles(analysisPixels);
     const closeUpPlacard = orangeCoverage(analysisPixels) >= .18;
     const rectangles = [...stackedPlacards(detected), ...detected].sort((left, right) => right.score - left.score).slice(0, 10).map((rectangle) => ({ ...rectangle, x: rectangle.x / analysisScale, y: rectangle.y / analysisScale, width: rectangle.width / analysisScale, height: rectangle.height / analysisScale }));
-    const candidates = rectangles.slice(0, 2).flatMap((rectangle, index) => {
+    const primaryCandidates: OcrCandidate[] = [];
+    const fallbackCandidates: OcrCandidate[] = [];
+    const secondaryCandidates: OcrCandidate[] = [];
+    for (const [index, rectangle] of rectangles.slice(0, 2).entries()) {
       const upper = { ...rectangle, height: rectangle.height * .48 };
       const lower = { ...rectangle, y: rectangle.y + rectangle.height * .52, height: rectangle.height * .48 };
-      return [
+      const main = [
+        cropCandidate(bitmap, rectangle, `контрастная табличка целиком ${index + 1}`, index, 'whole', 0),
         cropCandidate(bitmap, upper, `контрастная верхняя строка ${index + 1}`, index, 'upper', 0),
         cropCandidate(bitmap, lower, `контрастная нижняя строка ${index + 1}`, index, 'lower', 0),
-        ...(index === 0 ? [cropCandidate(bitmap, lower, 'исходная нижняя строка 1', index, 'lower')] : []),
-        ...(index === 0 ? [cropCandidate(bitmap, lower, 'мягкая нижняя строка 1', index, 'lower', -24)] : []),
-        ...(index === 0 ? [cropCandidate(bitmap, upper, 'очищенная верхняя строка 1', index, 'upper', 0, .055, true)] : []),
-        ...(index === 0 ? [cropCandidate(bitmap, lower, 'очищенная нижняя строка 1', index, 'lower', 0, .055, true)] : []),
-        ...(index === 0 ? [cropCandidate(bitmap, lower, 'нижняя строка без рамки 1', index, 'lower', 0, .095)] : []),
-        cropCandidate(bitmap, rectangle, `оранжевая область ${index + 1}`, index, 'whole')
       ];
-    });
+      if (index === 0) primaryCandidates.push(...main);
+      else secondaryCandidates.push(...main);
+      if (index === 0) fallbackCandidates.push(
+        cropCandidate(bitmap, lower, 'исходная нижняя строка 1', index, 'lower'),
+        cropCandidate(bitmap, lower, 'мягкая нижняя строка 1', index, 'lower', -24),
+        cropCandidate(bitmap, upper, 'очищенная верхняя строка 1', index, 'upper', 0, .055, true),
+        cropCandidate(bitmap, lower, 'очищенная нижняя строка 1', index, 'lower', 0, .055, true),
+        cropCandidate(bitmap, lower, 'нижняя строка без рамки 1', index, 'lower', 0, .095)
+      );
+    }
+    const closeUpCandidates: OcrCandidate[] = [];
     // A close-up of the orange plate is a common mobile input. Always add a
     // lightweight full-frame pair so the two number rows are read even when
     // the colour detector sees the plate border as the image boundary.
@@ -178,10 +186,11 @@ export async function prepareOcrCandidates(file: File): Promise<readonly OcrCand
       const fullFrame: Rectangle = { x: 0, y: 0, width: bitmap.width, height: bitmap.height, score: 0 };
       const fullUpper = { ...fullFrame, y: bitmap.height * .04, height: bitmap.height * .43 };
       const fullLower = { ...fullFrame, y: bitmap.height * .51, height: bitmap.height * .45 };
-      candidates.push(cropCandidate(bitmap, fullUpper, 'контрастная верхняя строка крупной таблички', -2, 'upper', 0));
-      candidates.push(cropCandidate(bitmap, fullLower, 'контрастная нижняя строка крупной таблички', -2, 'lower', 0));
-      candidates.push(cropCandidate(bitmap, fullFrame, 'крупная табличка целиком', -2, 'whole'));
+      closeUpCandidates.push(cropCandidate(bitmap, fullFrame, 'контрастная крупная табличка целиком', -2, 'whole', 0));
+      closeUpCandidates.push(cropCandidate(bitmap, fullUpper, 'контрастная верхняя строка крупной таблички', -2, 'upper', 0));
+      closeUpCandidates.push(cropCandidate(bitmap, fullLower, 'контрастная нижняя строка крупной таблички', -2, 'lower', 0));
     }
+    const candidates = [...primaryCandidates, ...closeUpCandidates, ...fallbackCandidates, ...secondaryCandidates];
     if (rectangles.length === 0) {
       const lowerCentre: Rectangle = { x: bitmap.width * .15, y: bitmap.height * .38, width: bitmap.width * .7, height: bitmap.height * .6, score: 0 };
       candidates.push(cropCandidate(bitmap, lowerCentre, 'нижняя центральная часть', -1, 'fallback'));

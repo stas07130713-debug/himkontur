@@ -468,7 +468,7 @@ try {
     }
     const recognizedPairs = [...document.querySelectorAll('.recognized-placard')].map((card) => [...card.querySelectorAll('input')].map((input) => input.value).join('/'));
     const expectedPairs = ${JSON.stringify(ocrExpectedPairs)};
-    check('offline photo OCR selects one verified placard candidate', recognizedPairs.length === 1 && expectedPairs.includes(recognizedPairs[0]), recognizedPairs.join(', ') + ' ' + (document.querySelector('.recognition-error')?.textContent ?? ''));
+    check('offline photo OCR selects one verified placard candidate', recognizedPairs.length === 1 && expectedPairs.includes(recognizedPairs[0]), recognizedPairs.join(', ') + ' ' + (document.querySelector('.recognition-error')?.textContent ?? '') + ' OCR=' + (document.documentElement.dataset.ocrDebug ?? ''));
     check('close-up placard recognition finishes within the mobile response budget', ocrElapsedMs > 0 && ocrElapsedMs <= 15000, Math.round(ocrElapsedMs) + ' ms');
     if (photoInput instanceof HTMLInputElement) {
       const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 800;
@@ -486,7 +486,7 @@ try {
           const startedAt = performance.now(); photoInput.dispatchEvent(new Event('change', { bubbles: true }));
           for (let attempt = 0; attempt < 100 && (document.querySelector('.recognition-progress') !== null || document.querySelectorAll('.recognized-placard input')[1]?.value !== '1203'); attempt += 1) await wait(150);
           const pair = [...document.querySelectorAll('.recognized-placard input')].map((input) => input.value).join('/');
-          check('offline OCR recognizes a pale rotated close-up placard', pair === '33/1203', pair);
+          check('offline OCR recognizes a pale rotated close-up placard', pair === '33/1203', pair + ' OCR=' + (document.documentElement.dataset.ocrDebug ?? ''));
           check('pale rotated placard stays within the mobile response budget', performance.now() - startedAt <= 15000, Math.round(performance.now() - startedAt) + ' ms');
         }
       }
@@ -516,7 +516,7 @@ try {
             const startedAt = performance.now(); photoInput.dispatchEvent(new Event('change', { bubbles: true }));
             for (let attempt = 0; attempt < 120 && (document.querySelector('.recognition-progress') !== null || document.querySelectorAll('.recognized-placard input')[1]?.value !== '1789'); attempt += 1) await wait(150);
             const pair = [...document.querySelectorAll('.recognized-placard input')].map((input) => input.value).join('/');
-            check('offline OCR recognizes a rephotographed placard with moire, glare and JPEG compression', pair === '80/1789', pair + ' ' + (document.querySelector('.recognition-error')?.textContent ?? ''));
+            check('offline OCR recognizes a rephotographed placard with moire, glare and JPEG compression', pair === '80/1789', pair + ' ' + (document.querySelector('.recognition-error')?.textContent ?? '') + ' OCR=' + (document.documentElement.dataset.ocrDebug ?? ''));
             check('rephotographed placard stays within the mobile response budget', performance.now() - startedAt <= 18000, Math.round(performance.now() - startedAt) + ' ms');
           }
         }
