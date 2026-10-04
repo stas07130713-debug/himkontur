@@ -68,6 +68,13 @@ try {
         const scroll = document.querySelector('.input-panel-scroll');
         scroll.scrollTop = 0;
         const button = document.querySelector('.calculate-button');
+        const panelRect = panel.getBoundingClientRect();
+        const escapedControls = [...panel.querySelectorAll('input, select, button, fieldset, details, label')]
+          .filter((element) => {
+            const rect = element.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0 && (rect.left < panelRect.left - 1 || rect.right > panelRect.right + 1);
+          })
+          .map((element) => ({ tag: element.tagName, className: element.className, text: element.textContent?.trim().slice(0, 80), rect: element.getBoundingClientRect().toJSON() }));
         const collapsed = { panelOverflowY: getComputedStyle(panel).overflowY, scrollOverflowY: getComputedStyle(scroll).overflowY,
           // Chromium may report up to two device pixels of fractional flex
           // rounding even though every control and the fixed button are fully
@@ -75,6 +82,8 @@ try {
           noScrollNeeded: scroll.scrollHeight <= scroll.clientHeight + 2,
           clientHeight: scroll.clientHeight, scrollHeight: scroll.scrollHeight,
           cardHeights: [...scroll.querySelectorAll('.input-section-card')].map((card) => Math.round(card.getBoundingClientRect().height)),
+          noHorizontalOverflow: panel.scrollWidth <= panel.clientWidth + 1 && escapedControls.length === 0,
+          escapedControls,
           buttonVisible: button.getBoundingClientRect().bottom <= panel.getBoundingClientRect().bottom + 1,
           detailsCollapsed: details === null || !details.open };
         if (details) details.open = true;
@@ -88,7 +97,7 @@ try {
       cases.push({ width, height, substance: labels[index], ...value });
     }
   }
-  const failures = cases.filter((item) => item.collapsed.panelOverflowY !== 'hidden' || !['hidden', 'auto'].includes(item.collapsed.scrollOverflowY) || !item.collapsed.noScrollNeeded || !item.collapsed.buttonVisible || !item.collapsed.detailsCollapsed || item.expanded.panelOverflowY !== 'hidden' || item.expanded.scrollOverflowY !== 'auto' || !item.expanded.buttonReachable);
+  const failures = cases.filter((item) => item.collapsed.panelOverflowY !== 'hidden' || !['hidden', 'auto'].includes(item.collapsed.scrollOverflowY) || !item.collapsed.noScrollNeeded || !item.collapsed.noHorizontalOverflow || !item.collapsed.buttonVisible || !item.collapsed.detailsCollapsed || item.expanded.panelOverflowY !== 'hidden' || item.expanded.scrollOverflowY !== 'auto' || !item.expanded.buttonReachable);
   const result = { checked: cases.length, substances: labels.length, viewports, failures, passed: failures.length === 0 };
   mkdirSync(resolve('artifacts'), { recursive: true });
   writeFileSync(resolve('artifacts', 'input-panel-layout-audit.json'), JSON.stringify(result, null, 2));
@@ -107,6 +116,40 @@ try {
   await evaluate(`(() => { const details = document.querySelector('.custom-source-card'); if (details) details.open = true; })()`);
   const expandedShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
   writeFileSync(resolve('artifacts', 'input-panel-ammonia-expanded.png'), Buffer.from(expandedShot.data, 'base64'));
+  await evaluate(`(async () => {
+    const wait = (ms) => new Promise((resolveWait) => setTimeout(resolveWait, ms));
+    const details = document.querySelector('.custom-source-card');
+    if (details) details.open = false;
+    document.querySelector('.substance-picker-button')?.click();
+    await wait(10);
+    [...document.querySelectorAll('.substance-options button')].find((button) => button.textContent?.includes('Соляная кислота'))?.click();
+    await wait(30);
+  })()`);
+  const hydrochloricAcidShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+  writeFileSync(resolve('artifacts', 'input-panel-hydrochloric-acid.png'), Buffer.from(hydrochloricAcidShot.data, 'base64'));
+  const pickerVisible = await evaluate(`(async () => {
+    const wait = (ms) => new Promise((resolveWait) => setTimeout(resolveWait, ms));
+    document.querySelector('.substance-picker-button')?.click();
+    await wait(30);
+    const list = document.querySelector('.substance-options');
+    const panel = document.querySelector('.input-panel');
+    if (!list || !panel) return false;
+    const rect = list.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const style = getComputedStyle(list);
+    return rect.width > 100 && rect.height > 100 && style.display !== 'none' && style.visibility !== 'hidden'
+      && rect.left >= panelRect.left && rect.right <= panelRect.right + 1 && rect.top >= panelRect.top && rect.top < panelRect.bottom;
+  })()`);
+  const pickerShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+  writeFileSync(resolve('artifacts', 'input-panel-picker-open.png'), Buffer.from(pickerShot.data, 'base64'));
+  if (!pickerVisible) throw new Error('Выпадающий список веществ существует, но не виден в левой панели.');
+  await evaluate(`(() => {
+    document.querySelector('.substance-picker-button')?.click();
+    document.querySelector('.theme-switch button[title="Тёмная тема"]')?.click();
+  })()`);
+  await delay(40);
+  const darkShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+  writeFileSync(resolve('artifacts', 'input-panel-dark.png'), Buffer.from(darkShot.data, 'base64'));
   if (!result.passed) throw new Error(`Проверка левой панели не пройдена: ${JSON.stringify(result)}`);
   console.log(`Левая панель: проверено ${result.checked} состояний (${result.substances} веществ × ${result.viewports.length} экрана); свернутый режим помещается, раскрытый прокручивается, кнопка расчёта доступна.`);
   socket.close();

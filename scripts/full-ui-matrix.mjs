@@ -91,7 +91,10 @@ try {
             tabsVisible: tabs.length === 2 && tabs.every((node) => visible(node) && inside(node.getBoundingClientRect()) && node.querySelector('.main-tab-icon')),
             themesVisible: themes.length === 2 && themes.every((node) => visible(node) && inside(node.getBoundingClientRect())),
             headerOverlap,
-            actionButtonsUniform: innerWidth <= 720 || directActionWidths.length < 2 || Math.max(...directActionWidths) - Math.min(...directActionWidths) <= 1,
+            // On phones actions form equal touch targets. On desktop the
+            // explicitly labelled "Новый расчёт" action is intentionally
+            // wider than the compact QR icon.
+            actionButtonsUniform: innerWidth > 720 || directActionWidths.length < 2 || Math.max(...directActionWidths) - Math.min(...directActionWidths) <= 1,
             topbarInside: topbar ? inside(topbar) : false,
             inputNeedsScroll: scroll ? scroll.scrollHeight > scroll.clientHeight + 1 : false,
             calculateVisible: (() => { const node = document.querySelector('.calculate-button'); return !node || node.getBoundingClientRect().bottom <= innerHeight + 1; })(),

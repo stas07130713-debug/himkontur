@@ -25,6 +25,8 @@ type OpenMeteoResponse = { hourly?: HourlyValues };
 const DAY_MS = 86_400_000;
 const RECENT_PAST_DAYS = 92;
 const MAX_FORECAST_DAYS = 16;
+const WEATHER_TIMEOUT_MS = 10_000;
+const weatherCache = new Map<string, WeatherObservation>();
 
 function localDate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -61,6 +63,9 @@ export async function fetchWeather(point: GeoPoint, accidentTimeIso: string, sig
   if (ageDays < -MAX_FORECAST_DAYS) throw new Error('Для выбранной будущей даты автоматический прогноз Open-Meteo ещё недоступен.');
 
   const dataKind: WeatherObservation['dataKind'] = ageDays > RECENT_PAST_DAYS ? 'archive' : 'forecast';
+  const cacheKey = `${point.latitude.toFixed(4)}:${point.longitude.toFixed(4)}:${target.toISOString().slice(0, 16)}`;
+  const cached = weatherCache.get(cacheKey);
+  if (cached !== undefined) return cached;
   const nextDay = new Date(target);
   nextDay.setDate(nextDay.getDate() + 1);
   const query = new URLSearchParams({
@@ -75,7 +80,22 @@ export async function fetchWeather(point: GeoPoint, accidentTimeIso: string, sig
   const endpoint = dataKind === 'archive'
     ? 'https://archive-api.open-meteo.com/v1/archive'
     : 'https://api.open-meteo.com/v1/forecast';
-  const response = await fetch(`${endpoint}?${query}`, signal === undefined ? undefined : { signal });
+  const controller = new AbortController();
+  const abortFromCaller = () => controller.abort(signal?.reason);
+  signal?.addEventListener('abort', abortFromCaller, { once: true });
+  const timeout = setTimeout(() => controller.abort(new Error('timeout')), WEATHER_TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(`${endpoint}?${query}`, { signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted && signal?.aborted !== true) {
+      throw new Error('Погодный сервис не ответил за 10 секунд. Проверьте интернет или введите данные вручную.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener('abort', abortFromCaller);
+  }
   if (!response.ok) throw new Error(`Погодный сервис вернул HTTP ${response.status} для выбранной даты.`);
   const hourly = ((await response.json()) as OpenMeteoResponse).hourly;
   if (hourly?.time === undefined || hourly.time.length === 0) throw new Error('Погодный сервис не вернул почасовые данные на выбранную дату.');
@@ -94,7 +114,7 @@ export async function fetchWeather(point: GeoPoint, accidentTimeIso: string, sig
   const cloudCover = pair(hourly.cloud_cover, 'облачность');
   const snowDepth = [optionalNumeric(hourly.snow_depth, lower), optionalNumeric(hourly.snow_depth, upper)] as const;
 
-  return {
+  const observation: WeatherObservation = {
     temperatureC: interpolate(temperature[0], temperature[1], fraction),
     windSpeedMps: interpolate(windSpeed[0], windSpeed[1], fraction),
     windFromDegrees: interpolateDirection(windDirection[0], windDirection[1], fraction),
@@ -104,4 +124,6 @@ export async function fetchWeather(point: GeoPoint, accidentTimeIso: string, sig
     provider: 'Open-Meteo',
     dataKind
   };
+  weatherCache.set(cacheKey, observation);
+  return observation;
 }

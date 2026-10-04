@@ -1,4 +1,4 @@
-import type { ChangeEvent, ReactNode } from 'react';
+import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react';
 import { SUBSTANCES } from '../core/reference-data';
 import { assessStability } from '../core/stability';
 import type { CalculationInput, SpillKind } from '../core/types';
@@ -71,6 +71,12 @@ export function InputPanel({ input, sourcePlaced, onChange, onFetchWeather, onMa
   const stability = assessStability(input);
   const forecastHours = Math.floor(input.elapsedHours + 1e-9);
   const forecastMinutes = Math.round((input.elapsedHours - forecastHours) * 60);
+  const [forecastHoursText, setForecastHoursText] = useState(() => String(forecastHours));
+  const [forecastMinutesText, setForecastMinutesText] = useState(() => String(forecastMinutes));
+  useEffect(() => {
+    setForecastHoursText(String(forecastHours));
+    setForecastMinutesText(String(forecastMinutes));
+  }, [forecastHours, forecastMinutes]);
   const updateForecastTotalMinutes = (minutes: number) => patch({ elapsedHours: Math.max(0, Math.min(240, Math.trunc(minutes))) / 60 });
   const updateForecastHours = (hours: number) => {
     if (!Number.isFinite(hours)) return;
@@ -92,21 +98,21 @@ export function InputPanel({ input, sourcePlaced, onChange, onFetchWeather, onMa
     <section className="input-section-card source-section">
       <div className="plain-section-title"><h2>Параметры источника</h2></div>
       {sourceControls}
-      <div className="field-grid source-core-parameters">
+      <div className="source-parameter-grid">
         <label>Масса вещества, т<div className="number-stepper"><button type="button" aria-label="Уменьшить массу на 0,01 т" onClick={() => patch({ massT: Math.max(0, Number((input.massT - 0.01).toFixed(6))) })}>−</button><input type="number" min="0" step="0.00001" value={displayMass(input.massT)} onChange={(event) => patch({ massT: numberValue(event) })}/><button type="button" aria-label="Увеличить массу на 0,01 т" onClick={() => patch({ massT: Number((input.massT + 0.01).toFixed(6)) })}>+</button></div></label>
+        <label className="spill-kind-field">Характер разлива
+          <select value={input.spillKind} onChange={(event) => patch({ spillKind: event.currentTarget.value as SpillKind })}>
+            <option value="free">Свободный разлив</option>
+            <option value="separateBund">Отдельный поддон</option>
+            <option value="commonBund">Общий поддон</option>
+          </select>
+        </label>
+        {input.spillKind === 'separateBund' && <label className="spill-detail-field">Высота обвалования, м<input type="number" min="0.21" step="0.01" value={displayNumber(input.bundHeightM)} onChange={(event) => patch({ bundHeightM: numberValue(event) })} /></label>}
+        {input.spillKind === 'commonBund' && <label className="spill-detail-field">Площадь поддона, м²<input type="number" min="1" step="0.01" value={displayNumber(input.commonBundAreaM2)} onChange={(event) => patch({ commonBundAreaM2: numberValue(event) })} /></label>}
       </div>
-      <label>Характер разлива
-        <select value={input.spillKind} onChange={(event) => patch({ spillKind: event.currentTarget.value as SpillKind })}>
-          <option value="free">Свободный разлив, слой 0,05 м</option>
-          <option value="separateBund">Отдельный поддон</option>
-          <option value="commonBund">Общий поддон</option>
-        </select>
-      </label>
-      {input.spillKind === 'separateBund' && <label>Высота обвалования, м<input type="number" min="0.21" step="0.01" value={displayNumber(input.bundHeightM)} onChange={(event) => patch({ bundHeightM: numberValue(event) })} /></label>}
-      {input.spillKind === 'commonBund' && <label>Площадь поддона, м²<input type="number" min="1" step="0.01" value={displayNumber(input.commonBundAreaM2)} onChange={(event) => patch({ commonBundAreaM2: numberValue(event) })} /></label>}
     </section>
     <section className="input-section-card accident-time-section">
-      <div className="section-heading input-block-title"><h3><UiIcon name="clock"/>Дата и время происшествия</h3><button type="button" className="link now-button" onClick={() => { const now = new Date(); now.setSeconds(0, 0); patch({ accidentTimeIso: now.toISOString() }); }}>Сейчас</button></div>
+      <div className="section-heading input-block-title"><h3><UiIcon name="clock"/>Дата и время происшествия</h3><button type="button" className="panel-now-button now-button" onClick={() => { const now = new Date(); now.setSeconds(0, 0); patch({ accidentTimeIso: now.toISOString() }); }}>Сейчас</button></div>
       <div className="field-grid date-time-grid">
         <label>Дата<input lang="ru-RU" type="date" value={localDateValue(input.accidentTimeIso)} onChange={(event) => patch({ accidentTimeIso: updateLocalDateTime(input.accidentTimeIso, event.currentTarget.value) })} /></label>
         <label>Время<input lang="ru-RU" type="time" value={localTimeValue(input.accidentTimeIso)} onChange={(event) => patch({ accidentTimeIso: updateLocalDateTime(input.accidentTimeIso, undefined, event.currentTarget.value) })} /></label>
@@ -144,11 +150,10 @@ export function InputPanel({ input, sourcePlaced, onChange, onFetchWeather, onMa
     </section>
 
     <section className="input-section-card forecast-section">
-      <div className="input-block-title forecast-title"><h3><UiIcon name="forecast"/>Время после аварии для расчёта</h3></div>
+      <div className="input-block-title forecast-title"><h3><UiIcon name="forecast"/>Время после аварии для расчёта</h3><button type="button" className="panel-now-button forecast-now" onClick={() => { const elapsedMinutes = Math.max(1, Math.min(240, Math.round((Date.now() - new Date(input.accidentTimeIso).getTime()) / 60_000))); patch({ elapsedHours: elapsedMinutes / 60 }); }}>Сейчас</button></div>
       <fieldset className="forecast-offset">
         <legend>Через сколько после аварии</legend>
-        <div><label>Часы<input aria-label="Часы прогноза" type="number" min="0" max="4" step="1" value={forecastHours} onChange={(event) => updateForecastHours(numberValue(event))} /></label><label>Минуты<input aria-label="Минуты прогноза" type="number" min="-1" max="60" step="1" value={forecastMinutes} onChange={(event) => updateForecastMinutes(numberValue(event))} /></label></div>
-        <button type="button" className="forecast-now" onClick={() => { const elapsedMinutes = Math.max(1, Math.min(240, Math.round((Date.now() - new Date(input.accidentTimeIso).getTime()) / 60_000))); patch({ elapsedHours: elapsedMinutes / 60 }); }}>Сейчас</button>
+        <div><label>Часы<input aria-label="Часы прогноза" type="number" min="0" max="4" step="1" value={forecastHoursText} onChange={(event) => { const value = event.currentTarget.value; setForecastHoursText(value); if (value !== '') updateForecastHours(Number(value)); }} onBlur={() => { if (forecastHoursText === '') { setForecastHoursText('0'); updateForecastHours(0); } }} /></label><label>Минуты<input aria-label="Минуты прогноза" type="number" min="-1" max="60" step="1" value={forecastMinutesText} onChange={(event) => { const value = event.currentTarget.value; setForecastMinutesText(value); if (value !== '') updateForecastMinutes(Number(value)); }} onBlur={() => { if (forecastMinutesText === '') { setForecastMinutesText('0'); updateForecastMinutes(0); } }} /></label></div>
         <small>{input.elapsedHours.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ч</small>
       </fieldset>
       <p className="absolute-forecast">Момент прогноза: <strong>{new Date(new Date(input.accidentTimeIso).getTime() + input.elapsedHours * 3_600_000).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}</strong></p>

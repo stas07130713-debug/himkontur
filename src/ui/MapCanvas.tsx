@@ -272,6 +272,7 @@ export function MapCanvas(props: Props) {
   const [online, setOnline] = useState(() => navigator.onLine);
   const [draggingSource, setDraggingSource] = useState(false);
   const [panning, setPanning] = useState(false);
+  const [widthMeasureFraction, setWidthMeasureFraction] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<
     | { target: "control"; control: ControlPoint; x: number; y: number }
     | { target: "source"; x: number; y: number }
@@ -290,6 +291,7 @@ export function MapCanvas(props: Props) {
   const controlPointerRef = useRef<{ pointerId: number; id: string } | null>(
     null,
   );
+  const widthPointerRef = useRef<{ pointerId: number } | null>(null);
   const panRef = useRef<{
     pointerId: number;
     clientX: number;
@@ -365,6 +367,9 @@ export function MapCanvas(props: Props) {
   useEffect(() => {
     setObjectsLocked(props.calculationStarted);
   }, [props.calculationStarted]);
+  useEffect(() => {
+    setWidthMeasureFraction(null);
+  }, [props.result]);
   useEffect(() => {
     const depth = props.result?.finalDepthKm;
     if (depth === undefined) return;
@@ -458,9 +463,16 @@ export function MapCanvas(props: Props) {
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    if (event.button !== 0) return;
+    if (event.button !== 0 || objectsLocked) return;
     props.onControlDragStart?.(control);
     controlPointerRef.current = { pointerId: event.pointerId, id: control.id };
+    svgRef.current?.setPointerCapture(event.pointerId);
+  };
+  const onWidthPointerDown = (event: ReactPointerEvent<SVGGElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.button !== 0 || props.result === null) return;
+    widthPointerRef.current = { pointerId: event.pointerId };
     svgRef.current?.setPointerCapture(event.pointerId);
   };
   const onMapPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
@@ -468,7 +480,8 @@ export function MapCanvas(props: Props) {
     if (
       event.button !== 0 ||
       sourcePointerRef.current !== null ||
-      controlPointerRef.current !== null
+      controlPointerRef.current !== null ||
+      widthPointerRef.current !== null
     )
       return;
     event.preventDefault();
@@ -523,6 +536,11 @@ export function MapCanvas(props: Props) {
     }
     const sourcePointer = sourcePointerRef.current;
     if (sourcePointer?.pointerId === event.pointerId) {
+      if (objectsLocked) {
+        sourcePointerRef.current = null;
+        setDraggingSource(false);
+        return;
+      }
       if (!sourcePointer.active) {
         if (Math.hypot(event.clientX - sourcePointer.clientX, event.clientY - sourcePointer.clientY) < 8) return;
         sourcePointer.active = true;
@@ -534,9 +552,27 @@ export function MapCanvas(props: Props) {
       return;
     }
     if (controlPointerRef.current?.pointerId === event.pointerId) {
+      if (objectsLocked) {
+        controlPointerRef.current = null;
+        return;
+      }
       const point = locate(event.clientX, event.clientY);
       if (point !== null)
         props.onControlChange(controlPointerRef.current.id, point);
+      return;
+    }
+    if (widthPointerRef.current?.pointerId === event.pointerId && props.result !== null) {
+      const point = locate(event.clientX, event.clientY);
+      const radius = props.result.finalDepthKm * projection.scale;
+      if (point !== null && radius > 0) {
+        const screen = projection.project(point);
+        const bearing = (props.result.plumeToDegrees * Math.PI) / 180;
+        const axialPixels =
+          (screen.x - sourceScreen.x) * Math.sin(bearing) -
+          (screen.y - sourceScreen.y) * Math.cos(bearing);
+        const minimum = props.result.sectorAngleDegrees >= 360 ? -0.96 : 0.02;
+        setWidthMeasureFraction(Math.max(minimum, Math.min(0.96, axialPixels / radius)));
+      }
       return;
     }
     const pan = panRef.current;
@@ -563,6 +599,8 @@ export function MapCanvas(props: Props) {
     }
     if (controlPointerRef.current?.pointerId === event.pointerId)
       controlPointerRef.current = null;
+    if (widthPointerRef.current?.pointerId === event.pointerId)
+      widthPointerRef.current = null;
     if (panRef.current?.pointerId === event.pointerId) {
       panRef.current = null;
       setPanning(false);
@@ -585,14 +623,29 @@ export function MapCanvas(props: Props) {
       y: sourceScreen.y - Math.cos(angle) * radius,
     });
     const front = polar(bearing);
-    const left =
-      props.result.sectorAngleDegrees >= 360
-        ? polar(bearing - Math.PI / 2)
-        : polar(bearing - halfAngle);
-    const right =
-      props.result.sectorAngleDegrees >= 360
-        ? polar(bearing + Math.PI / 2)
-        : polar(bearing + halfAngle);
+    const isCircle = props.result.sectorAngleDegrees >= 360;
+    const defaultFraction = isCircle ? 0 : Math.cos(halfAngle);
+    const axialFraction = widthMeasureFraction ?? defaultFraction;
+    const axialDistance = axialFraction * radius;
+    const arcHalfWidth = Math.sqrt(Math.max(0, radius * radius - axialDistance * axialDistance));
+    const sideHalfWidth = isCircle
+      ? arcHalfWidth
+      : Math.max(0, axialDistance) * Math.tan(halfAngle);
+    const halfWidth = Math.min(arcHalfWidth, sideHalfWidth);
+    const axis = { x: Math.sin(bearing), y: -Math.cos(bearing) };
+    const normal = { x: Math.cos(bearing), y: Math.sin(bearing) };
+    const widthCenter = {
+      x: sourceScreen.x + axis.x * axialDistance,
+      y: sourceScreen.y + axis.y * axialDistance,
+    };
+    const left = {
+      x: widthCenter.x - normal.x * halfWidth,
+      y: widthCenter.y - normal.y * halfWidth,
+    };
+    const right = {
+      x: widthCenter.x + normal.x * halfWidth,
+      y: widthCenter.y + normal.y * halfWidth,
+    };
     const normalCandidate = { x: Math.cos(bearing), y: Math.sin(bearing) };
     const normalDirection =
       normalCandidate.y < 0 ||
@@ -608,10 +661,7 @@ export function MapCanvas(props: Props) {
       y: sourceScreen.y + (front.y - sourceScreen.y) * fraction,
     });
     const sharedAnchor = alongDepth(0.56);
-    const widthMidpoint = {
-      x: (left.x + right.x) / 2,
-      y: (left.y + right.y) / 2,
-    };
+    const widthMidpoint = widthCenter;
     const compact = radius < 230;
     const labelOffset = compact ? 10 : 15;
     return {
@@ -641,11 +691,10 @@ export function MapCanvas(props: Props) {
       depthKm: props.result.finalDepthKm,
       possibleAreaKm2: props.result.possibleAreaKm2,
       widthKm:
-        props.result.sectorAngleDegrees >= 360
-          ? 2 * props.result.finalDepthKm
-          : 2 * props.result.finalDepthKm * Math.sin(halfAngle),
+        (2 * halfWidth) / projection.scale,
+      widthDistanceKm: axialDistance / projection.scale,
     };
-  }, [projection.scale, props.result, sourceScreen.x, sourceScreen.y]);
+  }, [projection.scale, props.result, sourceScreen.x, sourceScreen.y, widthMeasureFraction]);
   const plumeBands = useMemo(
     () =>
       props.result === null
@@ -730,6 +779,7 @@ export function MapCanvas(props: Props) {
             </div>
           </div>
         )}
+      </div>
         <div className="rotation-controls" aria-label="Поворот карты">
           <button
             title="Повернуть карту на 15° против часовой стрелки"
@@ -787,7 +837,6 @@ export function MapCanvas(props: Props) {
           className={objectsLocked ? "source-lock locked" : "source-lock"}
           onClick={() => setObjectsLocked((value) => !value)}
         />
-      </div>
       <div className={`map-surface ${props.basemap}`}>
         <div className="map-stage" ref={stageRef}>
           <div
@@ -930,25 +979,40 @@ export function MapCanvas(props: Props) {
                         L = {round(dimensions.depthKm, 2)} км
                       </text>
                     )}
-                    <line
-                      className="dimension-width-line"
-                      x1={dimensions.left.x}
-                      y1={dimensions.left.y}
-                      x2={dimensions.right.x}
-                      y2={dimensions.right.y}
-                    />
-                    {dimensions.showLabels && (
-                      <text
-                        className="map-measure-label dimension-width-label"
-                        style={{ fontSize: dimensions.labelSize }}
-                        x={dimensions.widthLabel.x}
-                        y={dimensions.widthLabel.y}
-                        textAnchor="middle"
-                        transform={`rotate(${dimensions.widthRotation} ${dimensions.widthLabel.x} ${dimensions.widthLabel.y})`}
-                      >
-                        W = {round(dimensions.widthKm, 2)} км
-                      </text>
-                    )}
+                    <g
+                      className="dimension-width-drag-group"
+                      onPointerDown={onWidthPointerDown}
+                      data-width-km={dimensions.widthKm.toFixed(3)}
+                      data-distance-km={dimensions.widthDistanceKm.toFixed(3)}
+                    >
+                      <title>Зажмите и перемещайте вдоль облака, чтобы измерить ширину фронта в нужном месте</title>
+                      <line
+                        className="dimension-width-drag-handle"
+                        x1={dimensions.left.x}
+                        y1={dimensions.left.y}
+                        x2={dimensions.right.x}
+                        y2={dimensions.right.y}
+                      />
+                      <line
+                        className="dimension-width-line"
+                        x1={dimensions.left.x}
+                        y1={dimensions.left.y}
+                        x2={dimensions.right.x}
+                        y2={dimensions.right.y}
+                      />
+                      {dimensions.showLabels && (
+                        <text
+                          className="map-measure-label dimension-width-label"
+                          style={{ fontSize: dimensions.labelSize }}
+                          x={dimensions.widthLabel.x}
+                          y={dimensions.widthLabel.y}
+                          textAnchor="middle"
+                          transform={`rotate(${dimensions.widthRotation} ${dimensions.widthLabel.x} ${dimensions.widthLabel.y})`}
+                        >
+                          W = {round(dimensions.widthKm, 2)} км
+                        </text>
+                      )}
+                    </g>
                   </g>
                   {dimensions.showAreaLabel && (
                     <g

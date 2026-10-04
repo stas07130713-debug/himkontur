@@ -9,6 +9,7 @@ import type { Basemap } from './MapCanvas';
 
 let protocolRegistered = false;
 let offlineArchivePromise: Promise<PMTiles> | null = null;
+let satelliteSourceSequence = 0;
 setWorkerUrl(new URL(mapWorkerUrl, document.baseURI).href);
 
 function isNativeMobileRuntime(): boolean {
@@ -85,11 +86,10 @@ function ensurePmtilesProtocol() {
 }
 
 function satelliteTileTemplate(): string {
-  const local = navigator.userAgent.includes('Electron') ||
-    (['localhost', '127.0.0.1', '::1'].includes(window.location.hostname) && window.location.port !== '');
-  return local
-    ? '/map-tiles/esri/{z}/{y}/{x}'
-    : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+  // Use the same endpoint in web, Android and Windows. The former local
+  // development proxy queued many raster requests and made switching appear
+  // frozen even though the imagery service itself was available.
+  return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 }
 
 const LOCAL_LAYER_IDS = [
@@ -124,7 +124,44 @@ function basemapStyle(): StyleSpecification {
 
 function removeSatelliteLayer(map: MapLibreMap) {
   if (map.getLayer('satellite-imagery') !== undefined) map.removeLayer('satellite-imagery');
-  if (map.getSource('satellite') !== undefined) map.removeSource('satellite');
+  for (const sourceId of Object.keys(map.getStyle().sources)) {
+    if (sourceId.startsWith('satellite-') && map.getSource(sourceId) !== undefined)
+      map.removeSource(sourceId);
+  }
+}
+
+function setLocalLayersVisible(map: MapLibreMap, visible: boolean) {
+  for (const layerId of LOCAL_LAYER_IDS) {
+    if (map.getLayer(layerId) !== undefined)
+      map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
+  }
+}
+
+function revealCompleteSatellite(map: MapLibreMap, container: HTMLDivElement) {
+  if (map.getLayer('satellite-imagery') === undefined || container.dataset.satelliteFailed === 'true') return;
+  // Raster tiles arrive independently. Never show a half satellite / half
+  // vector mosaic: retain the complete local map until every visible imagery
+  // tile is ready, then replace the whole viewport in one repaint.
+  map.setPaintProperty('satellite-imagery', 'raster-opacity', 1);
+  setLocalLayersVisible(map, false);
+  container.dataset.satelliteLoaded = 'true';
+  container.dataset.renderMode = 'satellite';
+}
+
+function concealIncompleteSatellite(map: MapLibreMap, container: HTMLDivElement) {
+  // Once a complete satellite frame has been shown, keep it during pan/zoom.
+  // MapLibre stretches the previous imagery briefly while fetching the next
+  // tiles; returning to the vector map on every movement looked like the
+  // selected basemap was switching by itself.
+  if (container.dataset.satelliteLoaded === 'true') return;
+  if (map.getLayer('satellite-imagery') !== undefined)
+    // A zero-opacity raster may be deprioritised by some WebView/MapLibre
+    // combinations. This effectively invisible value keeps its requests
+    // active while the complete local map remains visually dominant.
+    map.setPaintProperty('satellite-imagery', 'raster-opacity', 0.001);
+  setLocalLayersVisible(map, true);
+  container.dataset.satelliteLoaded = 'false';
+  container.dataset.renderMode = 'standard-fallback';
 }
 
 function applyBasemap(map: MapLibreMap, basemap: Basemap, container: HTMLDivElement | null) {
@@ -132,12 +169,11 @@ function applyBasemap(map: MapLibreMap, basemap: Basemap, container: HTMLDivElem
   // The local vector map always remains underneath the optional online
   // imagery. If the network disappears or an imagery tile is unavailable,
   // the user sees a complete autonomous map instead of empty squares.
-  for (const layerId of LOCAL_LAYER_IDS) {
-    if (map.getLayer(layerId) !== undefined) map.setLayoutProperty(layerId, 'visibility', 'visible');
-  }
+  setLocalLayersVisible(map, true);
   removeSatelliteLayer(map);
   if (satellite) {
-    map.addSource('satellite', {
+    const satelliteSourceId = `satellite-${++satelliteSourceSequence}`;
+    map.addSource(satelliteSourceId, {
       type: 'raster',
       tiles: [satelliteTileTemplate()],
       tileSize: 256,
@@ -148,14 +184,20 @@ function applyBasemap(map: MapLibreMap, basemap: Basemap, container: HTMLDivElem
     map.addLayer({
       id: 'satellite-imagery',
       type: 'raster',
-      source: 'satellite',
-      paint: { 'raster-fade-duration': 0, 'raster-opacity': 1 },
+      source: satelliteSourceId,
+      paint: { 'raster-fade-duration': 0, 'raster-opacity': 0.001 },
     });
   }
   if (container !== null) {
     container.dataset.basemap = basemap;
     container.dataset.satelliteRequested = String(satellite);
+    if (satellite) container.dataset.satelliteSourceId = map.getLayer('satellite-imagery')?.source ?? '';
+    else delete container.dataset.satelliteSourceId;
     container.dataset.satelliteLoaded = 'false';
+    container.dataset.satelliteFailed = 'false';
+    container.dataset.renderMode = satellite ? 'standard-fallback' : 'standard';
+    delete container.dataset.mapError;
+    delete container.dataset.satelliteError;
   }
   map.triggerRepaint();
 }
@@ -165,7 +207,9 @@ export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: Geo
   const mapRef = useRef<MapLibreMap | null>(null);
   const initialViewRef = useRef({ center, zoom });
   const initialStyleRef = useRef(basemapStyle());
-  const appliedBasemapRef = useRef(basemap);
+  const desiredBasemapRef = useRef(basemap);
+  const appliedBasemapRef = useRef<Basemap | null>(null);
+  const mapReadyRef = useRef(false);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -185,22 +229,54 @@ export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: Geo
       canvasContextAttributes: { preserveDrawingBuffer: true },
     });
     map.on('load', () => {
-      applyBasemap(map, appliedBasemapRef.current, container);
+      mapReadyRef.current = true;
+      applyBasemap(map, desiredBasemapRef.current, container);
+      appliedBasemapRef.current = desiredBasemapRef.current;
       container.dataset.mapReady = 'true';
       container.dataset.mapStatus = 'loaded';
     });
     map.on('styledata', () => { container.dataset.styleEvent = 'true'; });
-    map.on('idle', () => { container.dataset.mapIdle = 'true'; container.dataset.mapStatus = 'idle'; });
+    map.on('idle', () => {
+      container.dataset.mapIdle = 'true';
+      container.dataset.mapStatus = 'idle';
+      if (
+        desiredBasemapRef.current === 'satellite' &&
+        container.dataset.satelliteSourceId !== undefined &&
+        map.getSource(container.dataset.satelliteSourceId) !== undefined &&
+        map.isSourceLoaded(container.dataset.satelliteSourceId)
+      ) revealCompleteSatellite(map, container);
+    });
     map.on('sourcedata', (event) => {
       if (event.isSourceLoaded) container.dataset.sourceReady = 'true';
-      if (event.sourceId === 'satellite' && event.isSourceLoaded) container.dataset.satelliteLoaded = 'true';
+      if (event.sourceId === container.dataset.satelliteSourceId && desiredBasemapRef.current === 'satellite') {
+        if (event.isSourceLoaded) revealCompleteSatellite(map, container);
+        else concealIncompleteSatellite(map, container);
+      }
     });
     map.on('error', (event) => {
       const message = event.error.message;
-      container.dataset.mapError = message;
+      const failedSourceId = (event as typeof event & { sourceId?: string }).sourceId;
+      if (failedSourceId?.startsWith('satellite-') === true && failedSourceId !== container.dataset.satelliteSourceId)
+        return;
       // Failure of the optional Internet imagery is not a map failure: the
       // bundled vector map is still fully usable and stays visible beneath it.
-      if (!/satellite|arcgis|map-tiles|tile/iu.test(message)) container.dataset.mapStatus = 'error';
+      const optionalImageryFailure = /satellite|arcgis|map-tiles|tile/iu.test(message) ||
+        (/failed to fetch/iu.test(message) && container.dataset.sourceReady === 'true');
+      if (optionalImageryFailure) {
+        delete container.dataset.mapError;
+        if (desiredBasemapRef.current === 'satellite') {
+          if (container.dataset.satelliteLoaded === 'true') {
+            container.dataset.satelliteError = message;
+            return;
+          }
+          container.dataset.satelliteFailed = 'true';
+          container.dataset.satelliteError = message;
+          concealIncompleteSatellite(map, container);
+        }
+      } else {
+        container.dataset.mapError = message;
+        container.dataset.mapStatus = 'error';
+      }
     });
     const auditTimer = window.setInterval(() => {
       container.dataset.styleLoaded = String(map.isStyleLoaded());
@@ -209,10 +285,18 @@ export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: Geo
       container.dataset.mapCenter = `${currentCenter.lng.toFixed(6)},${currentCenter.lat.toFixed(6)}`;
     }, 500);
     mapRef.current = map;
+    let retryTimer: number | undefined;
     const retrySatellite = () => {
-      if (appliedBasemapRef.current === 'satellite' && map.isStyleLoaded()) {
-        applyBasemap(map, 'satellite', container);
-      }
+      window.clearTimeout(retryTimer);
+      // Give Android WebView / the browser a moment to restore its network
+      // stack. Starting requests in the same tick as the `online` event can
+      // preserve the previous failed connection and leave Satellite stale.
+      retryTimer = window.setTimeout(() => {
+        if (desiredBasemapRef.current === 'satellite' && mapReadyRef.current) {
+          applyBasemap(map, 'satellite', container);
+          appliedBasemapRef.current = 'satellite';
+        }
+      }, 1200);
     };
     window.addEventListener('online', retrySatellite);
     const observer = new ResizeObserver(() => map.resize());
@@ -220,18 +304,21 @@ export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: Geo
     return () => {
       observer.disconnect();
       window.removeEventListener('online', retrySatellite);
+      window.clearTimeout(retryTimer);
       window.clearInterval(auditTimer);
       map.remove();
       mapRef.current = null;
+      mapReadyRef.current = false;
     };
   }, []);
 
   useEffect(() => {
+    desiredBasemapRef.current = basemap;
     const map = mapRef.current;
-    if (map === null || appliedBasemapRef.current === basemap) return;
-    appliedBasemapRef.current = basemap;
+    if (map === null || !mapReadyRef.current || appliedBasemapRef.current === basemap) return;
     const container = containerRef.current;
     applyBasemap(map, basemap, container);
+    appliedBasemapRef.current = basemap;
   }, [basemap]);
 
   useEffect(() => {

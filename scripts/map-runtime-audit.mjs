@@ -76,6 +76,8 @@ try {
       basemap: host?.dataset.basemap ?? '',
       archiveMode: host?.dataset.archiveMode ?? '',
       satelliteLoaded: host?.dataset.satelliteLoaded ?? '',
+      satelliteFailed: host?.dataset.satelliteFailed ?? '',
+      renderMode: host?.dataset.renderMode ?? '',
       canvasSignature,
       sourceReady: host?.dataset.sourceReady ?? '',
       styleLoaded: host?.dataset.styleLoaded ?? '',
@@ -110,14 +112,50 @@ try {
     const afterPan = await inspect();
     cases.push({ name: 'pan-control', ...afterPan, changed: afterPan.center !== afterZoom.center });
   }
+  await evaluate(`[...document.querySelectorAll('button')].find((button) => button.textContent?.trim() === 'Рассчитать')?.click()`);
+  await delay(500);
+  const widthBefore = await evaluate(`(() => {
+    const group = document.querySelector('.dimension-width-drag-group');
+    const width = group?.dataset.widthKm ?? '';
+    const line = group?.querySelector('.dimension-width-line');
+    const depth = document.querySelector('.dimension-depth-line');
+    const svg = document.querySelector('.map-stage svg');
+    if (!(line instanceof SVGLineElement) || !(depth instanceof SVGLineElement) || !(svg instanceof SVGSVGElement)) return null;
+    const point = (x, y) => { const value = svg.createSVGPoint(); value.x = x; value.y = y; return value.matrixTransform(svg.getScreenCTM()); };
+    const center = point((Number(line.getAttribute('x1')) + Number(line.getAttribute('x2'))) / 2, (Number(line.getAttribute('y1')) + Number(line.getAttribute('y2'))) / 2);
+    const start = point(Number(depth.getAttribute('x1')), Number(depth.getAttribute('y1')));
+    const end = point(Number(depth.getAttribute('x2')), Number(depth.getAttribute('y2')));
+    const length = Math.max(1, Math.hypot(end.x - start.x, end.y - start.y));
+    return { width, x: center.x, y: center.y, targetX: center.x - (end.x - start.x) / length * 70, targetY: center.y - (end.y - start.y) / length * 70 };
+  })()`);
+  if (widthBefore !== null) {
+    await command('Input.dispatchMouseEvent', { type: 'mousePressed', x: widthBefore.x, y: widthBefore.y, button: 'left', clickCount: 1 });
+    await command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: widthBefore.targetX, y: widthBefore.targetY, button: 'left', buttons: 1 });
+    await command('Input.dispatchMouseEvent', { type: 'mouseReleased', x: widthBefore.targetX, y: widthBefore.targetY, button: 'left', clickCount: 1 });
+    await delay(250);
+    const widthAfter = await evaluate(`document.querySelector('.dimension-width-drag-group')?.dataset.widthKm ?? ''`);
+    cases.push({ name: 'width-measure-drag', ...(await inspect()), before: widthBefore.width, after: widthAfter, changed: widthAfter !== widthBefore.width });
+  }
   const standardBeforeSatellite = await inspect();
   await evaluate(`document.querySelector('.map-toolbar .segmented button:nth-child(2)')?.click()`);
-  await delay(3500);
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const state = await inspect();
+    if (state.satelliteLoaded === 'true' || state.satelliteFailed === 'true') break;
+    await delay(400);
+  }
   const onlineSatellite = await inspect();
   cases.push({
     name: 'online-satellite-switch',
     ...onlineSatellite,
     changed: onlineSatellite.canvasSignature !== standardBeforeSatellite.canvasSignature,
+  });
+  await evaluate(`document.querySelector('button[aria-label="Увеличить карту"]')?.click()`);
+  await delay(1400);
+  const satelliteAfterZoom = await inspect();
+  cases.push({
+    name: 'satellite-zoom-persistence',
+    ...satelliteAfterZoom,
+    changed: satelliteAfterZoom.satelliteLoaded === 'true' && satelliteAfterZoom.renderMode === 'satellite',
   });
   await evaluate(`document.querySelector('.map-toolbar .segmented button:nth-child(1)')?.click()`);
   await delay(1200);
@@ -148,7 +186,11 @@ try {
   await delay(1200);
   const beforeRecoverySwitch = await inspect();
   await evaluate(`document.querySelector('.map-toolbar .segmented button:nth-child(2)')?.click()`);
-  await delay(3500);
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const state = await inspect();
+    if (state.satelliteLoaded === 'true' || state.satelliteFailed === 'true') break;
+    await delay(400);
+  }
   const recoveredSatellite = await inspect();
   cases.push({
     name: 'online-satellite-recovery-switch',
@@ -156,7 +198,7 @@ try {
     changed: recoveredSatellite.canvasSignature !== beforeRecoverySwitch.canvasSignature,
   });
 
-  const failures = cases.filter((item) => item.status === 'missing' || item.status === 'error' || item.canvasWidth < 100 || item.canvasHeight < 100 || ((item.name.endsWith('-control') || item.name.includes('-switch')) && item.changed !== true) || (item.name.includes('online-satellite') && item.satelliteLoaded !== 'true'));
+  const failures = cases.filter((item) => item.status === 'missing' || item.status === 'error' || item.canvasWidth < 100 || item.canvasHeight < 100 || ((item.name.endsWith('-control') || item.name.includes('-switch') || item.name.includes('-persistence') || item.name === 'width-measure-drag') && item.changed !== true) || (item.name.includes('online-satellite') && item.satelliteLoaded !== 'true'));
   const report = { passed: failures.length === 0 && consoleErrors.length === 0, serviceWorkerReady, cases, consoleErrors, failures };
   writeFileSync(resolve('artifacts', 'map-runtime-audit.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));

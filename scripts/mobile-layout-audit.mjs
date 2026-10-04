@@ -31,6 +31,7 @@ try {
   await delay(3000);
   mkdirSync(resolve('artifacts'), { recursive: true });
   const cases = [];
+  let dangerousGoodsAutoReveal = false;
   for (const size of [{ width: 390, height: 844 }, { width: 430, height: 932 }, { width: 844, height: 390 }]) {
     await command('Emulation.setDeviceMetricsOverride', { ...size, deviceScaleFactor: 1, mobile: true });
     await delay(800);
@@ -49,6 +50,12 @@ try {
         })(),
         left: visible('.left-column'),
         map: visible('.map-column'),
+        mapControlsRightAligned: (() => {
+          const map = document.querySelector('.map-column')?.getBoundingClientRect();
+          const controls = [...document.querySelectorAll('.rotation-controls, .zoom, .source-focus, .source-lock')]
+            .map((node) => node.getBoundingClientRect());
+          return Boolean(map && controls.length === 4 && controls.every((rect) => rect.left >= map.left && rect.top >= map.top && rect.bottom <= map.bottom && Math.abs(map.right - rect.right) <= 12));
+        })(),
         right: visible('.right-column .results') && visible('.right-column .control-palette'),
         mobileOrder: (() => {
           const result = document.querySelector('.right-column .results');
@@ -75,6 +82,19 @@ try {
       await evaluate(`document.querySelector('.dialog-close')?.click()`);
       await evaluate(`document.querySelectorAll('.main-tabs button')[1]?.click()`);
       await delay(300);
+      await evaluate(`(() => {
+        scrollTo(0, 0);
+        const input = document.querySelector('.goods-search-box input');
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+        if (input && setter) { setter.call(input, 'хлор'); input.dispatchEvent(new Event('input', { bubbles: true })); }
+      })()`);
+      await delay(100);
+      await evaluate(`document.querySelector('.goods-search-box button')?.click()`);
+      await delay(850);
+      dangerousGoodsAutoReveal = await evaluate(`(() => {
+        const sheet = document.querySelector('.emergency-sheet');
+        return Boolean(sheet && scrollY > 0 && sheet.getBoundingClientRect().top < 160);
+      })()`);
       const goodsShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
       writeFileSync(resolve('artifacts', 'mobile-dangerous-goods-390.png'), Buffer.from(goodsShot.data, 'base64'));
       await evaluate(`document.querySelectorAll('.main-tabs button')[0]?.click()`);
@@ -84,11 +104,12 @@ try {
       writeFileSync(resolve('artifacts', 'mobile-calculation-landscape-844.png'), Buffer.from(shot.data, 'base64'));
     }
   }
-  const failures = cases.filter((item) => item.scrollWidth > item.viewport + 1 || !item.tabs || !item.mobileButton || !item.themeSwitch || !item.themeDoesNotOverlapTabs || !item.left || !item.map || !item.right || !item.mobileOrder || !item.calculate);
-  const report = { passed: failures.length === 0, cases, failures };
+  const failures = cases.filter((item) => item.scrollWidth > item.viewport + 1 || !item.tabs || !item.mobileButton || !item.themeSwitch || !item.themeDoesNotOverlapTabs || !item.left || !item.map || !item.mapControlsRightAligned || !item.right || !item.mobileOrder || !item.calculate);
+  if (!dangerousGoodsAutoReveal) failures.push({ check: 'dangerous-goods-auto-reveal' });
+  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, cases, failures };
   writeFileSync(resolve('artifacts', 'mobile-layout-audit.json'), JSON.stringify(report, null, 2));
   if (failures.length) throw new Error(`Мобильная компоновка не прошла проверку: ${JSON.stringify(failures)}`);
-  console.log(`Мобильная компоновка проверена на ${cases.map((item) => `${item.width}×${item.height}`).join(', ')}: горизонтального сдвига нет; после ввода следуют результаты, карта и контрольные точки.`);
+  console.log(`Мобильная компоновка проверена на ${cases.map((item) => `${item.width}×${item.height}`).join(', ')}: горизонтального сдвига нет; найденный опасный груз открывается автоматически; после ввода следуют результаты, карта и контрольные точки.`);
   socket.close();
 } finally {
   edge.kill();

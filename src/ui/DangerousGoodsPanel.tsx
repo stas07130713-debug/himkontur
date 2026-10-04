@@ -166,8 +166,12 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
   const [recognitionStage, setRecognitionStage] = useState('');
   const [recognitionProgress, setRecognitionProgress] = useState(0);
   const [recognitionError, setRecognitionError] = useState<string | null>(null);
+  const [photoSourceOpen, setPhotoSourceOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const cardLoadStarted = useRef(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const emergencySheetRef = useRef<HTMLElement>(null);
 
   useEffect(() => { const controller = new AbortController();
     void Promise.all([
@@ -217,7 +221,18 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
   const officialCard = emergencyLookup?.card;
   const substanceProfile = emergencyLookup?.profile;
   const validatedRecord = selected === null ? undefined : getPublishedSubstanceByUN(selected.un);
-  const chooseGood = (good: DangerousGood, nextStatus: Status = 'manual') => { setSelected(good); setStatus(nextStatus); };
+  useEffect(() => {
+    if (selected === null || !window.matchMedia('(max-width: 720px)').matches) return;
+    // The effect runs after React has mounted the result sheet, so the mobile
+    // view always reveals the selected cargo instead of occasionally keeping
+    // the empty state in view on slower devices.
+    const frame = window.requestAnimationFrame(() => emergencySheetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [selected]);
+  const chooseGood = (good: DangerousGood, nextStatus: Status = 'manual') => {
+    setSelected(good);
+    setStatus(nextStatus);
+  };
   const clearPhotoIdentification = () => {
     setPreview(null);
     setRecognizedPlacards([{ id: 0, hazard: '', un: '' }]);
@@ -239,6 +254,7 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
   const selectPhoto = async (event: ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget;
     const file = input.files?.[0]; if (file === undefined) return;
+    setPhotoSourceOpen(false);
     if (preview !== null) URL.revokeObjectURL(preview); const url = URL.createObjectURL(file); setQuery(''); setSelected(null); setPreview(url); setRecognizing(true); setRecognitionProgress(3); setRecognitionStage('Подготовка фотографии'); setRecognitionError(null); setRecognizedPlacards([]); setStatus('preliminary');
     let worker: Worker | undefined;
     try {
@@ -254,7 +270,7 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
         const result = await worker.recognize(candidate.canvas);
         reads.push({ region: candidate.region, row: candidate.row, label: candidate.label, numbers: ocrNumbers(result.data.text), confidence: result.data.confidence });
       }
-      type PairEvidence = { good: DangerousGood; hazard: string; un: string; region: number; votes: number; score: number };
+      type PairEvidence = { good: DangerousGood; hazard: string; un: string; region: number; votes: number; sourceVotes: number; score: number };
       const evidence = new Map<string, PairEvidence>();
       for (const region of [...new Set(reads.map((read) => read.region))]) {
         const regionReads = reads.filter((read) => read.region === region);
@@ -265,12 +281,42 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
             const good = database.find((item) => item.un === un && hazardDigits(item.hazardNumber) === hazard);
             if (good === undefined) continue;
             const key = `${region}:${hazard}:${un}`;
-            const current = evidence.get(key) ?? { good, hazard: good.hazardNumber || hazard, un, region, votes: 0, score: 0 };
+            const current = evidence.get(key) ?? { good, hazard: good.hazardNumber || hazard, un, region, votes: 0, sourceVotes: 0, score: 0 };
             current.votes += 1;
+            // Keep raw-crop evidence as an additional vote. The final rank also
+            // considers repeated contrast reads and the frame-removed variant,
+            // because a plate border may otherwise become an extra leading 1.
+            if (unRead.label.startsWith('исходная')) current.sourceVotes += 1;
             const contrastBonus = (hazardRead.label.startsWith('контрастная') ? .5 : 0) + (unRead.label.startsWith('контрастная') ? 1 : 0);
-            current.score += Math.max(1, (hazardRead.confidence + unRead.confidence) / 50) + contrastBonus;
+            const frameRemovalBonus = unRead.label.startsWith('нижняя строка без рамки') ? 6 : 0;
+            current.score += Math.max(1, (hazardRead.confidence + unRead.confidence) / 50) + contrastBonus + frameRemovalBonus;
             evidence.set(key, current);
           }
+        }
+      }
+      // На технических чертежах сплошная разделительная линия иногда делит
+      // оранжевое поле на два независимых цветовых прямоугольника. Тогда OCR
+      // правильно читает верхнюю и нижнюю строки, но они получают разные
+      // номера областей. Связываем такие строки только если во всём снимке
+      // получается ровно одна существующая в автономном справочнике пара.
+      if (evidence.size === 0) {
+        const crossRegionPairs = new Map<string, PairEvidence>();
+        const upperReads = reads.filter((read) => read.row === 'upper' || read.row === 'whole');
+        const lowerReads = reads.filter((read) => read.row === 'lower' || read.row === 'whole');
+        for (const hazardRead of upperReads) for (const hazard of hazardRead.numbers.filter((value) => value.length === 2 || value.length === 3)) {
+          for (const unRead of lowerReads) for (const un of unRead.numbers.filter((value) => value.length === 4)) {
+            const good = database.find((item) => item.un === un && hazardDigits(item.hazardNumber) === hazard);
+            if (good === undefined) continue;
+            const key = `${hazard}:${un}`;
+            const score = (hazardRead.confidence + unRead.confidence) / 50;
+            const current = crossRegionPairs.get(key);
+            const sourceVotes = unRead.label.startsWith('исходная') ? 1 : 0;
+            if (current === undefined || sourceVotes > current.sourceVotes || (sourceVotes === current.sourceVotes && score > current.score)) crossRegionPairs.set(key, { good, hazard: good.hazardNumber || hazard, un, region: -100, votes: 2, sourceVotes, score });
+          }
+        }
+        if (crossRegionPairs.size === 1) {
+          const onlyPair = crossRegionPairs.values().next().value;
+          if (onlyPair !== undefined) evidence.set(`-100:${onlyPair.hazard}:${onlyPair.un}`, onlyPair);
         }
       }
       // Полный снимок заметно медленнее подготовленных областей. Запускаем этот
@@ -289,13 +335,16 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
           const good = database.find((item) => item.un === unWord.value && hazardDigits(item.hazardNumber) === hazardWord.value);
           if (good === undefined) continue;
           const region = spatialRegion++; const key = `${region}:${hazardWord.value}:${unWord.value}`;
-          evidence.set(key, { good, hazard: good.hazardNumber || hazardWord.value, un: unWord.value, region, votes: 2, score: (hazardWord.confidence + unWord.confidence) / 25 });
+          evidence.set(key, { good, hazard: good.hazardNumber || hazardWord.value, un: unWord.value, region, votes: 2, sourceVotes: 1, score: (hazardWord.confidence + unWord.confidence) / 25 });
         }
       }
       const recognized = [...new Set([...reads.map((read) => read.region), ...[...evidence.values()].map((item) => item.region)])].flatMap((region) => {
-        const ranked = [...evidence.values()].filter((item) => item.region === region).sort((left, right) => right.votes - left.votes || right.score - left.score);
+        // A repeated reading from the two contrast variants is stronger than
+        // one raw-crop guess. The old order promoted the raw artefact 1120
+        // above two independent reads of the visible 1202/1203 row.
+        const ranked = [...evidence.values()].filter((item) => item.region === region).sort((left, right) => right.score - left.score || right.votes - left.votes || right.sourceVotes - left.sourceVotes);
         const best = ranked[0];
-        if (best === undefined || (best.votes < 2 && best.score < 2.4)) return [];
+        if (best === undefined || (best.sourceVotes < 1 && best.votes < 2 && best.score < 2.4)) return [];
         return [{ id: region, hazard: hazardDigits(best.hazard), un: best.un }];
       }).filter((placard, index, all) => all.findIndex((item) => item.hazard === placard.hazard && item.un === placard.un) === index);
       if (recognized.length > 0) {
@@ -385,10 +434,20 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
       <section className="goods-search-pane"><label className="goods-search-box"><input value={query} onChange={(event) => changeSearchQuery(event.currentTarget.value)} placeholder="Название, формула, UN или № опасности"/><button onClick={() => { const first = matches[0]; if (first !== undefined) chooseFromSearch(first); }}>Найти</button></label><small>Например: хлор, Cl₂, 1017 или 265. Новый поиск очищает результат распознавания фотографии.</small>{query.trim() !== '' && <><h2>Результаты поиска <b>({matches.length})</b></h2><div className="goods-search-results">{matches.map((good, index) => <button className={selected?.un === good.un && selected.description === good.description ? 'active' : ''} key={`${good.un}-${index}`} onClick={() => chooseFromSearch(good)}><strong>{good.description}{good.formula && ` (${good.formula})`}</strong><span>UN {good.un} · класс {good.className || '—'} · № опасности {good.hazardNumber || '—'}</span><b>›</b></button>)}</div></>}</section>
         <section className="photo-identification unified-photo-identification">
           <h2>Или распознайте табличку по фотографии</h2>
-          <label className="photo-click-target">
-            {preview === null ? <div className="photo-placeholder"><b>Нажмите сюда</b><span>Сделать снимок или выбрать фотографию</span></div> : <><img className="photo-preview" src={preview} alt="Исходная фотография маркировки"/><span className="photo-change-hint">Нажмите, чтобы заменить фотографию</span></>}
-            <input type="file" accept="image/*" onChange={(event) => void selectPhoto(event)}/>
-          </label>
+          <button type="button" className="photo-click-target" onClick={() => setPhotoSourceOpen(true)}>
+            {preview === null ? <span className="photo-placeholder"><b>Нажмите сюда</b><span>Сделать снимок или выбрать фотографию</span></span> : <><img className="photo-preview" src={preview} alt="Исходная фотография маркировки"/><span className="photo-change-hint">Нажмите, чтобы заменить фотографию</span></>}
+          </button>
+          <input ref={cameraInputRef} className="photo-source-input" type="file" accept="image/*" capture="environment" onChange={(event) => void selectPhoto(event)}/>
+          <input ref={galleryInputRef} className="photo-source-input" type="file" accept="image/*" onChange={(event) => void selectPhoto(event)}/>
+          {photoSourceOpen && <div className="photo-source-backdrop" role="presentation" onClick={() => setPhotoSourceOpen(false)}>
+            <div className="photo-source-menu" role="dialog" aria-modal="true" aria-label="Выберите источник фотографии" onClick={(event) => event.stopPropagation()}>
+              <h3>Добавить фотографию</h3>
+              <p>Выберите, откуда получить снимок таблички опасного груза.</p>
+              <button type="button" onClick={() => cameraInputRef.current?.click()}>📷 Включить камеру</button>
+              <button type="button" onClick={() => galleryInputRef.current?.click()}>🖼 Выбрать из галереи</button>
+              <button type="button" className="photo-source-cancel" onClick={() => setPhotoSourceOpen(false)}>Отмена</button>
+            </div>
+          </div>}
           <h2>Распознанная табличка</h2>
           {recognizing && <div className="recognition-progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={recognitionProgress}><div><i style={{ width: `${recognitionProgress}%` }}/></div><span>{recognitionStage || 'Распознавание маркировки'} · {recognitionProgress}%</span></div>}
           {recognitionError !== null && <p className="recognition-error" role="alert">{recognitionError}</p>}
@@ -404,7 +463,7 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
           <p className="recognition-warning">Проверьте табличку. При необходимости исправьте цифры непосредственно на ней и подтвердите груз.</p>
         </section>
     </aside>
-    <section className="emergency-sheet panel">
+    <section ref={emergencySheetRef} className="emergency-sheet panel">
       {loadError !== null && <p className="result-error">Локальная база не загружена: {loadError}</p>}
       {selected === null ? <div className="emergency-empty"><h2>Выберите опасный груз</h2><p>Найдите его по названию, номеру ООН, химической формуле или номеру опасности.</p></div> : <>
         <header className={`identification-status ${status}`}><strong>{status === 'manual' ? '✓ Выбрано из автономного справочника' : status === 'confirmed' ? '✓ Маркировка подтверждена пользователем' : '● Предварительно распознано'}</strong><span>{new Date().toLocaleString('ru-RU')}</span></header>

@@ -1,12 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { calculate } from "../core/calculation";
 import { verifyCalculation } from "../core/verifier";
 import { fetchWeather, type WeatherObservation } from "../core/weather";
 import type { CalculationInput } from "../core/types";
 import {
   loadScenarioFile,
-  saveScenario,
-  saveScenarioFile,
 } from "../storage/scenario-store";
 import { DangerousGoodsPanel } from "./DangerousGoodsPanel";
 import { currentMinuteIso, DEFAULT_INPUT } from "./defaults";
@@ -75,7 +73,6 @@ export function App() {
   const [, setNotice] = useState<string | null>(null);
   const pastRef = useRef<{ snapshot: Snapshot; label: string }[]>([]);
   const futureRef = useRef<{ snapshot: Snapshot; label: string }[]>([]);
-  const openFileRef = useRef<HTMLInputElement>(null);
   const [, setHistoryRevision] = useState(0);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -188,24 +185,6 @@ export function App() {
     }
   };
 
-  const store = async () => {
-    try {
-      const value = {
-        input: effectiveInput,
-        controls,
-        sourceLabel: source.label,
-        sourceConfiguration: source,
-        sourcePlaced,
-        basemap,
-      };
-      await saveScenarioFile(value);
-      await saveScenario(value);
-      setNotice("Сценарий сохранён в локальной базе этого устройства.");
-    } catch (error) {
-      setNotice(`Сохранение не выполнено: ${message(error)}`);
-    }
-  };
-
   const restore = async (file: File) => {
     try {
       const stored = await loadScenarioFile(file);
@@ -231,12 +210,6 @@ export function App() {
       setNotice(`Загрузка не выполнена: ${message(error)}`);
     }
   };
-  const chooseScenarioFile = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.currentTarget.files?.[0];
-    event.currentTarget.value = "";
-    if (file !== undefined) void restore(file);
-  };
-
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("scenario") !== "1")
       return;
@@ -392,17 +365,9 @@ export function App() {
           </button>
         </nav>
         <div className="file-actions">
-          <button className="new-calculation" title="Новый расчёт" onClick={newCalculation}>
+          <button className="new-calculation" title="Начать новый расчёт и очистить введённые данные" aria-label="Новый расчёт — очистить введённые данные" onClick={newCalculation}>
             <UiIcon name="new" />
             <span className="action-label">Новый расчёт</span>
-          </button>
-          <button title="Открыть расчёт" onClick={() => openFileRef.current?.click()}>
-            <UiIcon name="open" />
-            <span className="action-label">Открыть расчёт</span>
-          </button>
-          <button title="Сохранить расчёт" onClick={() => void store()}>
-            <UiIcon name="save" />
-            <span className="action-label">Сохранить расчёт</span>
           </button>
           <button
             className="mobile-access-action"
@@ -436,13 +401,6 @@ export function App() {
           >
             ↷
           </button>
-          <input
-            ref={openFileRef}
-            className="scenario-file-input"
-            type="file"
-            accept=".himkontur,.json,application/json"
-            onChange={chooseScenarioFile}
-          />
         </div>
         <div className="theme-switch" aria-label="Тема оформления">
           <button
@@ -797,7 +755,7 @@ export function App() {
         onClose={() => setMobileOpen(false)}
       />
       <footer className="statusbar">
-        <span>ХИМКОНТУР · v0.2.8</span>
+        <span>ХИМКОНТУР · v0.3.0</span>
         <span className="status-ready">● Готов к расчёту</span>
         <span>
           {new Date().toLocaleDateString("ru-RU")} ·{" "}

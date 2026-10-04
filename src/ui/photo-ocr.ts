@@ -34,11 +34,22 @@ function orangeRectangles(image: ImageData): readonly Rectangle[] {
     }
     const boxWidth = maxX - minX + 1; const boxHeight = maxY - minY + 1; const boxArea = boxWidth * boxHeight; const imageArea = width * height;
     const ratio = boxWidth / Math.max(1, boxHeight); const relativeArea = boxArea / imageArea; const density = count / boxArea;
-    if (boxWidth < 12 || boxHeight < 7 || ratio < .55 || ratio > 4.5 || relativeArea < .00008 || relativeArea > .16 || density < .08) continue;
+    // A photograph may contain either a small placard on a tanker or a tightly
+    // cropped placard filling almost the entire frame. Do not discard the
+    // latter merely because the orange field is large.
+    if (boxWidth < 12 || boxHeight < 7 || ratio < .55 || ratio > 4.5 || relativeArea < .00008 || relativeArea > .82 || density < .08) continue;
     const sizeScore = Math.min(1, relativeArea / .012);
     rectangles.push({ x: minX, y: minY, width: boxWidth, height: boxHeight, score: density * (.8 + sizeScore) });
   }
   return rectangles.sort((left, right) => right.score - left.score).slice(0, 16);
+}
+
+function orangeCoverage(image: ImageData): number {
+  let count = 0;
+  for (let offset = 0; offset < image.data.length; offset += 4) {
+    if (orangePixel(image.data[offset] ?? 0, image.data[offset + 1] ?? 0, image.data[offset + 2] ?? 0)) count += 1;
+  }
+  return count / Math.max(1, image.width * image.height);
 }
 
 function stackedPlacards(rectangles: readonly Rectangle[]): readonly Rectangle[] {
@@ -86,7 +97,7 @@ function otsuThreshold(pixels: ImageData): number {
   return best;
 }
 
-function cropCandidate(bitmap: ImageBitmap, rectangle: Rectangle, label: string, region: number, row: OcrCandidate['row'], thresholdOffset?: number): OcrCandidate {
+function cropCandidate(bitmap: ImageBitmap, rectangle: Rectangle, label: string, region: number, row: OcrCandidate['row'], thresholdOffset?: number, edgeClearFraction = .025): OcrCandidate {
   const marginX = rectangle.width * .03; const marginY = rectangle.height * .08;
   const sourceX = Math.max(0, rectangle.x - marginX); const sourceY = Math.max(0, rectangle.y - marginY);
   const sourceWidth = Math.min(bitmap.width - sourceX, rectangle.width + marginX * 2); const sourceHeight = Math.min(bitmap.height - sourceY, rectangle.height + marginY * 2);
@@ -98,16 +109,21 @@ function cropCandidate(bitmap: ImageBitmap, rectangle: Rectangle, label: string,
   if (context === null) return { canvas, label, region, row };
   context.imageSmoothingEnabled = true; context.imageSmoothingQuality = 'high';
   context.drawImage(bitmap, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
-  if (thresholdOffset === undefined) return { canvas, label, region, row };
-  const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
-  const threshold = Math.max(35, Math.min(220, otsuThreshold(pixels) + thresholdOffset));
-  for (let offset = 0; offset < pixels.data.length; offset += 4) {
-    const luminance = (pixels.data[offset] ?? 0) * .299 + (pixels.data[offset + 1] ?? 0) * .587 + (pixels.data[offset + 2] ?? 0) * .114;
-    const value = luminance < threshold ? 0 : 255;
-    pixels.data[offset] = value; pixels.data[offset + 1] = value; pixels.data[offset + 2] = value; pixels.data[offset + 3] = 255;
+  if (thresholdOffset !== undefined) {
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+    const threshold = Math.max(35, Math.min(220, otsuThreshold(pixels) + thresholdOffset));
+    for (let offset = 0; offset < pixels.data.length; offset += 4) {
+      const luminance = (pixels.data[offset] ?? 0) * .299 + (pixels.data[offset + 1] ?? 0) * .587 + (pixels.data[offset + 2] ?? 0) * .114;
+      const value = luminance < threshold ? 0 : 255;
+      pixels.data[offset] = value; pixels.data[offset + 1] = value; pixels.data[offset + 2] = value; pixels.data[offset + 3] = 255;
+    }
+    context.putImageData(pixels, 0, 0);
   }
-  context.putImageData(pixels, 0, 0);
-  const clearX = Math.round(canvas.width * .025); const clearY = Math.round(canvas.height * .04);
+  // The black frame and drawing dimension lines are frequently interpreted as
+  // an extra leading "1" (1202 -> 1120/11202). Remove a wider edge strip from
+  // every variant, including the raw colour crop; real digits are centred well
+  // inside a normative orange plate.
+  const clearX = Math.round(canvas.width * edgeClearFraction); const clearY = Math.round(canvas.height * .04);
   context.fillStyle = '#fff';
   context.fillRect(0, 0, canvas.width, clearY); context.fillRect(0, canvas.height - clearY, canvas.width, clearY);
   context.fillRect(0, 0, clearX, canvas.height); context.fillRect(canvas.width - clearX, 0, clearX, canvas.height);
@@ -122,7 +138,9 @@ export async function prepareOcrCandidates(file: File): Promise<readonly OcrCand
     const context = analysis.getContext('2d', { willReadFrequently: true });
     if (context === null) return [];
     context.drawImage(bitmap, 0, 0, analysis.width, analysis.height);
-    const detected = orangeRectangles(context.getImageData(0, 0, analysis.width, analysis.height));
+    const analysisPixels = context.getImageData(0, 0, analysis.width, analysis.height);
+    const detected = orangeRectangles(analysisPixels);
+    const closeUpPlacard = orangeCoverage(analysisPixels) >= .18;
     const rectangles = [...stackedPlacards(detected), ...detected].sort((left, right) => right.score - left.score).slice(0, 10).map((rectangle) => ({ ...rectangle, x: rectangle.x / analysisScale, y: rectangle.y / analysisScale, width: rectangle.width / analysisScale, height: rectangle.height / analysisScale }));
     const candidates = rectangles.slice(0, 2).flatMap((rectangle, index) => {
       const upper = { ...rectangle, height: rectangle.height * .48 };
@@ -130,9 +148,23 @@ export async function prepareOcrCandidates(file: File): Promise<readonly OcrCand
       return [
         cropCandidate(bitmap, upper, `контрастная верхняя строка ${index + 1}`, index, 'upper', 0),
         cropCandidate(bitmap, lower, `контрастная нижняя строка ${index + 1}`, index, 'lower', 0),
+        ...(index === 0 ? [cropCandidate(bitmap, lower, 'мягкая нижняя строка 1', index, 'lower', -24)] : []),
+        ...(index === 0 ? [cropCandidate(bitmap, lower, 'исходная нижняя строка 1', index, 'lower')] : []),
+        ...(index === 0 ? [cropCandidate(bitmap, lower, 'нижняя строка без рамки 1', index, 'lower', 0, .075)] : []),
         cropCandidate(bitmap, rectangle, `оранжевая область ${index + 1}`, index, 'whole')
       ];
     });
+    // A close-up of the orange plate is a common mobile input. Always add a
+    // lightweight full-frame pair so the two number rows are read even when
+    // the colour detector sees the plate border as the image boundary.
+    if (closeUpPlacard) {
+      const fullFrame: Rectangle = { x: 0, y: 0, width: bitmap.width, height: bitmap.height, score: 0 };
+      const fullUpper = { ...fullFrame, y: bitmap.height * .04, height: bitmap.height * .43 };
+      const fullLower = { ...fullFrame, y: bitmap.height * .51, height: bitmap.height * .45 };
+      candidates.push(cropCandidate(bitmap, fullUpper, 'контрастная верхняя строка крупной таблички', -2, 'upper', 0));
+      candidates.push(cropCandidate(bitmap, fullLower, 'контрастная нижняя строка крупной таблички', -2, 'lower', 0));
+      candidates.push(cropCandidate(bitmap, fullFrame, 'крупная табличка целиком', -2, 'whole'));
+    }
     if (rectangles.length === 0) {
       const lowerCentre: Rectangle = { x: bitmap.width * .15, y: bitmap.height * .38, width: bitmap.width * .7, height: bitmap.height * .6, score: 0 };
       candidates.push(cropCandidate(bitmap, lowerCentre, 'нижняя центральная часть', -1, 'fallback'));

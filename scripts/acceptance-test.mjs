@@ -118,8 +118,8 @@ try {
     check('people count input is removed', !document.querySelector('.control-palette')?.textContent?.includes('Количество людей'));
     check('top file actions use design icons', [...document.querySelectorAll('.file-actions button:not(.history-action):not(.theme-switch button)')].every((button) => button.querySelector('.ui-mini-icon') !== null));
     check('large browser-style work tabs are present', document.querySelector('.main-tabs')?.textContent?.includes('Расчёт АХОВ') && document.querySelector('.main-tabs')?.textContent?.includes('Опасный груз'));
-    check('top bar contains only requested actions in order', (() => { const text = document.querySelector('.topbar')?.textContent ?? ''; return !text.includes('Нормативная база') && !text.includes('Справочники') && text.indexOf('Новый расчёт') < text.indexOf('Открыть расчёт') && text.indexOf('Открыть расчёт') < text.indexOf('Сохранить расчёт'); })());
-    check('Windows title buttons do not overlap the application toolbar', !navigator.userAgent.includes('Electron') || (() => { const actions = document.querySelector('.file-actions'); const visibleButtons = [...document.querySelectorAll('.file-actions > button')].filter((button) => button.getBoundingClientRect().width > 0); const right = actions?.getBoundingClientRect().right ?? innerWidth; return visibleButtons.length >= 6 && right <= innerWidth - 145; })());
+    check('top bar contains only the requested calculation actions', (() => { const text = document.querySelector('.topbar')?.textContent ?? ''; return text.includes('Новый расчёт') && !text.includes('Сообщить об ошибке') && !text.includes('Открыть расчёт') && !text.includes('Сохранить расчёт') && document.querySelector('.mobile-access-action') !== null && document.querySelector('.feedback-action') === null; })());
+    check('Windows title buttons do not overlap the application toolbar', !navigator.userAgent.includes('Electron') || (() => { const actions = document.querySelector('.file-actions'); const visibleButtons = [...document.querySelectorAll('.file-actions > button')].filter((button) => button.getBoundingClientRect().width > 0); const right = actions?.getBoundingClientRect().right ?? innerWidth; return visibleButtons.length >= 5 && right <= innerWidth - 145; })());
     check('input section numbering is removed', document.querySelector('.numbered-section-title') === null && document.querySelector('.numbered-input-title') === null);
     document.querySelector('button[title="Тёмная тема"]')?.click(); await wait();
     check('dark theme can be enabled', document.querySelector('.app-shell')?.getAttribute('data-theme') === 'dark');
@@ -236,7 +236,7 @@ try {
     for (let index = 0; index < 3; index += 1) await dropTemplate(document.querySelector('.control-template-grid button'), .46 + index * .025, .48 + index * .025);
     check('three placed points fit the right panel without scrolling', (() => { const column = document.querySelector('.right-column'); const list = document.querySelector('.inline-controls-list'); return document.querySelectorAll('.placed-control-row').length === 3 && column && list && column.scrollHeight <= column.clientHeight + 1 && list.scrollHeight <= list.clientHeight + 1; })(), (() => { const column = document.querySelector('.right-column'); const list = document.querySelector('.inline-controls-list'); return (column ? column.scrollHeight + '/' + column.clientHeight : 'missing') + '; ' + (list ? list.scrollHeight + '/' + list.clientHeight : 'missing'); })());
     await dropTemplate(document.querySelector('.control-template-grid button'), .54, .56);
-    check('placed-points list scrolls independently after the third point', (() => { const column = document.querySelector('.right-column'); const list = document.querySelector('.inline-controls-list'); return document.querySelectorAll('.placed-control-row').length === 4 && column && list && column.scrollHeight <= column.clientHeight + 1 && list.scrollHeight > list.clientHeight; })());
+    check('four placed points stay visible or scroll inside their own list', (() => { const column = document.querySelector('.right-column'); const list = document.querySelector('.inline-controls-list'); const rows = [...document.querySelectorAll('.placed-control-row')]; const last = rows.at(-1)?.getBoundingClientRect(); const bounds = list?.getBoundingClientRect(); const fits = Boolean(last && bounds && last.bottom <= bounds.bottom + 1); const independentlyScrollable = Boolean(list && getComputedStyle(list).overflowY === 'auto' && list.scrollHeight > list.clientHeight); return rows.length === 4 && column && list && column.scrollHeight <= column.clientHeight + 1 && (fits || independentlyScrollable); })());
     clickByText('.inline-controls-list button', 'Очистить'); await wait();
     const contextRect = document.querySelector('.map-stage')?.getBoundingClientRect();
     document.querySelector('.map-stage svg')?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: contextRect ? contextRect.left + contextRect.width * .72 : 900, clientY: contextRect ? contextRect.top + contextRect.height * .72 : 650 })); await wait();
@@ -249,6 +249,10 @@ try {
 
     const forecastHours = document.querySelector('input[aria-label="Часы прогноза"]');
     const forecastMinutes = document.querySelector('input[aria-label="Минуты прогноза"]');
+    if (forecastHours instanceof HTMLInputElement) setInput(forecastHours, '');
+    if (forecastMinutes instanceof HTMLInputElement) setInput(forecastMinutes, '');
+    await wait();
+    check('forecast hour and minute fields can be cleared before entering a new value', forecastHours?.value === '' && forecastMinutes?.value === '', forecastHours?.value + ':' + forecastMinutes?.value);
     if (forecastHours instanceof HTMLInputElement) setInput(forecastHours, '0');
     if (forecastMinutes instanceof HTMLInputElement) setInput(forecastMinutes, '60');
     await wait();
@@ -292,21 +296,8 @@ try {
     check('substance information action opens the dangerous goods reference', document.querySelector('.goods-page') !== null && document.querySelector('.goods-search-box input')?.value === '1017');
     clickByText('.topbar nav button', 'Расчёт АХОВ'); await wait();
 
-    const massInput = [...document.querySelectorAll('label')].find((element) => element.textContent?.startsWith('Масса вещества, т'))?.querySelector('input');
-    const savedMass = massInput instanceof HTMLInputElement ? massInput.value : '';
-    let savedScenarioText = '';
-    window.showSaveFilePicker = async () => ({ createWritable: async () => ({ write: async (blob) => { savedScenarioText = await blob.text(); }, close: async () => {} }) });
-    clickByText('.file-actions button', 'Сохранить расчёт'); await wait(250);
-    if (massInput instanceof HTMLInputElement) setInput(massInput, '1.5');
-    const scenarioInput = document.querySelector('.scenario-file-input');
-    const transfer = new DataTransfer();
-    transfer.items.add(new File([savedScenarioText], 'test.himkontur', { type: 'application/json' }));
-    Object.defineProperty(scenarioInput, 'files', { configurable: true, value: transfer.files });
-    scenarioInput.dispatchEvent(new Event('change', { bubbles: true }));
-    await wait(250);
-    check('scenario saves and opens as a file', massInput instanceof HTMLInputElement && massInput.value === savedMass && savedScenarioText.includes('applicationUrl'), (massInput instanceof HTMLInputElement ? massInput.value : '') + '/' + savedMass);
     check('operations do not show popup notices', document.querySelector('.notice') === null);
-    check('undo is available after edits', !document.querySelector('.file-actions button')?.disabled);
+    check('undo is available after edits', !document.querySelector('.file-actions .history-action')?.disabled);
     const accidentDate = [...document.querySelectorAll('.date-time-grid label')].find((label) => label.textContent?.startsWith('Дата'))?.querySelector('input');
     const accidentTime = [...document.querySelectorAll('.date-time-grid label')].find((label) => label.textContent?.startsWith('Время'))?.querySelector('input');
     if (accidentDate instanceof HTMLInputElement) setInput(accidentDate, '2026-01-12');
@@ -323,7 +314,7 @@ try {
       source: document.querySelector('.source-marker')?.getAttribute('transform'),
       zoom: document.querySelector('.zoom span')?.textContent
     };
-    check('report map uses the single MapLibre canvas and the local tile proxy', (() => { const map = document.querySelector('.offline-vector-map'); const source = map?.dataset.tileSource ?? ''; return document.querySelectorAll('.offline-vector-map canvas').length === 1 && document.querySelector('.basemap-tile-layer') === null && source !== '' && (source === 'local-pmtiles' || new URL(source, location.href).origin === location.origin); })(), document.querySelector('.offline-vector-map')?.dataset.tileSource ?? 'missing');
+    check('report map uses one MapLibre canvas and an approved basemap source', (() => { const map = document.querySelector('.offline-vector-map'); const source = map?.dataset.tileSource ?? ''; const origin = source === 'local-pmtiles' ? '' : new URL(source, location.href).origin; return document.querySelectorAll('.offline-vector-map canvas').length === 1 && document.querySelector('.basemap-tile-layer') === null && source !== '' && (source === 'local-pmtiles' || origin === 'https://server.arcgisonline.com'); })(), document.querySelector('.offline-vector-map')?.dataset.tileSource ?? 'missing');
     clickByText('.result-actions button', 'Сформировать отчёт'); await wait();
     check('report offers PDF and Word instead of printing', document.querySelector('.report-choice')?.textContent?.includes('PDF') && document.querySelector('.report-choice')?.textContent?.includes('Word'));
     clickByText('.report-choice button', 'PDF'); await wait(8000);
@@ -442,17 +433,20 @@ try {
     check('non-pilot official card no longer shows the five-pilot missing-data notice', !document.querySelector('.emergency-sheet')?.textContent?.includes('ещё не прошли предметную проверку'));
     check('dangerous-goods footer stays at the bottom of the application', (() => { const footer = document.querySelector('.statusbar'); return footer !== null && Math.abs(footer.getBoundingClientRect().bottom - innerHeight) < 1; })());
     check('photo recognition requires human verification', document.querySelector('.recognition-warning')?.textContent?.includes('Проверьте табличку') && document.querySelector('.confirm-recognition') !== null);
+    document.querySelector('.photo-click-target')?.click(); await wait(50);
+    check('Android photo workflow opens one camera-or-gallery chooser', document.querySelector('.photo-source-menu')?.textContent?.includes('Включить камеру') && document.querySelector('.photo-source-menu')?.textContent?.includes('Выбрать из галереи') && document.querySelector('.photo-source-input[capture="environment"]') !== null);
+    document.querySelector('.photo-source-cancel')?.click(); await wait(20);
     const photoInput = document.querySelector('.photo-identification input[type="file"]');
     if (photoInput instanceof HTMLInputElement) {
       const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 800;
       const context = canvas.getContext('2d');
       if (context !== null) {
-        context.fillStyle = '#cbd1d1'; context.fillRect(0, 0, 1200, 800);
-        context.fillStyle = '#dc6f23'; context.beginPath(); context.ellipse(600, 300, 440, 230, 0, 0, Math.PI * 2); context.fill();
-        context.fillStyle = '#f28c28'; context.fillRect(500, 595, 200, 145);
-        context.strokeStyle = '#111'; context.lineWidth = 8; context.strokeRect(500, 595, 200, 145);
-        context.fillStyle = '#111'; context.font = 'bold 56px Arial'; context.textAlign = 'center';
-        context.fillText('30', 600, 655); context.fillRect(508, 670, 184, 7); context.fillText('1202', 600, 728);
+        // A close-up in which the placard fills the photograph used to be
+        // rejected by the orange-area detector. Keep it as a regression case.
+        context.fillStyle = '#f28c28'; context.fillRect(70, 45, 1060, 710);
+        context.strokeStyle = '#111'; context.lineWidth = 22; context.strokeRect(70, 45, 1060, 710);
+        context.fillStyle = '#111'; context.font = 'bold 210px Arial'; context.textAlign = 'center';
+        context.fillText('30', 600, 325); context.fillRect(92, 382, 1016, 22); context.fillText('1202', 600, 665);
         const externalFixture = ${JSON.stringify(ocrFixtureDataUrl)};
         const blob = externalFixture.length > 0 ? new Blob([Uint8Array.from(atob(externalFixture.split(',')[1] ?? ''), (character) => character.charCodeAt(0))], { type: 'image/png' }) : await new Promise((resolveBlob) => canvas.toBlob(resolveBlob, 'image/png'));
         if (blob !== null) {
