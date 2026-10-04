@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { SUBSTANCES } from '../core/reference-data';
 import { assessStability } from '../core/stability';
 import type { CalculationInput, SpillKind } from '../core/types';
@@ -6,6 +6,7 @@ import type { WeatherObservation } from '../core/weather';
 import { UiIcon } from './UiIcon';
 import { SubstancePicker } from './SubstancePicker';
 import { substanceUnNumber } from './substance-display';
+import { EditableNumberInput } from './EditableNumberInput';
 
 type Props = Readonly<{
   input: CalculationInput;
@@ -59,11 +60,10 @@ function updateLocalDateTime(iso: string, dateValue?: string, timeValue?: string
   return value.toISOString();
 }
 
-function numberValue(event: ChangeEvent<HTMLInputElement>): number {
-  return event.currentTarget.valueAsNumber;
-}
 function displayNumber(value: number): number { return Number(value.toFixed(2)); }
 function displayMass(value: number): number { return Number(value.toFixed(Math.abs(value) > 0 && Math.abs(value) < 0.01 ? 6 : 2)); }
+const numberText = (value: number): string => String(displayNumber(value));
+const massText = (value: number): string => String(displayMass(value));
 
 export function InputPanel({ input, sourcePlaced, onChange, onFetchWeather, onManualWeather, weatherBusy, weather, weatherError, calculationStarted, onCalculate, onOpenSubstance, sourceControls }: Props) {
   const patch = (value: Partial<CalculationInput>) => onChange({ ...input, ...value });
@@ -99,7 +99,7 @@ export function InputPanel({ input, sourcePlaced, onChange, onFetchWeather, onMa
       <div className="plain-section-title"><h2>Параметры источника</h2></div>
       {sourceControls}
       <div className="source-parameter-grid">
-        <label>Масса вещества, т<div className="number-stepper"><button type="button" aria-label="Уменьшить массу на 0,01 т" onClick={() => patch({ massT: Math.max(0, Number((input.massT - 0.01).toFixed(6))) })}>−</button><input type="number" min="0" step="0.00001" value={displayMass(input.massT)} onChange={(event) => patch({ massT: numberValue(event) })}/><button type="button" aria-label="Увеличить массу на 0,01 т" onClick={() => patch({ massT: Number((input.massT + 0.01).toFixed(6)) })}>+</button></div></label>
+        <label>Масса вещества, т<div className="number-stepper"><button type="button" aria-label="Уменьшить массу на 0,01 т" onClick={() => patch({ massT: Math.max(0, Number((input.massT - 0.01).toFixed(6))) })}>−</button><EditableNumberInput min="0" step="0.00001" value={input.massT} format={massText} onValueChange={(massT) => patch({ massT })}/><button type="button" aria-label="Увеличить массу на 0,01 т" onClick={() => patch({ massT: Number((input.massT + 0.01).toFixed(6)) })}>+</button></div></label>
         <label className="spill-kind-field">Характер разлива
           <select value={input.spillKind} onChange={(event) => patch({ spillKind: event.currentTarget.value as SpillKind })}>
             <option value="free">Свободный разлив</option>
@@ -107,8 +107,8 @@ export function InputPanel({ input, sourcePlaced, onChange, onFetchWeather, onMa
             <option value="commonBund">Общий поддон</option>
           </select>
         </label>
-        {input.spillKind === 'separateBund' && <label className="spill-detail-field">Высота обвалования, м<input type="number" min="0.21" step="0.01" value={displayNumber(input.bundHeightM)} onChange={(event) => patch({ bundHeightM: numberValue(event) })} /></label>}
-        {input.spillKind === 'commonBund' && <label className="spill-detail-field">Площадь поддона, м²<input type="number" min="1" step="0.01" value={displayNumber(input.commonBundAreaM2)} onChange={(event) => patch({ commonBundAreaM2: numberValue(event) })} /></label>}
+        {input.spillKind === 'separateBund' && <label className="spill-detail-field">Высота обвалования, м<EditableNumberInput min="0.21" step="0.01" value={input.bundHeightM} format={numberText} onValueChange={(bundHeightM) => patch({ bundHeightM })} /></label>}
+        {input.spillKind === 'commonBund' && <label className="spill-detail-field">Площадь поддона, м²<EditableNumberInput min="1" step="0.01" value={input.commonBundAreaM2} format={numberText} onValueChange={(commonBundAreaM2) => patch({ commonBundAreaM2 })} /></label>}
       </div>
     </section>
     <section className="input-section-card accident-time-section">
@@ -129,15 +129,15 @@ export function InputPanel({ input, sourcePlaced, onChange, onFetchWeather, onMa
       {weatherError !== null && <p className="weather-error">{weatherError}</p>}
       {weather !== null && <p className="hint weather-observation">{new Date(weather.observedAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })} · облачность {Math.round(weather.cloudCoverPercent)}%</p>}
       <div className="field-grid weather-fields">
-        <label>Температура, °C<input type="number" min="-60" max="60" step="0.01" value={displayNumber(input.temperatureC)} onChange={(event) => patch({ temperatureC: numberValue(event) })} /></label>
-        <label>Ветер, м/с<input type="number" min="0.1" max="60" step="0.01" value={displayNumber(input.windSpeedMps)} onChange={(event) => patch({ windSpeedMps: numberValue(event) })} /></label>
+        <label>Температура, °C<EditableNumberInput min="-60" max="60" step="0.01" value={input.temperatureC} format={numberText} onValueChange={(temperatureC) => patch({ temperatureC })} /></label>
+        <label>Ветер, м/с<EditableNumberInput min="0.1" max="60" step="0.01" value={input.windSpeedMps} format={numberText} onValueChange={(windSpeedMps) => patch({ windSpeedMps })} /></label>
         <label>Румб — откуда дует
           <select value={WIND_DIRECTIONS.some((item) => item.degrees === input.windFromDegrees) ? input.windFromDegrees : ''} onChange={(event) => patch({ windFromDegrees: Number(event.currentTarget.value) })}>
             {!WIND_DIRECTIONS.some((item) => item.degrees === input.windFromDegrees) && <option value="">По градусам: {input.windFromDegrees}°</option>}
             {WIND_DIRECTIONS.map((item) => <option key={item.degrees} value={item.degrees}>{item.short} — {item.label}</option>)}
           </select>
         </label>
-        <label>Точно, ° от севера<input type="number" min="0" max="359.99" step="0.01" value={displayNumber(input.windFromDegrees)} onChange={(event) => patch({ windFromDegrees: numberValue(event) })} /></label>
+        <label>Точно, ° от севера<EditableNumberInput min="0" max="359.99" step="0.01" value={input.windFromDegrees} format={numberText} onValueChange={(windFromDegrees) => patch({ windFromDegrees })} /></label>
         <label>Облачность
           <select value={input.cloudCoverPercent >= 80 ? 'overcast' : 'clear'} onChange={(event) => patch({ cloudCoverPercent: event.currentTarget.value === 'overcast' ? 100 : 0 })}>
             <option value="clear">Ясно / переменная</option>

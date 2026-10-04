@@ -1,7 +1,7 @@
 {
   "name": "ahov-decision-support",
   "private": true,
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Автономная система поддержки решений при химической аварии",
   "author": "Проект АХОВ",
   "repository": "https://github.com/stas07130713-debug/himkontur.git",

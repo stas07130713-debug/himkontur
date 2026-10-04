@@ -87,8 +87,12 @@ try {
     check('results moved into the right panel', document.querySelector('.right-column .results') !== null && document.querySelector('.left-column .results') === null);
     document.querySelector('.source-editor summary')?.click(); await wait();
     const sourceVolume = [...document.querySelectorAll('.source-editor label')].find((label) => label.textContent?.startsWith('Объём'))?.querySelector('input');
+    if (sourceVolume instanceof HTMLInputElement) { setInput(sourceVolume, ''); await wait(); }
+    check('source numeric fields can be fully cleared before entering a replacement', sourceVolume instanceof HTMLInputElement && sourceVolume.value === '', sourceVolume instanceof HTMLInputElement ? sourceVolume.value : 'missing');
     if (sourceVolume instanceof HTMLInputElement) setInput(sourceVolume, '10');
-    clickByText('.source-default-row button', 'Вернуть стандартные значения'); await wait();
+    const restoreSourceButton = [...document.querySelectorAll('.source-default-row button')].find((button) => button.textContent?.trim() === 'Вернуть стандартные значения');
+    check('source editor stays open while a numeric field is replaced', restoreSourceButton instanceof HTMLButtonElement, document.querySelector('.source-section')?.textContent ?? 'missing source section');
+    restoreSourceButton?.click(); await wait();
     const restoredVolume = [...document.querySelectorAll('.source-editor label')].find((label) => label.textContent?.startsWith('Объём'))?.querySelector('input');
     check('source card can restore its standard values', restoredVolume instanceof HTMLInputElement && Number(restoredVolume.value) === 43.46, restoredVolume instanceof HTMLInputElement ? restoredVolume.value : '');
     document.querySelector('.source-editor summary')?.click(); await wait();

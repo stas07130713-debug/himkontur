@@ -1,4 +1,5 @@
 import { useState, type CSSProperties } from 'react';
+import { EditableNumberInput } from './EditableNumberInput';
 import { SUBSTANCES } from '../core/reference-data';
 import {
   CAPACITY_MASS_COEFFICIENT,
@@ -18,6 +19,8 @@ type Props = Readonly<{
 
 const sourceStyle = (source: SourceConfiguration): CSSProperties | undefined =>
   source.imageDataUrl === undefined ? undefined : { backgroundImage: `url(${source.imageDataUrl})` };
+const twoDecimals = (value: number): string => String(Number(value.toFixed(2)));
+const threeDecimals = (value: number): string => String(Number(value.toFixed(3)));
 
 function standardSummary(source: SourceConfiguration): string {
   if (source.id === 'rail') return '54 т · 43,46 м³';
@@ -90,10 +93,10 @@ export function SourcePalette({ selected, onSelect, onConfigure }: Props) {
   const pipelineFields = (custom: boolean) => <>
     <div className="field-grid">
       <label>Длина трубопровода между задвижками, м
-        <input type="number" min="0" step="0.01" value={Number((selected.pipelineLengthM ?? 0).toFixed(2))} onChange={(event) => (custom ? configureCustom : configurePipeline)({ pipelineLengthM: Number(event.currentTarget.value) })}/>
+        <EditableNumberInput min="0" step="0.01" value={selected.pipelineLengthM ?? 0} format={twoDecimals} onValueChange={(pipelineLengthM) => (custom ? configureCustom : configurePipeline)({ pipelineLengthM })}/>
       </label>
       <label>Внутренний диаметр трубопровода, мм
-        <input type="number" min="0" step="0.01" value={Number((selected.pipelineDiameterMm ?? 0).toFixed(2))} onChange={(event) => (custom ? configureCustom : configurePipeline)({ pipelineDiameterMm: Number(event.currentTarget.value) })}/>
+        <EditableNumberInput min="0" step="0.01" value={selected.pipelineDiameterMm ?? 0} format={twoDecimals} onValueChange={(pipelineDiameterMm) => (custom ? configureCustom : configurePipeline)({ pipelineDiameterMm })}/>
       </label>
     </div>
     <output className="custom-source-volume">Расчётный объём трубопровода: <strong>{calculatedVolumeText} м³</strong></output>
@@ -101,7 +104,7 @@ export function SourcePalette({ selected, onSelect, onConfigure }: Props) {
 
   const coefficientField = (custom: boolean) => <>
     <label>Коэффициент перевода объёма в массу, т/м³
-      <input type="number" min="0" step="0.001" value={Number(coefficient.toFixed(3))} onChange={(event) => (custom ? configureCustom : configurePipeline)({ conversionTPerM3: Number(event.currentTarget.value) })}/>
+      <EditableNumberInput min="0" step="0.001" value={coefficient} format={threeDecimals} onValueChange={(conversionTPerM3) => (custom ? configureCustom : configurePipeline)({ conversionTPerM3 })}/>
       <small>Стандарт: плотность жидкости из таблицы В.3 — {density.toLocaleString('ru-RU', { maximumFractionDigits: 3 })} т/м³.</small>
     </label>
     {custom && <button type="button" className="restore-coefficient" onClick={restoreNormativeCoefficient}>Вернуть стандартный коэффициент</button>}
@@ -130,8 +133,8 @@ export function SourcePalette({ selected, onSelect, onConfigure }: Props) {
         <div className="source-default-row"><span>Стандарт: {standardSummary(SOURCE_LIBRARY.find((item) => item.id === selected.id) ?? selected)}</span><button type="button" onClick={restoreDefaults}>Вернуть стандартные значения</button></div>
         <label>Название<input value={selected.label} onChange={(event) => configure({ ...selected, label: event.target.value })}/></label>
         {selected.calculationMode === 'pipeline' ? <>{pipelineFields(false)}{coefficientField(false)}</> : <>
-          <div className="field-grid"><label>Объём ёмкостей (суммарный), м³<input type="number" min="0" step="0.01" value={Number(selected.volumeM3.toFixed(2))} onChange={(event) => configure({ ...selected, volumeM3: Number(event.target.value) })}/></label><label>Коэффициент заполнения<output className="capacity-coefficient">1,25</output></label></div>
-          <label>Коэффициент перевода объёма в массу, т/м³<input type="number" min="0" step="0.001" value={Number(coefficient.toFixed(3))} onChange={(event) => configure({ ...selected, conversionTPerM3: Number(event.currentTarget.value) })}/><small>Стандарт: плотность жидкого хлора из таблицы В.3 — 1,553 т/м³.</small></label>
+          <div className="field-grid"><label>Объём ёмкостей (суммарный), м³<EditableNumberInput min="0" step="0.01" value={selected.volumeM3} format={twoDecimals} onValueChange={(volumeM3) => configure({ ...selected, volumeM3 })}/></label><label>Коэффициент заполнения<output className="capacity-coefficient">1,25</output></label></div>
+          <label>Коэффициент перевода объёма в массу, т/м³<EditableNumberInput min="0" step="0.001" value={coefficient} format={threeDecimals} onValueChange={(conversionTPerM3) => configure({ ...selected, conversionTPerM3 })}/><small>Стандарт: плотность жидкого хлора из таблицы В.3 — 1,553 т/м³.</small></label>
         </>}
         {massSummary}
       </details>
@@ -140,7 +143,7 @@ export function SourcePalette({ selected, onSelect, onConfigure }: Props) {
       <div className="custom-source-card-body">
         <label>Название источника<input value={selected.label} onChange={(event) => configureCustom({ label: event.currentTarget.value })}/></label>
         <label>Вид источника<select value={selected.calculationMode ?? 'vessel'} onChange={(event) => configureCustom({ calculationMode: event.currentTarget.value as 'vessel' | 'pipeline' })}><option value="vessel">Ёмкость или резервуар</option><option value="pipeline">Трубопровод</option></select></label>
-        {selected.calculationMode === 'pipeline' ? pipelineFields(true) : <label>Объём ёмкости, м³<input type="number" min="0" step="0.01" value={Number(selected.volumeM3.toFixed(2))} onChange={(event) => configureCustom({ volumeM3: Number(event.currentTarget.value) })}/></label>}
+        {selected.calculationMode === 'pipeline' ? pipelineFields(true) : <label>Объём ёмкости, м³<EditableNumberInput min="0" step="0.01" value={selected.volumeM3} format={twoDecimals} onValueChange={(volumeM3) => configureCustom({ volumeM3 })}/></label>}
         {coefficientField(true)}
         {selected.calculationMode !== 'pipeline' && <small className="capacity-rule-note">Для ёмкости дополнительно применяется установленный коэффициент заполнения 1,25.</small>}
         {massSummary}

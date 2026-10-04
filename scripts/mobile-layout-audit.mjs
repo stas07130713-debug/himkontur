@@ -32,6 +32,7 @@ try {
   mkdirSync(resolve('artifacts'), { recursive: true });
   const cases = [];
   let dangerousGoodsAutoReveal = false;
+  let expandedSourceCanScroll = false;
   for (const size of [{ width: 390, height: 844 }, { width: 430, height: 932 }, { width: 844, height: 390 }]) {
     await command('Emulation.setDeviceMetricsOverride', { ...size, deviceScaleFactor: 1, mobile: true });
     await delay(800);
@@ -102,6 +103,16 @@ try {
     })()`);
     cases.push({ ...size, ...layout });
     if (size.width === 390) {
+      expandedSourceCanScroll = await evaluate(`(async () => {
+        document.querySelector('.source-editor:not([open]) > summary')?.click();
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const scroller = document.querySelector('.input-panel-scroll');
+        if (!(scroller instanceof HTMLElement)) return false;
+        scroller.scrollTop = scroller.scrollHeight;
+        const result = getComputedStyle(scroller).overflowY === 'auto' && scroller.scrollHeight > scroller.clientHeight && scroller.scrollTop > 0;
+        document.querySelector('.source-editor[open] > summary')?.click();
+        return result;
+      })()`);
       const shot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
       writeFileSync(resolve('artifacts', 'mobile-calculation-390.png'), Buffer.from(shot.data, 'base64'));
       await evaluate(`document.querySelector('.mobile-access-action')?.click()`);
@@ -135,7 +146,8 @@ try {
   }
   const failures = cases.filter((item) => item.scrollWidth > item.viewport + 1 || !item.tabs || !item.mobileButton || !item.mobileSubtitle || !item.actionsBalanced || !item.themeSwitch || !item.themeDoesNotOverlapTabs || !item.left || !item.map || !item.fullCloudLabels || !item.compassAvoidsToolbarContent || !item.mapControlsRightAligned || !item.mapOverlayControlsDoNotOverlap || !item.right || !item.mobileOrder || !item.calculate);
   if (!dangerousGoodsAutoReveal) failures.push({ check: 'dangerous-goods-auto-reveal' });
-  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, cases, failures };
+  if (!expandedSourceCanScroll) failures.push({ check: 'expanded-source-mobile-scroll' });
+  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, expandedSourceCanScroll, cases, failures };
   writeFileSync(resolve('artifacts', 'mobile-layout-audit.json'), JSON.stringify(report, null, 2));
   if (failures.length) throw new Error(`Мобильная компоновка не прошла проверку: ${JSON.stringify(failures)}`);
   console.log(`Мобильная компоновка проверена на ${cases.map((item) => `${item.width}×${item.height}`).join(', ')}: горизонтального сдвига нет; найденный опасный груз открывается автоматически; после ввода следуют результаты, карта и контрольные точки.`);

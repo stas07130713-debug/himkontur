@@ -2002,6 +2002,16 @@ button.wide { width: 100%; margin-top: 10px; }
   }
   .compass-rose { top: 50px; }
   .input-panel .source-parameter-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .input-panel-scroll:has(.source-editor[open], .custom-source-card[open]) {
+    max-height: 76dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: auto;
+  }
+  .input-panel-scroll:has(.source-editor[open], .custom-source-card[open])::-webkit-scrollbar { width: 7px; }
 }
 
 @media (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
