@@ -61,10 +61,12 @@ try {
         left: visible('.left-column'),
         map: visible('.map-column'),
         fullCloudLabels: [...document.querySelectorAll('.layer-toggles label')].every((node) => node.scrollWidth <= node.clientWidth + 1 && node.scrollHeight <= node.clientHeight + 1),
-        compassBelowToolbar: (() => {
+        compassAvoidsToolbarContent: (() => {
           const compass = document.querySelector('.compass-rose')?.getBoundingClientRect();
-          const toolbar = document.querySelector('.map-toolbar')?.getBoundingClientRect();
-          return Boolean(compass && toolbar && compass.top >= toolbar.bottom - 1);
+          const toolbarItems = [...document.querySelectorAll('.map-tool-group, .toolbar-wind-summary')]
+            .map((node) => node.getBoundingClientRect());
+          const overlaps = (a, b) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+          return Boolean(compass && toolbarItems.length && toolbarItems.every((rect) => !overlaps(compass, rect)));
         })(),
         mapControlsRightAligned: (() => {
           const map = document.querySelector('.map-column')?.getBoundingClientRect();
@@ -72,6 +74,17 @@ try {
             .map((node) => node.getBoundingClientRect());
           return Boolean(map && controls.length === 4 && controls.every((rect) => rect.left >= map.left && rect.top >= map.top && rect.bottom <= map.bottom && Math.abs(map.right - rect.right) <= 12));
         })(),
+        mapOverlayControlsDoNotOverlap: (() => {
+          const map = document.querySelector('.map-column')?.getBoundingClientRect();
+          const controls = [...document.querySelectorAll('.compass-rose, .rotation-controls, .zoom, .source-focus, .source-lock')]
+            .map((node) => node.getBoundingClientRect());
+          const overlaps = (a, b) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+          const insideMap = Boolean(map && controls.length === 5 && controls.every((rect) => rect.left >= map.left && rect.right <= map.right && rect.top >= map.top && rect.bottom <= map.bottom));
+          return insideMap && controls.every((rect, index) => controls.slice(index + 1).every((other) => !overlaps(rect, other)));
+        })(),
+        mapOverlayRects: [...document.querySelectorAll('.compass-rose, .rotation-controls, .zoom, .source-focus, .source-lock')]
+          .map((node) => ({ className: node.className, ...node.getBoundingClientRect().toJSON() })),
+        mapRect: document.querySelector('.map-column')?.getBoundingClientRect().toJSON(),
         right: visible('.right-column .results') && visible('.right-column .control-palette'),
         mobileOrder: (() => {
           const result = document.querySelector('.right-column .results');
@@ -120,7 +133,7 @@ try {
       writeFileSync(resolve('artifacts', 'mobile-calculation-landscape-844.png'), Buffer.from(shot.data, 'base64'));
     }
   }
-  const failures = cases.filter((item) => item.scrollWidth > item.viewport + 1 || !item.tabs || !item.mobileButton || !item.mobileSubtitle || !item.actionsBalanced || !item.themeSwitch || !item.themeDoesNotOverlapTabs || !item.left || !item.map || !item.fullCloudLabels || !item.compassBelowToolbar || !item.mapControlsRightAligned || !item.right || !item.mobileOrder || !item.calculate);
+  const failures = cases.filter((item) => item.scrollWidth > item.viewport + 1 || !item.tabs || !item.mobileButton || !item.mobileSubtitle || !item.actionsBalanced || !item.themeSwitch || !item.themeDoesNotOverlapTabs || !item.left || !item.map || !item.fullCloudLabels || !item.compassAvoidsToolbarContent || !item.mapControlsRightAligned || !item.mapOverlayControlsDoNotOverlap || !item.right || !item.mobileOrder || !item.calculate);
   if (!dangerousGoodsAutoReveal) failures.push({ check: 'dangerous-goods-auto-reveal' });
   const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, cases, failures };
   writeFileSync(resolve('artifacts', 'mobile-layout-audit.json'), JSON.stringify(report, null, 2));

@@ -2000,10 +2000,18 @@ button.wide { width: 100%; margin-top: 10px; }
     white-space: normal;
     line-height: 1.08;
   }
-  .compass-rose { top: 92px; }
+  .compass-rose { top: 50px; }
   .input-panel .source-parameter-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 }
 
 @media (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
-  .compass-rose { top: 74px; }
+  .compass-rose { top: 48px; right: 10px; width: 72px; height: 72px; }
+  .map-column > .rotation-controls { top: 124px; right: 10px; width: 40px; }
+  .map-column > .rotation-controls button,
+  .map-column > .rotation-controls button:first-child,
+  .map-column > .rotation-controls button:last-child { min-height: 24px; }
+  .map-column > .zoom { top: 200px; right: 10px; width: 40px; }
+  .map-column > .zoom button { height: 26px; min-height: 26px; }
+  .map-column > .source-focus { top: 256px; right: 10px; width: 38px; height: 38px; min-height: 38px; }
+  .map-column > .source-lock { top: 298px; right: 10px; width: 40px; min-height: 32px; }
 }
