@@ -376,6 +376,7 @@ export function App() {
             onClick={() => setMobileOpen(true)}
           >
             <UiIcon name="qr" />
+            <span className="qr-mobile-label">QR-код</span>
           </button>
           <button
             className="history-action"
@@ -755,7 +756,7 @@ export function App() {
         onClose={() => setMobileOpen(false)}
       />
       <footer className="statusbar">
-        <span>ХИМКОНТУР · v0.3.0</span>
+        <span>ХИМКОНТУР · v0.3.1</span>
         <span className="status-ready">● Готов к расчёту</span>
         <span>
           {new Date().toLocaleDateString("ru-RU")} ·{" "}

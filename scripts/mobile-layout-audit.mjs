@@ -42,6 +42,16 @@ try {
         scrollWidth: document.documentElement.scrollWidth,
         tabs: visible('.main-tabs'),
         mobileButton: visible('.mobile-access-action'),
+        mobileSubtitle: (() => {
+          const subtitle = document.querySelector('.chemcontour-logo small');
+          return Boolean(subtitle && getComputedStyle(subtitle).display !== 'none' && subtitle.textContent?.includes('Система поддержки принятия решений при ЧС'));
+        })(),
+        actionsBalanced: (() => {
+          const actions = [...document.querySelectorAll('.file-actions > button:not(.history-action)')]
+            .map((node) => node.getBoundingClientRect());
+          const bar = document.querySelector('.file-actions')?.getBoundingClientRect();
+          return Boolean(bar && actions.length === 2 && Math.abs(actions[0].width - actions[1].width) <= 2 && actions[0].left >= bar.left && actions[1].right <= bar.right);
+        })(),
         themeSwitch: visible('.topbar > .theme-switch'),
         themeDoesNotOverlapTabs: (() => {
           const theme = document.querySelector('.topbar > .theme-switch')?.getBoundingClientRect();
@@ -50,6 +60,12 @@ try {
         })(),
         left: visible('.left-column'),
         map: visible('.map-column'),
+        fullCloudLabels: [...document.querySelectorAll('.layer-toggles label')].every((node) => node.scrollWidth <= node.clientWidth + 1 && node.scrollHeight <= node.clientHeight + 1),
+        compassBelowToolbar: (() => {
+          const compass = document.querySelector('.compass-rose')?.getBoundingClientRect();
+          const toolbar = document.querySelector('.map-toolbar')?.getBoundingClientRect();
+          return Boolean(compass && toolbar && compass.top >= toolbar.bottom - 1);
+        })(),
         mapControlsRightAligned: (() => {
           const map = document.querySelector('.map-column')?.getBoundingClientRect();
           const controls = [...document.querySelectorAll('.rotation-controls, .zoom, .source-focus, .source-lock')]
@@ -104,7 +120,7 @@ try {
       writeFileSync(resolve('artifacts', 'mobile-calculation-landscape-844.png'), Buffer.from(shot.data, 'base64'));
     }
   }
-  const failures = cases.filter((item) => item.scrollWidth > item.viewport + 1 || !item.tabs || !item.mobileButton || !item.themeSwitch || !item.themeDoesNotOverlapTabs || !item.left || !item.map || !item.mapControlsRightAligned || !item.right || !item.mobileOrder || !item.calculate);
+  const failures = cases.filter((item) => item.scrollWidth > item.viewport + 1 || !item.tabs || !item.mobileButton || !item.mobileSubtitle || !item.actionsBalanced || !item.themeSwitch || !item.themeDoesNotOverlapTabs || !item.left || !item.map || !item.fullCloudLabels || !item.compassBelowToolbar || !item.mapControlsRightAligned || !item.right || !item.mobileOrder || !item.calculate);
   if (!dangerousGoodsAutoReveal) failures.push({ check: 'dangerous-goods-auto-reveal' });
   const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, cases, failures };
   writeFileSync(resolve('artifacts', 'mobile-layout-audit.json'), JSON.stringify(report, null, 2));

@@ -1931,6 +1931,7 @@ button.wide { width: 100%; margin-top: 10px; }
 .file-actions .new-calculation .ui-mini-icon { width: 21px; height: 21px; stroke-width: 2.2; }
 .file-actions > .new-calculation { width: auto; min-width: 40px; padding-inline: 9px; }
 .file-actions > .new-calculation .action-label { display: inline; }
+.qr-mobile-label { display: none; }
 
 @media (max-height: 939px) and (min-width: 721px) {
   .input-panel-scroll,
@@ -1966,6 +1967,43 @@ button.wide { width: 100%; margin-top: 10px; }
 }
 
 @media (max-width: 720px), (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
-  .file-actions > .new-calculation { width: 100%; padding-inline: 3px; }
+  .chemcontour-logo { align-items: center; }
+  .chemcontour-logo div { min-width: 0; }
+  .chemcontour-logo small {
+    display: block;
+    margin-top: 2px;
+    color: #d8ecef;
+    font-size: 8px;
+    line-height: 1.12;
+    letter-spacing: 0;
+    white-space: normal;
+  }
+  .file-actions {
+    width: min(100%, 360px);
+    margin-inline: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .file-actions > .new-calculation,
+  .file-actions > .mobile-access-action {
+    width: 100%;
+    min-height: 42px;
+    padding-inline: 7px;
+    gap: 7px;
+  }
+  .file-actions > .mobile-access-action .qr-mobile-label { display: inline; }
+  .map-toolbar { right: 5px; }
+  .map-toolbar .map-tool-group { width: 100%; }
+  .map-toolbar .layer-toggles label {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    line-height: 1.08;
+  }
+  .compass-rose { top: 92px; }
   .input-panel .source-parameter-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+
+@media (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
+  .compass-rose { top: 74px; }
 }
