@@ -437,6 +437,7 @@ try {
     check('Android photo workflow opens one camera-or-gallery chooser', document.querySelector('.photo-source-menu')?.textContent?.includes('Включить камеру') && document.querySelector('.photo-source-menu')?.textContent?.includes('Выбрать из галереи') && document.querySelector('.photo-source-input[capture="environment"]') !== null);
     document.querySelector('.photo-source-cancel')?.click(); await wait(20);
     const photoInput = document.querySelector('.photo-identification input[type="file"]');
+    let ocrElapsedMs = 0;
     if (photoInput instanceof HTMLInputElement) {
       const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 800;
       const context = canvas.getContext('2d');
@@ -452,14 +453,72 @@ try {
         if (blob !== null) {
           const transfer = new DataTransfer(); transfer.items.add(new File([blob], 'placard-1017.png', { type: 'image/png' }));
           Object.defineProperty(photoInput, 'files', { configurable: true, value: transfer.files });
+          const ocrStartedAt = performance.now();
           photoInput.dispatchEvent(new Event('change', { bubbles: true }));
+          await wait(40);
+          check('manual placard fields remain available while offline OCR is running', document.querySelector('.recognition-progress') !== null && document.querySelectorAll('.recognized-placard input:not([type="file"])').length === 2 && [...document.querySelectorAll('.recognized-placard input:not([type="file"])')].every((input) => !input.disabled));
           for (let attempt = 0; attempt < 300 && (document.querySelector('.recognition-progress') !== null || !(document.querySelectorAll('.photo-identification input:not([type="file"])')[1]?.value)); attempt += 1) await wait(250);
+          ocrElapsedMs = performance.now() - ocrStartedAt;
         }
       }
     }
     const recognizedPairs = [...document.querySelectorAll('.recognized-placard')].map((card) => [...card.querySelectorAll('input')].map((input) => input.value).join('/'));
     const expectedPairs = ${JSON.stringify(ocrExpectedPairs)};
     check('offline photo OCR selects one verified placard candidate', recognizedPairs.length === 1 && expectedPairs.includes(recognizedPairs[0]), recognizedPairs.join(', ') + ' ' + (document.querySelector('.recognition-error')?.textContent ?? ''));
+    check('close-up placard recognition finishes within the mobile response budget', ocrElapsedMs > 0 && ocrElapsedMs <= 15000, Math.round(ocrElapsedMs) + ' ms');
+    if (photoInput instanceof HTMLInputElement) {
+      const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 800;
+      const context = canvas.getContext('2d');
+      if (context !== null) {
+        context.translate(600, 400); context.rotate(.035);
+        context.fillStyle = '#ffd07a'; context.fillRect(-530, -355, 1060, 710);
+        context.strokeStyle = '#111'; context.lineWidth = 22; context.strokeRect(-530, -355, 1060, 710);
+        context.fillStyle = '#111'; context.font = 'bold 210px Arial'; context.textAlign = 'center';
+        context.fillText('33', 0, -75); context.fillRect(-508, -18, 1016, 22); context.fillText('1203', 0, 265);
+        const blob = await new Promise((resolveBlob) => canvas.toBlob(resolveBlob, 'image/png'));
+        if (blob !== null) {
+          const transfer = new DataTransfer(); transfer.items.add(new File([blob], 'placard-pale-rotated.png', { type: 'image/png' }));
+          Object.defineProperty(photoInput, 'files', { configurable: true, value: transfer.files });
+          const startedAt = performance.now(); photoInput.dispatchEvent(new Event('change', { bubbles: true }));
+          for (let attempt = 0; attempt < 100 && (document.querySelector('.recognition-progress') !== null || document.querySelectorAll('.recognized-placard input')[1]?.value !== '1203'); attempt += 1) await wait(150);
+          const pair = [...document.querySelectorAll('.recognized-placard input')].map((input) => input.value).join('/');
+          check('offline OCR recognizes a pale rotated close-up placard', pair === '33/1203', pair);
+          check('pale rotated placard stays within the mobile response budget', performance.now() - startedAt <= 15000, Math.round(performance.now() - startedAt) + ' ms');
+        }
+      }
+    }
+    if (photoInput instanceof HTMLInputElement) {
+      const source = document.createElement('canvas'); source.width = 1000; source.height = 650;
+      const sourceContext = source.getContext('2d');
+      const rephotographed = document.createElement('canvas'); rephotographed.width = 1200; rephotographed.height = 800;
+      const context = rephotographed.getContext('2d');
+      if (sourceContext !== null && context !== null) {
+        sourceContext.fillStyle = '#e7832d'; sourceContext.fillRect(20, 20, 960, 610);
+        sourceContext.strokeStyle = '#151515'; sourceContext.lineWidth = 20; sourceContext.strokeRect(20, 20, 960, 610);
+        sourceContext.fillStyle = '#111'; sourceContext.font = 'bold 185px Arial'; sourceContext.textAlign = 'center';
+        sourceContext.fillText('80', 500, 270); sourceContext.fillRect(40, 315, 920, 20); sourceContext.fillText('1789', 500, 555);
+        const reduced = document.createElement('canvas'); reduced.width = 560; reduced.height = 365;
+        const reducedContext = reduced.getContext('2d');
+        if (reducedContext !== null) {
+          reducedContext.filter = 'blur(.55px) contrast(.92)'; reducedContext.drawImage(source, 0, 0, reduced.width, reduced.height);
+          context.fillStyle = '#d6d9d7'; context.fillRect(0, 0, 1200, 800);
+          context.save(); context.translate(600, 400); context.rotate(-.028); context.drawImage(reduced, -510, -333, 1020, 666); context.restore();
+          for (let x = 0; x < 1200; x += 4) { context.fillStyle = x % 8 === 0 ? '#ffffff12' : '#0017280d'; context.fillRect(x, 0, 2, 800); }
+          const glare = context.createLinearGradient(250, 100, 850, 700); glare.addColorStop(0, '#ffffff00'); glare.addColorStop(.48, '#ffffff30'); glare.addColorStop(.62, '#ffffff08'); glare.addColorStop(1, '#ffffff00'); context.fillStyle = glare; context.fillRect(0, 0, 1200, 800);
+          const blob = await new Promise((resolveBlob) => rephotographed.toBlob(resolveBlob, 'image/jpeg', .72));
+          if (blob !== null) {
+            const transfer = new DataTransfer(); transfer.items.add(new File([blob], 'placard-rephotographed.jpg', { type: 'image/jpeg' }));
+            Object.defineProperty(photoInput, 'files', { configurable: true, value: transfer.files });
+            const startedAt = performance.now(); photoInput.dispatchEvent(new Event('change', { bubbles: true }));
+            for (let attempt = 0; attempt < 120 && (document.querySelector('.recognition-progress') !== null || document.querySelectorAll('.recognized-placard input')[1]?.value !== '1789'); attempt += 1) await wait(150);
+            const pair = [...document.querySelectorAll('.recognized-placard input')].map((input) => input.value).join('/');
+            check('offline OCR recognizes a rephotographed placard with moire, glare and JPEG compression', pair === '80/1789', pair + ' ' + (document.querySelector('.recognition-error')?.textContent ?? ''));
+            check('rephotographed placard stays within the mobile response budget', performance.now() - startedAt <= 18000, Math.round(performance.now() - startedAt) + ' ms');
+          }
+        }
+      }
+    }
+    check('photo OCR uses only bundled local worker, model and language data', performance.getEntriesByType('resource').filter((entry) => (/tesseract|traineddata/u.test(entry.name) || entry.name.includes('/ocr/')) && new URL(entry.name).origin !== location.origin).length === 0);
     check('photo workflow keeps exactly one confirmed cargo and cannot show competing substances', document.querySelectorAll('.recognized-placard').length === 1);
     check('starting photo recognition clears the search candidate and old substance card', unInput instanceof HTMLInputElement && unInput.value === '' && document.querySelector('.goods-hero') === null);
     if (unInput instanceof HTMLInputElement) setInput(unInput, '1017'); await wait(100);

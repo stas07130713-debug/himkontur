@@ -1,9 +1,12 @@
 export type OcrCandidate = Readonly<{ canvas: HTMLCanvasElement; label: string; region: number; row: 'upper' | 'lower' | 'whole' | 'fallback' }>;
 
-type Rectangle = Readonly<{ x: number; y: number; width: number; height: number; score: number }>;
+type Rectangle = Readonly<{ x: number; y: number; width: number; height: number; score: number; angle?: number }>;
 
 function orangePixel(red: number, green: number, blue: number): boolean {
-  return red > 125 && green > 42 && green < 190 && blue < 125 && red > green * 1.18 && green > red * .32 && green > blue * .82;
+  // Real placards are frequently photographed in shade or overexposed by a
+  // phone camera. A narrow RGB interval rejected both pale yellow-orange and
+  // dark orange plates even though their hue was still unambiguous.
+  return red >= 105 && green >= 30 && blue <= 175 && red - green >= 18 && red - blue >= 35 && green >= blue * .75;
 }
 
 function orangeRectangles(image: ImageData): readonly Rectangle[] {
@@ -20,10 +23,12 @@ function orangeRectangles(image: ImageData): readonly Rectangle[] {
     if (mask[start] === 0 || visited[start] === 1) continue;
     let head = 0; let tail = 0; let count = 0;
     let minX = width; let minY = height; let maxX = 0; let maxY = 0;
+    let sumX = 0; let sumY = 0; let sumXX = 0; let sumYY = 0; let sumXY = 0;
     queue[tail++] = start; visited[start] = 1;
     while (head < tail) {
       const current = queue[head++] ?? 0; const x = current % width; const y = Math.floor(current / width); count += 1;
       minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+      sumX += x; sumY += y; sumXX += x * x; sumYY += y * y; sumXY += x * y;
       const neighbours = [current - 1, current + 1, current - width, current + width];
       for (const next of neighbours) {
         if (next < 0 || next >= mask.length || mask[next] === 0 || visited[next] === 1) continue;
@@ -39,7 +44,10 @@ function orangeRectangles(image: ImageData): readonly Rectangle[] {
     // latter merely because the orange field is large.
     if (boxWidth < 12 || boxHeight < 7 || ratio < .55 || ratio > 4.5 || relativeArea < .00008 || relativeArea > .82 || density < .08) continue;
     const sizeScore = Math.min(1, relativeArea / .012);
-    rectangles.push({ x: minX, y: minY, width: boxWidth, height: boxHeight, score: density * (.8 + sizeScore) });
+    const meanX = sumX / count; const meanY = sumY / count;
+    const covarianceXX = sumXX / count - meanX * meanX; const covarianceYY = sumYY / count - meanY * meanY; const covarianceXY = sumXY / count - meanX * meanY;
+    const angle = .5 * Math.atan2(2 * covarianceXY, covarianceXX - covarianceYY);
+    rectangles.push({ x: minX, y: minY, width: boxWidth, height: boxHeight, score: density * (.8 + sizeScore), angle });
   }
   return rectangles.sort((left, right) => right.score - left.score).slice(0, 16);
 }
@@ -68,7 +76,7 @@ function stackedPlacards(rectangles: readonly Rectangle[]): readonly Rectangle[]
     const height = lower.y + lower.height - y;
     const ratio = width / Math.max(1, height);
     if (ratio < .65 || ratio > 2.8) continue;
-    merged.push({ x, y, width, height, score: (upper.score + lower.score) / 2 + .35 });
+    merged.push({ x, y, width, height, score: (upper.score + lower.score) / 2 + .35, angle: (upper.angle ?? 0) * .5 + (lower.angle ?? 0) * .5 });
   }
   return merged;
 }
@@ -97,7 +105,7 @@ function otsuThreshold(pixels: ImageData): number {
   return best;
 }
 
-function cropCandidate(bitmap: ImageBitmap, rectangle: Rectangle, label: string, region: number, row: OcrCandidate['row'], thresholdOffset?: number, edgeClearFraction = .025): OcrCandidate {
+function cropCandidate(bitmap: ImageBitmap, rectangle: Rectangle, label: string, region: number, row: OcrCandidate['row'], thresholdOffset?: number, edgeClearFraction = .025, denoise = false): OcrCandidate {
   const marginX = rectangle.width * .03; const marginY = rectangle.height * .08;
   const sourceX = Math.max(0, rectangle.x - marginX); const sourceY = Math.max(0, rectangle.y - marginY);
   const sourceWidth = Math.min(bitmap.width - sourceX, rectangle.width + marginX * 2); const sourceHeight = Math.min(bitmap.height - sourceY, rectangle.height + marginY * 2);
@@ -108,7 +116,14 @@ function cropCandidate(bitmap: ImageBitmap, rectangle: Rectangle, label: string,
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (context === null) return { canvas, label, region, row };
   context.imageSmoothingEnabled = true; context.imageSmoothingQuality = 'high';
-  context.drawImage(bitmap, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
+  context.fillStyle = '#fff'; context.fillRect(0, 0, canvas.width, canvas.height);
+  const angle = Math.abs(rectangle.angle ?? 0) <= Math.PI / 12 ? rectangle.angle ?? 0 : 0;
+  context.save();
+  context.translate(canvas.width / 2, canvas.height / 2);
+  context.rotate(-angle);
+  if (denoise) context.filter = `blur(${Math.max(.55, Math.min(1.4, scale * .16))}px)`;
+  context.drawImage(bitmap, sourceX, sourceY, sourceWidth, sourceHeight, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
+  context.restore();
   if (thresholdOffset !== undefined) {
     const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
     const threshold = Math.max(35, Math.min(220, otsuThreshold(pixels) + thresholdOffset));
@@ -149,6 +164,8 @@ export async function prepareOcrCandidates(file: File): Promise<readonly OcrCand
         cropCandidate(bitmap, upper, `контрастная верхняя строка ${index + 1}`, index, 'upper', 0),
         cropCandidate(bitmap, lower, `контрастная нижняя строка ${index + 1}`, index, 'lower', 0),
         ...(index === 0 ? [cropCandidate(bitmap, lower, 'мягкая нижняя строка 1', index, 'lower', -24)] : []),
+        ...(index === 0 ? [cropCandidate(bitmap, upper, 'очищенная верхняя строка 1', index, 'upper', 0, .025, true)] : []),
+        ...(index === 0 ? [cropCandidate(bitmap, lower, 'очищенная нижняя строка 1', index, 'lower', 0, .025, true)] : []),
         ...(index === 0 ? [cropCandidate(bitmap, lower, 'исходная нижняя строка 1', index, 'lower')] : []),
         ...(index === 0 ? [cropCandidate(bitmap, lower, 'нижняя строка без рамки 1', index, 'lower', 0, .075)] : []),
         cropCandidate(bitmap, rectangle, `оранжевая область ${index + 1}`, index, 'whole')
@@ -176,6 +193,28 @@ export async function prepareOcrCandidates(file: File): Promise<readonly OcrCand
       }
     }
     return candidates;
+  } finally {
+    bitmap.close();
+  }
+}
+
+export async function prepareOcrSpatialCandidate(file: File): Promise<HTMLCanvasElement> {
+  const bitmap = await createImageBitmap(file);
+  try {
+    // The camera original can be tens of megapixels. Tesseract does not gain
+    // useful placard detail beyond this size, while memory use and recognition
+    // time grow sharply on Android.
+    const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext('2d');
+    if (context !== null) {
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    }
+    return canvas;
   } finally {
     bitmap.close();
   }

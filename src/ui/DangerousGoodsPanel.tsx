@@ -4,7 +4,7 @@ import { getEmergencyCardByUN } from '../core/emergencyCards/emergencyCardLookup
 import { EmergencyCardRepository } from '../core/emergencyCards/emergencyCardRepository';
 import { SUBSTANCES } from '../core/reference-data';
 import { SUBSTANCE_PRESENTATION } from './substance-display';
-import { prepareOcrCandidates } from './photo-ocr';
+import { prepareOcrCandidates, prepareOcrSpatialCandidate } from './photo-ocr';
 import { HazardLabel, type HazardLabelData } from './HazardLabel';
 import { getPublishedSubstanceByUN } from '../core/substances/substanceDataPipeline';
 import { OPERATIONAL_FACTS_CATALOG, type WaterCompatibility } from '../core/substances/operationalFactsCatalog';
@@ -16,6 +16,7 @@ type HazardLabelRow = Readonly<{ rowIndex: number; un: string; description: stri
 type HazardLabelDatabase = Readonly<{ rows: readonly HazardLabelRow[] }>;
 type Status = 'manual' | 'preliminary' | 'confirmed';
 type RecognizedPlacard = Readonly<{ id: number; hazard: string; un: string }>;
+type OcrRead = Readonly<{ region: number; row: 'upper' | 'lower' | 'whole' | 'fallback'; label: string; numbers: readonly string[]; confidence: number }>;
 
 const FORMULA_BY_UN = Object.values(SUBSTANCE_PRESENTATION).reduce<Record<string, string>>((result, item) => { if (item.un.length > 0 && result[item.un] === undefined) result[item.un] = item.formula; return result; }, { ...ADDITIONAL_FORMULA_BY_UN });
 const SEARCH_ALIASES_BY_UN = SUBSTANCES.reduce<Record<string, string>>((result, substance) => { const un = SUBSTANCE_PRESENTATION[substance.id]?.un; if (un !== undefined && un.length > 0) result[un] = `${result[un] ?? ''} ${substance.name}`; return result; }, {});
@@ -87,6 +88,26 @@ function DocumentParagraph({ label, value }: Readonly<{ label: string; value: st
 }
 function ocrNumbers(text: string): readonly string[] { return [...new Set([...text.split(/\r?\n/u).map((line) => line.replace(/\D/gu, '')).filter((value) => /^\d{2,4}$/u.test(value)), ...(text.match(/\d{2,4}/gu) ?? [])])]; }
 function hazardDigits(value: string): string { return value.replace(/\D/gu, ''); }
+function currentFlag(reference: Readonly<{ current: boolean }>): boolean { return reference.current; }
+
+function earlyVerifiedPlacard(reads: readonly OcrRead[], database: readonly DangerousGood[]): RecognizedPlacard | undefined {
+  for (const region of [...new Set(reads.map((read) => read.region))]) {
+    const regionReads = reads.filter((read) => read.region === region);
+    for (const good of database) {
+      const hazard = hazardDigits(good.hazardNumber);
+      if (hazard.length < 2) continue;
+      const hazardReads = regionReads.filter((read) => (read.row === 'upper' || read.row === 'whole') && read.numbers.includes(hazard));
+      const unReads = regionReads.filter((read) => (read.row === 'lower' || read.row === 'whole') && read.numbers.includes(good.un));
+      // Two independently preprocessed lower-row reads prevent one frame edge
+      // from being accepted as an extra leading digit. This still lets a clear
+      // placard finish after only three OCR passes instead of twelve or more.
+      if (hazardReads.length >= 1 && unReads.length >= 2 && Math.max(...hazardReads.map((read) => read.confidence)) >= 25) {
+        return { id: region, hazard, un: good.un };
+      }
+    }
+  }
+  return undefined;
+}
 
 function transportPhysicalState(good: DangerousGood | null): string | undefined {
   if (good === null) return undefined;
@@ -172,6 +193,8 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const emergencySheetRef = useRef<HTMLElement>(null);
+  const recognitionRunRef = useRef(0);
+  const manualRecognitionEditRef = useRef<boolean>(false);
 
   useEffect(() => { const controller = new AbortController();
     void Promise.all([
@@ -197,6 +220,12 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
     if (exact !== undefined) setStatus('manual');
   }, [database, initialQuery]);
   useEffect(() => () => { if (preview !== null) URL.revokeObjectURL(preview); }, [preview]);
+  useEffect(() => {
+    // Warm the completely local OCR worker while the user is choosing a photo.
+    // No network request is involved: worker, WASM and trained data are bundled.
+    const timer = window.setTimeout(() => { void loadOcrWorker().catch(() => undefined); }, 50);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const matches = useMemo(() => {
     const search = normalized(query.trim());
@@ -234,6 +263,8 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
     setStatus(nextStatus);
   };
   const clearPhotoIdentification = () => {
+    recognitionRunRef.current += 1;
+    manualRecognitionEditRef.current = false;
     setPreview(null);
     setRecognizedPlacards([{ id: 0, hazard: '', un: '' }]);
     setRecognizing(false);
@@ -254,21 +285,26 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
   const selectPhoto = async (event: ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget;
     const file = input.files?.[0]; if (file === undefined) return;
+    const runId = recognitionRunRef.current + 1;
+    recognitionRunRef.current = runId;
+    manualRecognitionEditRef.current = false;
     setPhotoSourceOpen(false);
-    if (preview !== null) URL.revokeObjectURL(preview); const url = URL.createObjectURL(file); setQuery(''); setSelected(null); setPreview(url); setRecognizing(true); setRecognitionProgress(3); setRecognitionStage('Подготовка фотографии'); setRecognitionError(null); setRecognizedPlacards([]); setStatus('preliminary');
+    if (preview !== null) URL.revokeObjectURL(preview); const url = URL.createObjectURL(file); setQuery(''); setSelected(null); setPreview(url); setRecognizing(true); setRecognitionProgress(3); setRecognitionStage('Подготовка фотографии'); setRecognitionError(null); setRecognizedPlacards([{ id: 0, hazard: '', un: '' }]); setStatus('preliminary');
     let worker: Worker | undefined;
     try {
-      const { PSM } = await import('tesseract.js');
-      worker = await loadOcrWorker();
-      const candidates = await prepareOcrCandidates(file);
-      type OcrRead = Readonly<{ region: number; row: 'upper' | 'lower' | 'whole' | 'fallback'; label: string; numbers: readonly string[]; confidence: number }>;
+      const [{ PSM }, loadedWorker, candidates] = await Promise.all([import('tesseract.js'), loadOcrWorker(), prepareOcrCandidates(file)]);
+      worker = loadedWorker;
+      if (recognitionRunRef.current !== runId) return;
       const reads: OcrRead[] = [];
       for (const [index, candidate] of candidates.entries()) {
+        if (recognitionRunRef.current !== runId) return;
         setRecognitionStage('Распознавание маркировки');
         setRecognitionProgress(Math.round(8 + ((index + 1) / Math.max(1, candidates.length)) * 72));
         await worker.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: candidate.row === 'upper' || candidate.row === 'lower' ? PSM.SINGLE_WORD : candidate.row === 'fallback' ? PSM.SPARSE_TEXT : PSM.SINGLE_BLOCK });
         const result = await worker.recognize(candidate.canvas);
         reads.push({ region: candidate.region, row: candidate.row, label: candidate.label, numbers: ocrNumbers(result.data.text), confidence: result.data.confidence });
+        const earlyPlacard = earlyVerifiedPlacard(reads, database);
+        if (earlyPlacard !== undefined) break;
       }
       type PairEvidence = { good: DangerousGood; hazard: string; un: string; region: number; votes: number; sourceVotes: number; score: number };
       const evidence = new Map<string, PairEvidence>();
@@ -288,7 +324,7 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
             // because a plate border may otherwise become an extra leading 1.
             if (unRead.label.startsWith('исходная')) current.sourceVotes += 1;
             const contrastBonus = (hazardRead.label.startsWith('контрастная') ? .5 : 0) + (unRead.label.startsWith('контрастная') ? 1 : 0);
-            const frameRemovalBonus = unRead.label.startsWith('нижняя строка без рамки') ? 6 : 0;
+            const frameRemovalBonus = unRead.label.startsWith('нижняя строка без рамки') ? .8 : 0;
             current.score += Math.max(1, (hazardRead.confidence + unRead.confidence) / 50) + contrastBonus + frameRemovalBonus;
             evidence.set(key, current);
           }
@@ -324,7 +360,8 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
       if (evidence.size === 0) {
         setRecognitionStage('Дополнительная проверка'); setRecognitionProgress(86);
         await worker.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: PSM.SPARSE_TEXT });
-        const spatialResult = await worker.recognize(file, {}, { blocks: true, text: true });
+        const spatialCandidate = await prepareOcrSpatialCandidate(file);
+        const spatialResult = await worker.recognize(spatialCandidate, {}, { blocks: true, text: true });
         const words = (spatialResult.data.blocks ?? []).flatMap((block) => block.paragraphs.flatMap((paragraph) => paragraph.lines.flatMap((line) => line.words))).map((word) => ({ value: word.text.replace(/\D/gu, ''), confidence: word.confidence, bbox: word.bbox }));
         let spatialRegion = 1000;
         for (const hazardWord of words.filter((word) => (word.value.length === 2 || word.value.length === 3) && word.confidence >= 25)) for (const unWord of words.filter((word) => word.value.length === 4 && word.confidence >= 25)) {
@@ -350,12 +387,13 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
       if (recognized.length > 0) {
         // The workflow confirms exactly one dangerous cargo. Showing several
         // competing plates created contradictory selected substances.
-        const primaryPlacard = recognized[0];
-        if (primaryPlacard !== undefined) setRecognizedPlacards([primaryPlacard]);
+        if (!currentFlag(manualRecognitionEditRef)) setRecognizedPlacards(recognized.slice(0, 1));
         setRecognitionProgress(100);
       } else {
-        setRecognizedPlacards([{ id: 0, hazard: '', un: '' }]);
-        setRecognitionError('Маркировка не распознана с достаточной достоверностью. Программа уже увеличила найденные области автоматически. Сделайте более прямой снимок либо введите оба номера вручную. Случайные варианты программа не подставляет.');
+        if (!currentFlag(manualRecognitionEditRef)) {
+          setRecognizedPlacards([{ id: 0, hazard: '', un: '' }]);
+          setRecognitionError('Маркировка не распознана с достаточной достоверностью. Программа уже увеличила найденные области автоматически. Сделайте более прямой снимок либо введите оба номера вручную. Случайные варианты программа не подставляет.');
+        }
       }
     } catch (error: unknown) {
       await worker?.terminate().catch(() => undefined);
@@ -363,15 +401,17 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
       const detail = error instanceof Error ? error.message : String(error);
       setRecognitionError(`Не удалось обработать фотографию автономно: ${detail || 'ошибка модуля распознавания'}.`);
     } finally {
-      setRecognizing(false);
-      setRecognitionStage('');
-      setRecognitionProgress(0);
+      if (recognitionRunRef.current === runId) {
+        setRecognizing(false);
+        setRecognitionStage('');
+        setRecognitionProgress(0);
+      }
       input.value = '';
     }
   };
-  const updatePlacard = (id: number, field: 'hazard' | 'un', value: string) => { setRecognizedPlacards((items) => items.map((item) => item.id === id ? { ...item, [field]: value } : item)); setSelected(null); setQuery(''); setStatus('preliminary'); setRecognitionError(null); };
-  const dismissPlacard = (id: number) => setRecognizedPlacards((items) => items.filter((item) => item.id !== id));
-  const confirmRecognition = (placard: RecognizedPlacard) => { const good = database.find((item) => item.un === placard.un && hazardDigits(item.hazardNumber) === placard.hazard); if (good !== undefined) { chooseGood(good, 'confirmed'); setQuery(''); } else setRecognitionError('Такая пара номера опасности и номера ООН отсутствует в автономном справочнике ADR. Проверьте обе строки таблички.'); };
+  const updatePlacard = (id: number, field: 'hazard' | 'un', value: string) => { manualRecognitionEditRef.current = true; setRecognizedPlacards((items) => items.map((item) => item.id === id ? { ...item, [field]: value } : item)); setSelected(null); setQuery(''); setStatus('preliminary'); setRecognitionError(null); };
+  const dismissPlacard = (id: number) => { manualRecognitionEditRef.current = true; setRecognizedPlacards((items) => items.map((item) => item.id === id ? { ...item, hazard: '', un: '' } : item)); setRecognitionError(null); };
+  const confirmRecognition = (placard: RecognizedPlacard) => { const good = database.find((item) => item.un === placard.un && hazardDigits(item.hazardNumber) === placard.hazard); if (good !== undefined) { recognitionRunRef.current += 1; setRecognizing(false); setRecognitionStage(''); setRecognitionProgress(0); chooseGood(good, 'confirmed'); setQuery(''); } else setRecognitionError('Такая пара номера опасности и номера ООН отсутствует в автономном справочнике ADR. Проверьте обе строки таблички.'); };
   const propertyItems = validatedRecord?.emergency.mainProperties.value ?? substanceProfile?.mainProperties ?? sentences(officialCard?.mainProperties ?? '');
   const fireItems = validatedRecord?.emergency.fireExplosionHazards.value ?? substanceProfile?.fireExplosionHazard ?? sentences(officialCard?.fireExplosionHazard ?? '');
   const healthItemsBase = validatedRecord?.emergency.healthHazards.value ?? substanceProfile?.humanHazard ?? sentences([officialCard?.humanHazard.description, officialCard?.humanHazard.symptoms].filter(Boolean).join(' '));
@@ -457,7 +497,7 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
                 <input aria-label={`Номер опасности таблички ${index + 1}`} value={placard.hazard} inputMode="numeric" placeholder="Кемлер" onChange={(event) => updatePlacard(placard.id, 'hazard', event.currentTarget.value.replace(/\D/gu, '').slice(0, 3))}/>
                 <input aria-label={`Номер ООН таблички ${index + 1}`} value={placard.un} inputMode="numeric" placeholder="UN" onChange={(event) => updatePlacard(placard.id, 'un', event.currentTarget.value.replace(/\D/gu, '').slice(0, 4))}/>
               </div>
-              <div><strong>Опасный груз</strong><span>Верхняя строка — номер опасности<br/>Нижняя строка — номер ООН</span><div className="placard-actions"><button className="confirm-recognition" disabled={recognizing || placard.hazard.length < 2 || placard.un.length !== 4} onClick={() => confirmRecognition(placard)}>Подтвердить</button><button className="dismiss-placard" onClick={() => dismissPlacard(placard.id)}>Очистить</button></div></div>
+              <div><strong>Опасный груз</strong><span>Верхняя строка — номер опасности<br/>Нижняя строка — номер ООН</span><div className="placard-actions"><button className="confirm-recognition" disabled={placard.hazard.length < 2 || placard.un.length !== 4} onClick={() => confirmRecognition(placard)}>Подтвердить</button><button className="dismiss-placard" onClick={() => dismissPlacard(placard.id)}>Очистить</button></div></div>
             </article>)}
           </div>
           <p className="recognition-warning">Проверьте табличку. При необходимости исправьте цифры непосредственно на ней и подтвердите груз.</p>

@@ -37,7 +37,7 @@ export default defineConfig({
         icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,json,tsv,traineddata,pmtiles}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,json,tsv,traineddata,wasm,pmtiles}'],
         // The autonomous Monchegorsk map is deliberately bundled as one
         // PMTiles archive. It must be precached for the installed PWA and the
         // Android WebView, otherwise the UI loads offline but the map does not.
