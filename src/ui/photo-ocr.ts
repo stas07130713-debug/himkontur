@@ -105,7 +105,7 @@ function otsuThreshold(pixels: ImageData): number {
   return best;
 }
 
-function cropCandidate(bitmap: ImageBitmap, rectangle: Rectangle, label: string, region: number, row: OcrCandidate['row'], thresholdOffset?: number, edgeClearFraction = .025, denoise = false): OcrCandidate {
+function cropCandidate(bitmap: ImageBitmap, rectangle: Rectangle, label: string, region: number, row: OcrCandidate['row'], thresholdOffset?: number, edgeClearFraction = .055, denoise = false): OcrCandidate {
   const marginX = rectangle.width * .03; const marginY = rectangle.height * .08;
   const sourceX = Math.max(0, rectangle.x - marginX); const sourceY = Math.max(0, rectangle.y - marginY);
   const sourceWidth = Math.min(bitmap.width - sourceX, rectangle.width + marginX * 2); const sourceHeight = Math.min(bitmap.height - sourceY, rectangle.height + marginY * 2);
@@ -163,11 +163,11 @@ export async function prepareOcrCandidates(file: File): Promise<readonly OcrCand
       return [
         cropCandidate(bitmap, upper, `контрастная верхняя строка ${index + 1}`, index, 'upper', 0),
         cropCandidate(bitmap, lower, `контрастная нижняя строка ${index + 1}`, index, 'lower', 0),
-        ...(index === 0 ? [cropCandidate(bitmap, lower, 'мягкая нижняя строка 1', index, 'lower', -24)] : []),
-        ...(index === 0 ? [cropCandidate(bitmap, upper, 'очищенная верхняя строка 1', index, 'upper', 0, .025, true)] : []),
-        ...(index === 0 ? [cropCandidate(bitmap, lower, 'очищенная нижняя строка 1', index, 'lower', 0, .025, true)] : []),
         ...(index === 0 ? [cropCandidate(bitmap, lower, 'исходная нижняя строка 1', index, 'lower')] : []),
-        ...(index === 0 ? [cropCandidate(bitmap, lower, 'нижняя строка без рамки 1', index, 'lower', 0, .075)] : []),
+        ...(index === 0 ? [cropCandidate(bitmap, lower, 'мягкая нижняя строка 1', index, 'lower', -24)] : []),
+        ...(index === 0 ? [cropCandidate(bitmap, upper, 'очищенная верхняя строка 1', index, 'upper', 0, .055, true)] : []),
+        ...(index === 0 ? [cropCandidate(bitmap, lower, 'очищенная нижняя строка 1', index, 'lower', 0, .055, true)] : []),
+        ...(index === 0 ? [cropCandidate(bitmap, lower, 'нижняя строка без рамки 1', index, 'lower', 0, .095)] : []),
         cropCandidate(bitmap, rectangle, `оранжевая область ${index + 1}`, index, 'whole')
       ];
     });
