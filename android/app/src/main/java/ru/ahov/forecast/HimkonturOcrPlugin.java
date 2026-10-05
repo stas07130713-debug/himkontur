@@ -43,9 +43,9 @@ public class HimkonturOcrPlugin extends Plugin {
                     JSArray elements = new JSArray();
                     for (Text.TextBlock block : result.getTextBlocks()) {
                         for (Text.Line line : block.getLines()) {
-                            appendElement(elements, line.getText(), line.getBoundingBox());
+                            appendElement(elements, line.getText(), line.getBoundingBox(), line.getConfidence());
                             for (Text.Element element : line.getElements()) {
-                                appendElement(elements, element.getText(), element.getBoundingBox());
+                                appendElement(elements, element.getText(), element.getBoundingBox(), element.getConfidence());
                             }
                         }
                     }
@@ -58,7 +58,7 @@ public class HimkonturOcrPlugin extends Plugin {
         });
     }
 
-    private void appendElement(JSArray elements, String text, Rect box) {
+    private void appendElement(JSArray elements, String text, Rect box, float confidence) {
         if (box == null) return;
         JSObject item = new JSObject();
         item.put("text", text);
@@ -66,6 +66,7 @@ public class HimkonturOcrPlugin extends Plugin {
         item.put("y", box.top);
         item.put("width", box.width());
         item.put("height", box.height());
+        item.put("confidence", confidence);
         elements.put(item);
     }
 

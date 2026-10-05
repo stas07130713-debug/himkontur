@@ -109,9 +109,11 @@ function cropCandidate(bitmap: ImageBitmap, rectangle: Rectangle, label: string,
   const marginX = rectangle.width * .03; const marginY = rectangle.height * .08;
   const sourceX = Math.max(0, rectangle.x - marginX); const sourceY = Math.max(0, rectangle.y - marginY);
   const sourceWidth = Math.min(bitmap.width - sourceX, rectangle.width + marginX * 2); const sourceHeight = Math.min(bitmap.height - sourceY, rectangle.height + marginY * 2);
-  // Для цифр таблички 640 px достаточно; прежние 800/1200 px заметно замедляли
-  // каждый локальный проход OCR на телефонах без прироста точности.
-  const scale = Math.min(8, Math.max(2, 640 / Math.max(sourceWidth, 1)));
+  // A phone photo is commonly 4000×3000 px. The old lower bound of 2 enlarged
+  // such a crop to roughly 8000×6000 and could exhaust the Android WebView.
+  // Keep the longest edge near 720 px instead: enlarge only genuinely small
+  // distant placards and downscale close-up camera originals.
+  const scale = Math.min(6, Math.max(.12, 720 / Math.max(sourceWidth, sourceHeight, 1)));
   const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(sourceWidth * scale)); canvas.height = Math.max(1, Math.round(sourceHeight * scale));
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (context === null) return { canvas, label, region, row };
@@ -171,6 +173,8 @@ export async function prepareOcrCandidates(file: File): Promise<readonly OcrCand
       if (index === 0) primaryCandidates.push(...main);
       else secondaryCandidates.push(...main);
       if (index === 0) fallbackCandidates.push(
+        cropCandidate(bitmap, rectangle, 'исходная табличка целиком 1', index, 'whole'),
+        cropCandidate(bitmap, upper, 'исходная верхняя строка 1', index, 'upper'),
         cropCandidate(bitmap, lower, 'исходная нижняя строка 1', index, 'lower'),
         cropCandidate(bitmap, lower, 'мягкая нижняя строка 1', index, 'lower', -24),
         cropCandidate(bitmap, upper, 'очищенная верхняя строка 1', index, 'upper', 0, .055, true),
@@ -189,9 +193,21 @@ export async function prepareOcrCandidates(file: File): Promise<readonly OcrCand
       closeUpCandidates.push(cropCandidate(bitmap, fullFrame, 'контрастная крупная табличка целиком', -2, 'whole', 0));
       closeUpCandidates.push(cropCandidate(bitmap, fullUpper, 'контрастная верхняя строка крупной таблички', -2, 'upper', 0));
       closeUpCandidates.push(cropCandidate(bitmap, fullLower, 'контрастная нижняя строка крупной таблички', -2, 'lower', 0));
+      closeUpCandidates.push(cropCandidate(bitmap, fullFrame, 'исходная крупная табличка целиком', -2, 'whole'));
+      closeUpCandidates.push(cropCandidate(bitmap, fullUpper, 'исходная верхняя строка крупной таблички', -2, 'upper'));
+      closeUpCandidates.push(cropCandidate(bitmap, fullLower, 'исходная нижняя строка крупной таблички', -2, 'lower'));
     }
     const candidates = [...primaryCandidates, ...closeUpCandidates, ...fallbackCandidates, ...secondaryCandidates];
     if (rectangles.length === 0) {
+      // Low light, reflections or a photographed screen can hide the orange
+      // colour from the detector. Native ML Kit still reads the two rows well,
+      // so always provide a bounded raw full-frame pair in this case.
+      const fullFrame: Rectangle = { x: 0, y: 0, width: bitmap.width, height: bitmap.height, score: 0 };
+      const fullUpper = { ...fullFrame, y: bitmap.height * .04, height: bitmap.height * .43 };
+      const fullLower = { ...fullFrame, y: bitmap.height * .51, height: bitmap.height * .45 };
+      candidates.push(cropCandidate(bitmap, fullFrame, 'исходная табличка без цветового контура', -1, 'whole'));
+      candidates.push(cropCandidate(bitmap, fullUpper, 'исходная верхняя строка без цветового контура', -1, 'upper'));
+      candidates.push(cropCandidate(bitmap, fullLower, 'исходная нижняя строка без цветового контура', -1, 'lower'));
       const lowerCentre: Rectangle = { x: bitmap.width * .15, y: bitmap.height * .38, width: bitmap.width * .7, height: bitmap.height * .6, score: 0 };
       candidates.push(cropCandidate(bitmap, lowerCentre, 'нижняя центральная часть', -1, 'fallback'));
       candidates.push(cropCandidate(bitmap, lowerCentre, 'контрастная нижняя часть', -1, 'fallback', 0));

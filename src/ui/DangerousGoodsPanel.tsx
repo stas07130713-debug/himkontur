@@ -5,7 +5,7 @@ import { EmergencyCardRepository } from '../core/emergencyCards/emergencyCardRep
 import { SUBSTANCES } from '../core/reference-data';
 import { SUBSTANCE_PRESENTATION } from './substance-display';
 import { prepareOcrCandidates, prepareOcrSpatialCandidate } from './photo-ocr';
-import { nativeOcrAvailable, placardDigitsFromNativeElements, recognizeCanvasNatively } from './native-ocr';
+import { nativeOcrAvailable, placardDigitsFromNativeElements, placardDigitsFromNativeRows, recognizeCanvasNatively } from './native-ocr';
 import { HazardLabel, type HazardLabelData } from './HazardLabel';
 import { getPublishedSubstanceByUN } from '../core/substances/substanceDataPipeline';
 import { OPERATIONAL_FACTS_CATALOG, type WaterCompatibility } from '../core/substances/operationalFactsCatalog';
@@ -90,6 +90,18 @@ function DocumentParagraph({ label, value }: Readonly<{ label: string; value: st
 function ocrNumbers(text: string): readonly string[] { return [...new Set([...text.split(/\r?\n/u).map((line) => line.replace(/\D/gu, '')).filter((value) => /^\d{2,4}$/u.test(value)), ...(text.match(/\d{2,4}/gu) ?? [])])]; }
 function hazardDigits(value: string): string { return value.replace(/\D/gu, ''); }
 function currentFlag(reference: Readonly<{ current: boolean }>): boolean { return reference.current; }
+
+async function recognizeCanvasNativelyBounded(canvas: HTMLCanvasElement): ReturnType<typeof recognizeCanvasNatively> {
+  let timeoutId = 0;
+  try {
+    return await Promise.race([
+      recognizeCanvasNatively(canvas),
+      new Promise<never>((_, reject) => { timeoutId = window.setTimeout(() => reject(new Error('Android OCR превысил допустимое время обработки.')), 4500); }),
+    ]);
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 
 type DigitConsensus = Readonly<{ value: string; observations: number; weakestAgreement: number; directVotes: number }>;
 
@@ -292,6 +304,7 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
   useEffect(() => {
     // Warm the completely local OCR worker while the user is choosing a photo.
     // No network request is involved: worker, WASM and trained data are bundled.
+    if (nativeOcrAvailable()) return undefined;
     const timer = window.setTimeout(() => { void loadOcrWorker().catch(() => undefined); }, 50);
     return () => window.clearTimeout(timer);
   }, []);
@@ -371,23 +384,62 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
       if (nativeOcrAvailable()) {
         setRecognitionStage('Быстрое распознавание на устройстве');
         setRecognitionProgress(12);
-        const nativeCandidates = candidates.filter((candidate) => candidate.row === 'whole').slice(0, 2);
-        const nativeReads: RecognizedPlacard[] = [];
-        for (const candidate of nativeCandidates) {
-          try {
-            const result = placardDigitsFromNativeElements(await recognizeCanvasNatively(candidate.canvas), (hazard, un) => goodForPlacard(database, hazard, un) !== undefined);
-            if (result !== undefined) nativeReads.push({ id: -500, ...result });
-          } catch {
-            // The bundled Tesseract path below remains a fully offline fallback
-            // for devices whose native recognizer cannot decode a particular file.
+        const isKnownPair = (hazard: string, un: string) => goodForPlacard(database, hazard, un) !== undefined;
+        const availableRegions = [...new Set(candidates.filter((candidate) => candidate.row !== 'fallback').map((candidate) => candidate.region))];
+        const regionPriority = availableRegions.sort((left, right) => left === -2 ? -1 : right === -2 ? 1 : left - right).slice(0, 2);
+        let nativePlacard: RecognizedPlacard | undefined;
+        for (const region of regionPriority) {
+          const regionCandidates = candidates.filter((candidate) => candidate.region === region);
+          const rawUpper = regionCandidates.find((candidate) => candidate.row === 'upper' && candidate.label.startsWith('исходная'));
+          const rawLower = regionCandidates.find((candidate) => candidate.row === 'lower' && candidate.label.startsWith('исходная'));
+          if (rawUpper !== undefined && rawLower !== undefined) {
+            try {
+              const [upperElements, lowerElements] = await Promise.all([
+                recognizeCanvasNativelyBounded(rawUpper.canvas),
+                recognizeCanvasNativelyBounded(rawLower.canvas),
+              ]);
+              const rowResult = placardDigitsFromNativeRows(upperElements, lowerElements, isKnownPair);
+              if (rowResult !== undefined) { nativePlacard = { id: region, ...rowResult }; break; }
+            } catch {
+              // Continue with the bounded whole-placard variants below.
+            }
+          }
+          const pairScores = new Map<string, { placard: RecognizedPlacard; votes: number; score: number }>();
+          const wholeCandidates = regionCandidates.filter((candidate) => candidate.row === 'whole').sort((left, right) => Number(right.label.startsWith('исходная')) - Number(left.label.startsWith('исходная'))).slice(0, 4);
+          for (const candidate of wholeCandidates) {
+            try {
+              const result = placardDigitsFromNativeElements(await recognizeCanvasNativelyBounded(candidate.canvas), isKnownPair);
+              if (result === undefined) continue;
+              const key = `${result.hazard}/${result.un}`;
+              const current = pairScores.get(key) ?? { placard: { id: region, ...result }, votes: 0, score: 0 };
+              current.votes += 1;
+              current.score += candidate.label.startsWith('исходная') ? 2 : 1;
+              pairScores.set(key, current);
+            } catch {
+              // A failed variant must not force the slower WebAssembly engine.
+            }
+          }
+          const ranked = [...pairScores.values()].sort((left, right) => right.score - left.score || right.votes - left.votes);
+          const best = ranked[0]; const second = ranked[1];
+          // A single whole-image read can confuse the frame with a digit
+          // (for example 1202 -> 1120). Use it only when two independently
+          // preprocessed variants agree; the separately cropped row result
+          // above remains the preferred fast path.
+          if (best !== undefined && best.votes >= 2 && (second === undefined || best.score - second.score >= 2)) {
+            nativePlacard = best.placard; break;
           }
         }
-        const agreedNative = nativeReads.find((item) => nativeReads.filter((candidate) => candidate.hazard === item.hazard && candidate.un === item.un).length >= Math.min(2, nativeCandidates.length));
-        if (agreedNative !== undefined && recognitionRunRef.current === runId) {
-          if (!currentFlag(manualRecognitionEditRef)) setRecognizedPlacards([agreedNative]);
+        if (nativePlacard !== undefined && recognitionRunRef.current === runId) {
+          if (!currentFlag(manualRecognitionEditRef)) setRecognizedPlacards([nativePlacard]);
           setRecognitionProgress(100);
           return;
         }
+        if (!currentFlag(manualRecognitionEditRef)) {
+          setRecognizedPlacards([{ id: 0, hazard: '', un: '' }]);
+          setRecognitionError('Android не смог уверенно прочитать обе строки. Введите видимые номера вручную: поля уже доступны. Случайный груз программа не подставляет.');
+        }
+        setRecognitionProgress(100);
+        return;
       }
       const [{ PSM }, loadedWorker] = await Promise.all([import('tesseract.js'), loadOcrWorker()]);
       worker = loadedWorker;

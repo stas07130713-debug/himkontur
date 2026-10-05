@@ -454,15 +454,18 @@ try {
     const photoInput = document.querySelector('.photo-identification input[type="file"]');
     let ocrElapsedMs = 0;
     if (photoInput instanceof HTMLInputElement) {
-      const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 800;
+      // A modern phone camera commonly supplies a 12 MP image. This exact
+      // size guards against the former regression where preprocessing enlarged
+      // it again and exhausted Android memory before OCR could start.
+      const canvas = document.createElement('canvas'); canvas.width = 4000; canvas.height = 3000;
       const context = canvas.getContext('2d');
       if (context !== null) {
         // A close-up in which the placard fills the photograph used to be
         // rejected by the orange-area detector. Keep it as a regression case.
-        context.fillStyle = '#f28c28'; context.fillRect(70, 45, 1060, 710);
-        context.strokeStyle = '#111'; context.lineWidth = 22; context.strokeRect(70, 45, 1060, 710);
-        context.fillStyle = '#111'; context.font = 'bold 210px Arial'; context.textAlign = 'center';
-        context.fillText('30', 600, 325); context.fillRect(92, 382, 1016, 22); context.fillText('1202', 600, 665);
+        context.fillStyle = '#f28c28'; context.fillRect(230, 170, 3540, 2660);
+        context.strokeStyle = '#111'; context.lineWidth = 72; context.strokeRect(230, 170, 3540, 2660);
+        context.fillStyle = '#111'; context.font = 'bold 700px Arial'; context.textAlign = 'center';
+        context.fillText('30', 2000, 1220); context.fillRect(307, 1432, 3386, 82); context.fillText('1202', 2000, 2495);
         const externalFixture = ${JSON.stringify(ocrFixtureDataUrl)};
         const blob = externalFixture.length > 0 ? new Blob([Uint8Array.from(atob(externalFixture.split(',')[1] ?? ''), (character) => character.charCodeAt(0))], { type: 'image/png' }) : await new Promise((resolveBlob) => canvas.toBlob(resolveBlob, 'image/png'));
         if (blob !== null) {

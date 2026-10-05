@@ -6,6 +6,7 @@ export type NativeOcrElement = Readonly<{
   y: number;
   width: number;
   height: number;
+  confidence?: number;
 }>;
 export type NativePlacardDigits = Readonly<{ hazard: string; un: string }>;
 
@@ -20,12 +21,45 @@ export function nativeOcrAvailable(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 }
 
+function normalizedNumericText(value: string): string {
+  return value
+    .toLocaleUpperCase('ru-RU')
+    .replace(/[OОQDД]/gu, '0')
+    .replace(/[IІL|]/gu, '1')
+    .replace(/[ZЗ]/gu, '2')
+    .replace(/S/gu, '5')
+    .replace(/[BВ]/gu, '8')
+    .replace(/\D/gu, '');
+}
+
+export function numbersFromNativeElements(elements: readonly NativeOcrElement[]): readonly string[] {
+  const values = elements.flatMap((element) => {
+    const digits = normalizedNumericText(element.text);
+    if (digits.length < 2 || digits.length > 7) return [];
+    if (digits.length === 6 || digits.length === 7) return [digits, digits.slice(0, -4), digits.slice(-4)];
+    return [digits];
+  });
+  return [...new Set(values.filter((value) => value.length >= 2 && value.length <= 4))];
+}
+
+export function placardDigitsFromNativeRows(
+  upperElements: readonly NativeOcrElement[],
+  lowerElements: readonly NativeOcrElement[],
+  isKnownPair: (hazard: string, un: string) => boolean,
+): NativePlacardDigits | undefined {
+  const hazards = numbersFromNativeElements(upperElements).filter((value) => value.length === 2 || value.length === 3);
+  const uns = numbersFromNativeElements(lowerElements).filter((value) => value.length === 4);
+  const pairs = hazards.flatMap((hazard) => uns.flatMap((un) => isKnownPair(hazard, un) ? [{ hazard, un }] : []));
+  const unique = pairs.filter((pair, index, all) => all.findIndex((item) => item.hazard === pair.hazard && item.un === pair.un) === index);
+  return unique.length === 1 ? unique[0] : undefined;
+}
+
 export function placardDigitsFromNativeElements(
   elements: readonly NativeOcrElement[],
   isKnownPair: (hazard: string, un: string) => boolean,
 ): NativePlacardDigits | undefined {
   const tokens = elements.flatMap((element) => {
-    const digits = element.text.replace(/\D/gu, '');
+    const digits = normalizedNumericText(element.text);
     const groups = digits.length >= 2 && digits.length <= 7 ? [digits] : [];
     return groups.flatMap((group) => {
       if (group.length === 6 || group.length === 7) return [
