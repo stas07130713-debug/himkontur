@@ -117,7 +117,7 @@ async function serveRemoteTile(request, response, url) {
     const upstream = await fetch(url, {
       headers: {
         'Accept': 'image/avif,image/webp,image/png,image/*,*/*;q=0.8',
-        'User-Agent': 'HIMKONTUR/0.2.1 (local emergency-planning application)'
+        'User-Agent': `HIMKONTUR/${app.getVersion()} (local emergency-planning application)`
       },
       signal: AbortSignal.timeout(12_000)
     });

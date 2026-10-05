@@ -130,15 +130,18 @@ try {
   const pickerVisible = await evaluate(`(async () => {
     const wait = (ms) => new Promise((resolveWait) => setTimeout(resolveWait, ms));
     document.querySelector('.substance-picker-button')?.click();
-    await wait(30);
-    const list = document.querySelector('.substance-options');
-    const panel = document.querySelector('.input-panel');
-    if (!list || !panel) return false;
-    const rect = list.getBoundingClientRect();
-    const panelRect = panel.getBoundingClientRect();
-    const style = getComputedStyle(list);
-    return rect.width > 100 && rect.height > 100 && style.display !== 'none' && style.visibility !== 'hidden'
-      && rect.left >= panelRect.left && rect.right <= panelRect.right + 1 && rect.top >= panelRect.top && rect.top < panelRect.bottom;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      await wait(25);
+      const list = document.querySelector('.substance-options');
+      const panel = document.querySelector('.input-panel');
+      if (!list || !panel) continue;
+      const rect = list.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const style = getComputedStyle(list);
+      if (rect.width > 100 && rect.height > 100 && style.display !== 'none' && style.visibility !== 'hidden'
+        && rect.left >= panelRect.left && rect.right <= panelRect.right + 1 && rect.top >= panelRect.top && rect.top < panelRect.bottom) return true;
+    }
+    return false;
   })()`);
   const pickerShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
   writeFileSync(resolve('artifacts', 'input-panel-picker-open.png'), Buffer.from(pickerShot.data, 'base64'));

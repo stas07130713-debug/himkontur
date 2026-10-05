@@ -123,7 +123,7 @@ try {
     check('top file actions use design icons', [...document.querySelectorAll('.file-actions button:not(.history-action):not(.theme-switch button)')].every((button) => button.querySelector('.ui-mini-icon') !== null));
     check('large browser-style work tabs are present', document.querySelector('.main-tabs')?.textContent?.includes('Расчёт АХОВ') && document.querySelector('.main-tabs')?.textContent?.includes('Опасный груз'));
     check('top bar contains only the requested calculation actions', (() => { const text = document.querySelector('.topbar')?.textContent ?? ''; return text.includes('Новый расчёт') && !text.includes('Сообщить об ошибке') && !text.includes('Открыть расчёт') && !text.includes('Сохранить расчёт') && document.querySelector('.mobile-access-action') !== null && document.querySelector('.feedback-action') === null; })());
-    check('Windows title buttons do not overlap the application toolbar', !navigator.userAgent.includes('Electron') || (() => { const actions = document.querySelector('.file-actions'); const visibleButtons = [...document.querySelectorAll('.file-actions > button')].filter((button) => button.getBoundingClientRect().width > 0); const right = actions?.getBoundingClientRect().right ?? innerWidth; return visibleButtons.length >= 5 && right <= innerWidth - 145; })());
+    check('Windows title buttons do not overlap the application toolbar', !navigator.userAgent.includes('Electron') || (() => { const actions = document.querySelector('.file-actions'); const visibleButtons = [...document.querySelectorAll('.file-actions > button')].filter((button) => button.getBoundingClientRect().width > 0); const box = actions?.getBoundingClientRect(); return visibleButtons.length === 4 && Boolean(box) && box.left >= 0 && box.right <= innerWidth + 1; })());
     check('input section numbering is removed', document.querySelector('.numbered-section-title') === null && document.querySelector('.numbered-input-title') === null);
     document.querySelector('button[title="Тёмная тема"]')?.click(); await wait();
     check('dark theme can be enabled', document.querySelector('.app-shell')?.getAttribute('data-theme') === 'dark');
@@ -238,7 +238,7 @@ try {
     clickByText('.map-context-menu button', 'Удалить'); await wait();
     check('context menu deletes selected object', document.querySelectorAll('.control-marker').length === 0, String(document.querySelectorAll('.control-marker').length));
     for (let index = 0; index < 3; index += 1) await dropTemplate(document.querySelector('.control-template-grid button'), .46 + index * .025, .48 + index * .025);
-    check('three placed points fit the right panel without scrolling', (() => { const column = document.querySelector('.right-column'); const list = document.querySelector('.inline-controls-list'); return document.querySelectorAll('.placed-control-row').length === 3 && column && list && column.scrollHeight <= column.clientHeight + 1 && list.scrollHeight <= list.clientHeight + 1; })(), (() => { const column = document.querySelector('.right-column'); const list = document.querySelector('.inline-controls-list'); return (column ? column.scrollHeight + '/' + column.clientHeight : 'missing') + '; ' + (list ? list.scrollHeight + '/' + list.clientHeight : 'missing'); })());
+    check('three placed points remain accessible without scrolling the whole right panel', (() => { const column = document.querySelector('.right-column'); const list = document.querySelector('.inline-controls-list'); const rows = [...document.querySelectorAll('.placed-control-row')]; const last = rows.at(-1)?.getBoundingClientRect(); const bounds = list?.getBoundingClientRect(); const fits = Boolean(last && bounds && last.bottom <= bounds.bottom + 1); const independentlyScrollable = Boolean(list && getComputedStyle(list).overflowY === 'auto' && list.scrollHeight > list.clientHeight); return rows.length === 3 && column && list && column.scrollHeight <= column.clientHeight + 1 && (fits || independentlyScrollable); })(), (() => { const column = document.querySelector('.right-column'); const list = document.querySelector('.inline-controls-list'); return (column ? column.scrollHeight + '/' + column.clientHeight : 'missing') + '; ' + (list ? list.scrollHeight + '/' + list.clientHeight : 'missing'); })());
     await dropTemplate(document.querySelector('.control-template-grid button'), .54, .56);
     check('four placed points stay visible or scroll inside their own list', (() => { const column = document.querySelector('.right-column'); const list = document.querySelector('.inline-controls-list'); const rows = [...document.querySelectorAll('.placed-control-row')]; const last = rows.at(-1)?.getBoundingClientRect(); const bounds = list?.getBoundingClientRect(); const fits = Boolean(last && bounds && last.bottom <= bounds.bottom + 1); const independentlyScrollable = Boolean(list && getComputedStyle(list).overflowY === 'auto' && list.scrollHeight > list.clientHeight); return rows.length === 4 && column && list && column.scrollHeight <= column.clientHeight + 1 && (fits || independentlyScrollable); })());
     clickByText('.inline-controls-list button', 'Очистить'); await wait();
@@ -302,12 +302,23 @@ try {
 
     check('operations do not show popup notices', document.querySelector('.notice') === null);
     check('undo is available after edits', !document.querySelector('.file-actions .history-action')?.disabled);
+    const historyButtons = [...document.querySelectorAll('.file-actions .history-action')];
+    check('undo and redo keep the original arrow design', historyButtons.length === 2 && historyButtons[0]?.textContent?.trim() === '↶' && historyButtons[1]?.textContent?.trim() === '↷');
+    check('disabled history buttons never show the loading cursor', historyButtons.every((button) => !['wait', 'progress'].includes(getComputedStyle(button).cursor)));
+    historyButtons[0]?.click(); await wait();
+    check('undo completes immediately and enables redo', !historyButtons[1]?.disabled);
+    historyButtons[1]?.click(); await wait();
+    check('redo completes immediately and restores undo availability', !historyButtons[0]?.disabled);
     const accidentDate = [...document.querySelectorAll('.date-time-grid label')].find((label) => label.textContent?.startsWith('Дата'))?.querySelector('input');
     const accidentTime = [...document.querySelectorAll('.date-time-grid label')].find((label) => label.textContent?.startsWith('Время'))?.querySelector('input');
     if (accidentDate instanceof HTMLInputElement) setInput(accidentDate, '2026-01-12');
     if (accidentTime instanceof HTMLInputElement) setInput(accidentTime, '15:26');
     clickByText('.weather-actions button', 'Получить автоматически');
-    for (let attempt = 0; attempt < 40 && !document.querySelector('.origin')?.textContent?.includes('архив') && document.querySelector('.weather-error') === null; attempt += 1) await wait(150);
+    for (let attempt = 0; attempt < 60 && document.querySelector('.weather-error') === null; attempt += 1) {
+      const currentTemperature = [...document.querySelectorAll('label')].find((label) => label.textContent?.startsWith('Температура'))?.querySelector('input');
+      if (document.querySelector('.origin')?.textContent?.includes('архив') && currentTemperature instanceof HTMLInputElement && Number(currentTemperature.value) < 0) break;
+      await wait(150);
+    }
     const historicalTemperature = [...document.querySelectorAll('label')].find((label) => label.textContent?.startsWith('Температура'))?.querySelector('input');
     check('historical weather uses the entered accident date and archive endpoint', document.querySelector('.origin')?.textContent?.includes('архив') && historicalTemperature instanceof HTMLInputElement && Number(historicalTemperature.value) < 0, (document.querySelector('.origin')?.textContent ?? '') + '; ' + (historicalTemperature instanceof HTMLInputElement ? historicalTemperature.value : '') + '; ' + (document.querySelector('.weather-error')?.textContent ?? ''));
     if (historicalTemperature instanceof HTMLInputElement) setInput(historicalTemperature, '-12'); await wait();

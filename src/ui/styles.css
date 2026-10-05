@@ -16,7 +16,7 @@
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 button, input, select { font: inherit; }
 button { cursor: pointer; }
-button:disabled { cursor: wait; opacity: .55; }
+button:disabled { cursor: not-allowed; opacity: .55; }
 
 .app-shell { min-width: 1040px; min-height: 100vh; }
 .topbar { height: 56px; padding: 0 14px; display: grid; grid-template-columns: minmax(190px, 1fr) auto minmax(190px, 1fr); align-items: center; gap: 10px; background: #f9faf7; border-bottom: 1px solid var(--line); box-shadow: 0 2px 12px #1232; }

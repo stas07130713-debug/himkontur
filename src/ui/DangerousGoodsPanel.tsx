@@ -5,6 +5,7 @@ import { EmergencyCardRepository } from '../core/emergencyCards/emergencyCardRep
 import { SUBSTANCES } from '../core/reference-data';
 import { SUBSTANCE_PRESENTATION } from './substance-display';
 import { prepareOcrCandidates, prepareOcrSpatialCandidate } from './photo-ocr';
+import { nativeOcrAvailable, placardDigitsFromNativeElements, recognizeCanvasNatively } from './native-ocr';
 import { HazardLabel, type HazardLabelData } from './HazardLabel';
 import { getPublishedSubstanceByUN } from '../core/substances/substanceDataPipeline';
 import { OPERATIONAL_FACTS_CATALOG, type WaterCompatibility } from '../core/substances/operationalFactsCatalog';
@@ -247,6 +248,7 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
   const [selected, setSelected] = useState<DangerousGood | null>(null);
   const [status, setStatus] = useState<Status>('manual');
   const [preview, setPreview] = useState<string | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
   const [recognizedPlacards, setRecognizedPlacards] = useState<readonly RecognizedPlacard[]>([{ id: 0, hazard: '', un: '' }]);
   const [recognizing, setRecognizing] = useState(false);
   const [recognitionStage, setRecognitionStage] = useState('');
@@ -284,7 +286,9 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
     setSelected(exact ?? null);
     if (exact !== undefined) setStatus('manual');
   }, [database, initialQuery]);
-  useEffect(() => () => { if (preview !== null) URL.revokeObjectURL(preview); }, [preview]);
+  useEffect(() => () => {
+    if (previewUrlRef.current !== null) URL.revokeObjectURL(previewUrlRef.current);
+  }, []);
   useEffect(() => {
     // Warm the completely local OCR worker while the user is choosing a photo.
     // No network request is involved: worker, WASM and trained data are bundled.
@@ -327,10 +331,15 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
     setSelected(good);
     setStatus(nextStatus);
   };
+  const replacePreview = (next: string | null) => {
+    if (previewUrlRef.current !== null && previewUrlRef.current !== next) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = next;
+    setPreview(next);
+  };
   const clearPhotoIdentification = () => {
     recognitionRunRef.current += 1;
     manualRecognitionEditRef.current = false;
-    setPreview(null);
+    replacePreview(null);
     setRecognizedPlacards([{ id: 0, hazard: '', un: '' }]);
     setRecognizing(false);
     setRecognitionStage('');
@@ -354,10 +363,33 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
     recognitionRunRef.current = runId;
     manualRecognitionEditRef.current = false;
     setPhotoSourceOpen(false);
-    if (preview !== null) URL.revokeObjectURL(preview); const url = URL.createObjectURL(file); setQuery(''); setSelected(null); setPreview(url); setRecognizing(true); setRecognitionProgress(3); setRecognitionStage('Подготовка фотографии'); setRecognitionError(null); setRecognizedPlacards([{ id: 0, hazard: '', un: '' }]); setStatus('preliminary');
+    const url = URL.createObjectURL(file); setQuery(''); setSelected(null); replacePreview(url); setRecognizing(true); setRecognitionProgress(3); setRecognitionStage('Подготовка фотографии'); setRecognitionError(null); setRecognizedPlacards([{ id: 0, hazard: '', un: '' }]); setStatus('preliminary');
     let worker: Worker | undefined;
     try {
-      const [{ PSM }, loadedWorker, candidates] = await Promise.all([import('tesseract.js'), loadOcrWorker(), prepareOcrCandidates(file)]);
+      const candidates = await prepareOcrCandidates(file);
+      if (recognitionRunRef.current !== runId) return;
+      if (nativeOcrAvailable()) {
+        setRecognitionStage('Быстрое распознавание на устройстве');
+        setRecognitionProgress(12);
+        const nativeCandidates = candidates.filter((candidate) => candidate.row === 'whole').slice(0, 2);
+        const nativeReads: RecognizedPlacard[] = [];
+        for (const candidate of nativeCandidates) {
+          try {
+            const result = placardDigitsFromNativeElements(await recognizeCanvasNatively(candidate.canvas), (hazard, un) => goodForPlacard(database, hazard, un) !== undefined);
+            if (result !== undefined) nativeReads.push({ id: -500, ...result });
+          } catch {
+            // The bundled Tesseract path below remains a fully offline fallback
+            // for devices whose native recognizer cannot decode a particular file.
+          }
+        }
+        const agreedNative = nativeReads.find((item) => nativeReads.filter((candidate) => candidate.hazard === item.hazard && candidate.un === item.un).length >= Math.min(2, nativeCandidates.length));
+        if (agreedNative !== undefined && recognitionRunRef.current === runId) {
+          if (!currentFlag(manualRecognitionEditRef)) setRecognizedPlacards([agreedNative]);
+          setRecognitionProgress(100);
+          return;
+        }
+      }
+      const [{ PSM }, loadedWorker] = await Promise.all([import('tesseract.js'), loadOcrWorker()]);
       worker = loadedWorker;
       if (recognitionRunRef.current !== runId) return;
       const reads: OcrRead[] = [];

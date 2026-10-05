@@ -8,6 +8,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(HimkonturUpdaterPlugin.class);
         registerPlugin(HimkonturFilesPlugin.class);
+        registerPlugin(HimkonturOcrPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

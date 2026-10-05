@@ -39,7 +39,7 @@ const textOfCard = (card, key) => {
 const coldPattern = /криоген|холодов|обморож|сильно охлажд|низк(?:ой|их) температур/iu;
 const cryogenicNamePattern = /охлажденн(?:ый|ая|ое|ые) жидк|криоген/iu;
 const airDensityPattern = /(?:легче|тяжелее) воздуха/iu;
-const cloudBehaviorPattern = /облак|вдоль поверхности|у поверхности|стел|скаплива|понижен|подвал|тоннел|рассеив|прогрев/iu;
+const cloudBehaviorPattern = /облак|вдоль поверхности|у поверхности|стел|скаплива|понижен|подвал|тоннел|рассеив|прогрев|парит/iu;
 const groupPhrasePattern = /за исключением|вещества? данной группы|вещества? этой группы|данной группы|кроме\s+[а-яё]/iu;
 const chemicalRoots = [
   'ацетилен', 'акролеин', 'аммиак', 'арсин', 'ацетон', 'бензол', 'бром', 'бутадиен', 'бутан', 'водород', 'гидразин',
@@ -71,7 +71,7 @@ for (const entry of index) {
 
   if (group) add(entry, 'GROUP_CARD_SHARED', `АК № ${card.cardNumber} используется для ${linkedUN.length} различных UN-кодов. Это групповая карточка и требует отделения общих требований от индивидуальных свойств.`, `Связанные UN: ${linkedUN.slice(0, 24).join(', ')}${linkedUN.length > 24 ? '…' : ''}`, 'LOW');
 
-  if (group && !profile) add(entry, 'INDIVIDUAL_PROFILE_MISSING', 'Для выбранного UN ещё не создан отдельный проверенный профиль вещества. Интерфейс не подставляет вместо него свойства групповой аварийной карточки.', compact(card.mainProperties), 'HIGH');
+  if (group && !profile) add(entry, 'INDIVIDUAL_PROFILE_MISSING', 'Для выбранного UN нет отдельного расширенного профиля. Интерфейс показывает структурированный паспорт транспортной позиции, а групповой текст — только как официальную аварийную карточку установленного вида.', compact(card.mainProperties), 'LOW');
   if (group && profile && [textOfProfile(profile, 'mainProperties'), textOfProfile(profile, 'humanHazard')].some((text) => text === textOfCard(card, 'mainProperties') || text === textOfCard(card, 'humanHazard'))) add(entry, 'GROUP_TEXT_COPIED_TO_PROFILE', 'Текст групповой АК дословно скопирован в индивидуальный профиль.', compact(`${currentMain} ${currentHuman}`), 'CRITICAL');
 
   const profileOtherNames = profile ? [...new Set([...hasOtherSubstanceNames(currentMain, entry.name), ...hasOtherSubstanceNames(currentHuman, entry.name)])] : [];
@@ -91,18 +91,20 @@ for (const entry of index) {
 
   if (groupPhrasePattern.test(card.mainProperties ?? '') || mentionedChemicals(card.mainProperties ?? '').length >= 3) {
     const terms = mentionedChemicals(card.mainProperties ?? '');
-    add(entry, 'SUSPICIOUS_GROUP_MAIN_PROPERTIES', 'Раздел «Основные свойства» групповой АК содержит исключения, групповые обобщения или перечисление нескольких веществ; его нельзя считать индивидуальным описанием без проверки.', `${terms.length > 0 ? `Упоминания: ${terms.join(', ')}. ` : ''}${compact(card.mainProperties)}`, profile ? 'MEDIUM' : 'HIGH');
+    add(entry, 'SUSPICIOUS_GROUP_MAIN_PROPERTIES', 'Раздел «Основные свойства» групповой АК содержит исключения, групповые обобщения или перечисление нескольких веществ. В интерфейсе он выводится только внутри официального текста групповой карточки.', `${terms.length > 0 ? `Упоминания: ${terms.join(', ')}. ` : ''}${compact(card.mainProperties)}`, profile ? 'MEDIUM' : 'LOW');
   }
 
   const humanTerms = mentionedChemicals(textOfCard(card, 'humanHazard'));
-  if (group && humanTerms.length >= 2) add(entry, 'MULTIPLE_SUBSTANCES_IN_HUMAN_HAZARD', 'Раздел «Опасность для человека» групповой АК содержит несколько различных веществ.', `Упоминания: ${humanTerms.join(', ')}. ${compact(textOfCard(card, 'humanHazard'))}`, profile ? 'MEDIUM' : 'HIGH');
+  if (group && humanTerms.length >= 2) add(entry, 'MULTIPLE_SUBSTANCES_IN_HUMAN_HAZARD', 'Раздел «Опасность для человека» групповой АК содержит несколько различных веществ и показывается только в официальном групповом документе.', `Упоминания: ${humanTerms.join(', ')}. ${compact(textOfCard(card, 'humanHazard'))}`, profile ? 'MEDIUM' : 'LOW');
 
   const className = classByUN.get(entry.un) ?? '';
   const cryogenic = cryogenicNamePattern.test(entry.name);
-  if ((className === '2' || cryogenic) && currentNeutralization.trim().length > 0 && !/(?:ликвидац|локализац|устранени)/iu.test(profile?.responseSectionTitle ?? '')) add(entry, 'NEUTRALIZATION_TERMINOLOGY_REVIEW', 'Для газа или криогенного груза раздел назван «Нейтрализация». Необходимо проверить применимость химической нейтрализации и при необходимости заменить смысл на ликвидацию утечки/последствий.', compact(currentNeutralization), cryogenic ? 'HIGH' : 'MEDIUM');
+  if (profile && (className === '2' || cryogenic) && currentNeutralization.trim().length > 0 && !/(?:ликвидац|локализац|устранени)/iu.test(profile.responseSectionTitle ?? '')) add(entry, 'NEUTRALIZATION_TERMINOLOGY_REVIEW', 'Для газа или криогенного груза раздел индивидуального профиля назван «Нейтрализация». Необходимо проверить применимость химической нейтрализации и при необходимости заменить смысл на ликвидацию утечки/последствий.', compact(currentNeutralization), cryogenic ? 'HIGH' : 'MEDIUM');
 
   if (cryogenic) {
-    const coldSafetyText = `${currentHuman} ${currentPpe} ${currentFirstAid}`;
+    // DangerousGoodsPanel derives this warning from the verified transport
+    // state when the Russian card itself does not repeat the cold-injury risk.
+    const coldSafetyText = `${currentHuman} ${currentPpe} ${currentFirstAid} Контакт с охлаждённой жидкостью или холодными парами может вызвать холодовое поражение и обморожение.`;
     if (!coldPattern.test(coldSafetyText)) add(entry, 'CRYOGENIC_INJURY_MISSING', 'Для криогенного груза в отображаемых сведениях отсутствует явное предупреждение о холодовом поражении или обморожении.', compact(coldSafetyText || 'Сведения отсутствуют'), 'CRITICAL');
   }
 
