@@ -73,13 +73,25 @@ export function UpdateCenter() {
 
   useEffect(() => {
     if (window.himkonturUpdates === undefined) return;
-    return window.himkonturUpdates.onStatus((status) => {
+    const receiveStatus = (status: Awaited<ReturnType<NonNullable<typeof window.himkonturUpdates>["getStatus"]>>) => {
       if (status.state === "available") setState({ mode: "available", text: `Загружается новая версия ${status.version ?? ""}`.trim(), ...(status.version === undefined ? {} : { version: status.version }) });
       else if (status.state === "downloading") setState({ mode: "downloading", text: "Загрузка обновления Windows", ...(status.percent === undefined ? {} : { percent: status.percent }) });
       else if (status.state === "downloaded") setState({ mode: "ready", text: `Версия ${status.version ?? ""} готова к установке`.trim(), ...(status.version === undefined ? {} : { version: status.version }) });
       else if (status.state === "error" && !automaticCheck.current) setState({ mode: "message", text: status.message ?? "Не удалось проверить обновления." });
       else if (status.state === "current" && !automaticCheck.current) setState({ mode: "message", text: `Установлена актуальная версия ${status.version ?? packageInformation.version}` });
-    });
+    };
+    const unsubscribe = window.himkonturUpdates.onStatus(receiveStatus);
+    // Replay the most recent main-process state. This closes the race where a
+    // fast update check completed before React registered its event listener.
+    void window.himkonturUpdates.getStatus().then(receiveStatus);
+    const startupCheck = window.setTimeout(() => {
+      automaticCheck.current = true;
+      void window.himkonturUpdates?.check();
+    }, 5_500);
+    return () => {
+      window.clearTimeout(startupCheck);
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {

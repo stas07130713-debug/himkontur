@@ -8,9 +8,11 @@ afterEach(() => vi.unstubAllGlobals());
 describe('weather at the accident date and time', () => {
   it('requests the entered date and interpolates the exact entered minute', async () => {
     const accident = new Date(2026, 8, 1, 11, 20);
-    let requestedUrl = '';
+    const requestedUrls: string[] = [];
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
-      requestedUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const requestedUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      requestedUrls.push(requestedUrl);
+      if (requestedUrl.includes('api.met.no')) return Promise.reject(new Error('reserve unavailable in this test'));
       return Promise.resolve(new Response(JSON.stringify({ hourly: {
       time: ['2026-09-01T11:00', '2026-09-01T12:00'],
       temperature_2m: [10, 13],
@@ -24,14 +26,35 @@ describe('weather at the accident date and time', () => {
 
     const weather = await fetchWeather(POINT, accident.toISOString());
 
-    expect(requestedUrl).toContain('latitude=67.939');
-    expect(requestedUrl).toContain('longitude=32.873');
-    expect(requestedUrl).toContain('start_date=2026-09-01');
+    expect(requestedUrls.some((url) => url.includes('latitude=67.939'))).toBe(true);
+    expect(requestedUrls.some((url) => url.includes('longitude=32.873'))).toBe(true);
+    expect(requestedUrls.some((url) => url.includes('start_date=2026-09-01'))).toBe(true);
     expect(weather.observedAt).toBe(accident.toISOString());
     expect(weather.temperatureC).toBeCloseTo(11, 8);
     expect(weather.windSpeedMps).toBeCloseTo(4, 8);
     expect(weather.windFromDegrees).toBeCloseTo(0, 8);
     expect(weather.cloudCoverPercent).toBeCloseTo(30, 8);
+  });
+
+  it('uses the independent MET Norway provider when Open-Meteo is unavailable without VPN', async () => {
+    const accident = new Date(Date.now() + 30 * 60_000);
+    const lower = new Date(accident); lower.setMinutes(0, 0, 0);
+    const upper = new Date(lower.getTime() + 60 * 60_000);
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      if (url.includes('open-meteo.com')) return Promise.reject(new TypeError('Failed to fetch'));
+      return Promise.resolve(new Response(JSON.stringify({ properties: { timeseries: [
+        { time: lower.toISOString(), data: { instant: { details: { air_temperature: 6, wind_speed: 4, wind_from_direction: 350, cloud_area_fraction: 60 } } } },
+        { time: upper.toISOString(), data: { instant: { details: { air_temperature: 8, wind_speed: 6, wind_from_direction: 10, cloud_area_fraction: 80 } } } }
+      ] } }), { status: 200 }));
+    }));
+
+    const weather = await fetchWeather({ latitude: 68.1, longitude: 33.1 }, accident.toISOString());
+
+    expect(weather.provider).toBe('MET Norway');
+    expect(weather.temperatureC).toBeGreaterThan(6);
+    expect(weather.temperatureC).toBeLessThan(8);
+    expect(weather.windFromDegrees < 10 || weather.windFromDegrees > 350).toBe(true);
   });
 
   it('uses the historical archive for an old accident and tolerates absent snow data', async () => {

@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 contextBridge.exposeInMainWorld('himkonturUpdates', {
   platform: 'windows',
   getVersion: () => ipcRenderer.invoke('himkontur:update-version'),
+  getStatus: () => ipcRenderer.invoke('himkontur:update-status-current'),
   check: () => ipcRenderer.invoke('himkontur:update-check'),
   install: () => ipcRenderer.invoke('himkontur:update-install'),
   onStatus: (callback) => {

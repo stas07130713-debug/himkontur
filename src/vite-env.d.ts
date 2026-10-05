@@ -2,7 +2,7 @@
 /// <reference types="vite-plugin-pwa/client" />
 
 type HimkonturUpdateStatus = Readonly<{
-  state: "checking" | "available" | "downloading" | "downloaded" | "current" | "error" | "development" | "installing";
+  state: "idle" | "checking" | "available" | "downloading" | "downloaded" | "current" | "error" | "development" | "installing";
   version?: string;
   percent?: number;
   message?: string;
@@ -14,6 +14,7 @@ interface Window {
   himkonturUpdates?: Readonly<{
     platform: "windows";
     getVersion: () => Promise<string>;
+    getStatus: () => Promise<HimkonturUpdateStatus>;
     check: () => Promise<HimkonturUpdateStatus>;
     install: () => Promise<HimkonturUpdateStatus>;
     onStatus: (callback: (status: HimkonturUpdateStatus) => void) => () => void;

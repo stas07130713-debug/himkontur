@@ -147,6 +147,45 @@ function cropCandidate(bitmap: ImageBitmap, rectangle: Rectangle, label: string,
   return { canvas, label, region, row };
 }
 
+function expandedHalfRectangle(bitmap: ImageBitmap, rectangle: Rectangle, direction: 'up' | 'down'): Rectangle | undefined {
+  const ratio = rectangle.width / Math.max(1, rectangle.height);
+  const relativeArea = rectangle.width * rectangle.height / Math.max(1, bitmap.width * bitmap.height);
+  // On a tanker painted orange the lower half of the placard is often the
+  // only isolated colour component: the upper half visually merges with the
+  // tank body. Expand compact, row-shaped components vertically to recover
+  // the missing Kemler row. Large orange vehicle panels are deliberately not
+  // expanded.
+  if (ratio < 1.15 || ratio > 4.8 || relativeArea > .035) return undefined;
+  const x = Math.max(0, rectangle.x - rectangle.width * .08);
+  const width = Math.min(bitmap.width - x, rectangle.width * 1.16);
+  const y = direction === 'up'
+    ? Math.max(0, rectangle.y - rectangle.height * 1.18)
+    : Math.max(0, rectangle.y - rectangle.height * .08);
+  const height = Math.min(bitmap.height - y, rectangle.height * 2.3);
+  if (height <= rectangle.height * 1.45) return undefined;
+  return { x, y, width, height, score: rectangle.score + .2, ...(rectangle.angle === undefined ? {} : { angle: rectangle.angle }) };
+}
+
+function contextCandidates(bitmap: ImageBitmap, rectangle: Rectangle, index: number): readonly OcrCandidate[] {
+  const candidates: OcrCandidate[] = [];
+  for (const direction of ['up', 'down'] as const) {
+    const expanded = expandedHalfRectangle(bitmap, rectangle, direction);
+    if (expanded === undefined) continue;
+    const upper = { ...expanded, height: expanded.height * .48 };
+    const lower = { ...expanded, y: expanded.y + expanded.height * .52, height: expanded.height * .48 };
+    const directionLabel = direction === 'up' ? 'выше номера ООН' : 'ниже номера опасности';
+    candidates.push(
+      cropCandidate(bitmap, expanded, `контрастный контекст ${directionLabel} ${index + 1}`, index, 'whole', 0),
+      cropCandidate(bitmap, upper, `контрастная верхняя строка ${directionLabel} ${index + 1}`, index, 'upper', 0),
+      cropCandidate(bitmap, lower, `контрастная нижняя строка ${directionLabel} ${index + 1}`, index, 'lower', 0),
+      cropCandidate(bitmap, expanded, `исходная контекстная табличка ${directionLabel} ${index + 1}`, index, 'whole'),
+      cropCandidate(bitmap, upper, `исходная верхняя строка ${directionLabel} ${index + 1}`, index, 'upper'),
+      cropCandidate(bitmap, lower, `исходная нижняя строка ${directionLabel} ${index + 1}`, index, 'lower')
+    );
+  }
+  return candidates;
+}
+
 export async function prepareOcrCandidates(file: File): Promise<readonly OcrCandidate[]> {
   const bitmap = await createImageBitmap(file);
   try {
@@ -157,7 +196,10 @@ export async function prepareOcrCandidates(file: File): Promise<readonly OcrCand
     context.drawImage(bitmap, 0, 0, analysis.width, analysis.height);
     const analysisPixels = context.getImageData(0, 0, analysis.width, analysis.height);
     const detected = orangeRectangles(analysisPixels);
-    const closeUpPlacard = orangeCoverage(analysisPixels) >= .18;
+    // An orange tanker can occupy 20–30% of the frame without being a close-up
+    // of its placard. A higher threshold prevents wasteful full-photo OCR in
+    // that case while preserving genuine close-up plates.
+    const closeUpPlacard = orangeCoverage(analysisPixels) >= .36;
     const rectangles = [...stackedPlacards(detected), ...detected].sort((left, right) => right.score - left.score).slice(0, 10).map((rectangle) => ({ ...rectangle, x: rectangle.x / analysisScale, y: rectangle.y / analysisScale, width: rectangle.width / analysisScale, height: rectangle.height / analysisScale }));
     const primaryCandidates: OcrCandidate[] = [];
     const fallbackCandidates: OcrCandidate[] = [];
@@ -166,7 +208,12 @@ export async function prepareOcrCandidates(file: File): Promise<readonly OcrCand
       const upper = { ...rectangle, height: rectangle.height * .48 };
       const lower = { ...rectangle, y: rectangle.y + rectangle.height * .52, height: rectangle.height * .48 };
       const main = [
+        // Read the isolated orange component first. On distant tanker photos it
+        // often already contains the complete four-digit UN row; the verified
+        // local directory can then restore its unique Kemler number without
+        // running every expensive enhancement variant.
         cropCandidate(bitmap, rectangle, `контрастная табличка целиком ${index + 1}`, index, 'whole', 0),
+        ...contextCandidates(bitmap, rectangle, index),
         cropCandidate(bitmap, upper, `контрастная верхняя строка ${index + 1}`, index, 'upper', 0),
         cropCandidate(bitmap, lower, `контрастная нижняя строка ${index + 1}`, index, 'lower', 0),
       ];

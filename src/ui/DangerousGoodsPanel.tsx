@@ -5,7 +5,7 @@ import { EmergencyCardRepository } from '../core/emergencyCards/emergencyCardRep
 import { SUBSTANCES } from '../core/reference-data';
 import { SUBSTANCE_PRESENTATION } from './substance-display';
 import { prepareOcrCandidates, prepareOcrSpatialCandidate } from './photo-ocr';
-import { nativeOcrAvailable, placardDigitsFromNativeElements, placardDigitsFromNativeRows, recognizeCanvasNatively } from './native-ocr';
+import { nativeOcrAvailable, placardDigitsFromNativeElements, placardDigitsFromNativeRows, placardDigitsFromNativeUn, recognizeCanvasNatively } from './native-ocr';
 import { HazardLabel, type HazardLabelData } from './HazardLabel';
 import { getPublishedSubstanceByUN } from '../core/substances/substanceDataPipeline';
 import { OPERATIONAL_FACTS_CATALOG, type WaterCompatibility } from '../core/substances/operationalFactsCatalog';
@@ -130,6 +130,21 @@ function digitConsensus(reads: readonly OcrRead[], length: number): DigitConsens
 
 function goodForPlacard(database: readonly DangerousGood[], hazard: string, un: string): DangerousGood | undefined {
   return database.find((good) => hazardDigits(good.hazardNumber) === hazard && good.un === un);
+}
+
+function uniqueHazardForUn(database: readonly DangerousGood[], un: string): string | undefined {
+  const hazards = [...new Set(database.filter((good) => good.un === un).map((good) => hazardDigits(good.hazardNumber)).filter((value) => value.length >= 2))];
+  return hazards.length === 1 ? hazards[0] : undefined;
+}
+
+function singleUnPlacard(read: OcrRead, database: readonly DangerousGood[]): RecognizedPlacard | undefined {
+  if (read.region < 0 || (read.row !== 'whole' && read.row !== 'lower') || read.confidence < 70) return undefined;
+  const uns = [...new Set(read.numbers.filter((value) => value.length === 4))];
+  if (uns.length !== 1) return undefined;
+  const un = uns[0];
+  if (un === undefined) return undefined;
+  const hazard = uniqueHazardForUn(database, un);
+  return hazard === undefined ? undefined : { id: read.region, hazard, un };
 }
 
 function singlePassPlacard(read: OcrRead, database: readonly DangerousGood[]): RecognizedPlacard | undefined {
@@ -385,6 +400,7 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
         setRecognitionStage('Быстрое распознавание на устройстве');
         setRecognitionProgress(12);
         const isKnownPair = (hazard: string, un: string) => goodForPlacard(database, hazard, un) !== undefined;
+        const hazardForUn = (un: string) => uniqueHazardForUn(database, un);
         const availableRegions = [...new Set(candidates.filter((candidate) => candidate.row !== 'fallback').map((candidate) => candidate.region))];
         const regionPriority = availableRegions.sort((left, right) => left === -2 ? -1 : right === -2 ? 1 : left - right).slice(0, 2);
         let nativePlacard: RecognizedPlacard | undefined;
@@ -399,16 +415,19 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
                 recognizeCanvasNativelyBounded(rawLower.canvas),
               ]);
               const rowResult = placardDigitsFromNativeRows(upperElements, lowerElements, isKnownPair);
-              if (rowResult !== undefined) { nativePlacard = { id: region, ...rowResult }; break; }
+              const unResult = placardDigitsFromNativeUn(lowerElements, hazardForUn);
+              const result = rowResult ?? unResult;
+              if (result !== undefined) { nativePlacard = { id: region, ...result }; break; }
             } catch {
               // Continue with the bounded whole-placard variants below.
             }
           }
           const pairScores = new Map<string, { placard: RecognizedPlacard; votes: number; score: number }>();
-          const wholeCandidates = regionCandidates.filter((candidate) => candidate.row === 'whole').sort((left, right) => Number(right.label.startsWith('исходная')) - Number(left.label.startsWith('исходная'))).slice(0, 4);
+          const wholeCandidates = regionCandidates.filter((candidate) => candidate.row === 'whole').sort((left, right) => Number(right.label.startsWith('контрастная табличка целиком')) - Number(left.label.startsWith('контрастная табличка целиком')) || Number(right.label.startsWith('исходная')) - Number(left.label.startsWith('исходная'))).slice(0, 6);
           for (const candidate of wholeCandidates) {
             try {
-              const result = placardDigitsFromNativeElements(await recognizeCanvasNativelyBounded(candidate.canvas), isKnownPair);
+              const elements = await recognizeCanvasNativelyBounded(candidate.canvas);
+              const result = placardDigitsFromNativeElements(elements, isKnownPair) ?? placardDigitsFromNativeUn(elements, hazardForUn);
               if (result === undefined) continue;
               const key = `${result.hazard}/${result.un}`;
               const current = pairScores.get(key) ?? { placard: { id: region, ...result }, votes: 0, score: 0 };
@@ -455,7 +474,7 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
         const read = { region: candidate.region, row: candidate.row, label: candidate.label, numbers: ocrNumbers(result.data.text), confidence: result.data.confidence } as const;
         reads.push(read);
         if (import.meta.env.DEV) document.documentElement.dataset.ocrDebug = JSON.stringify(reads);
-        fastPlacard = singlePassPlacard(read, database) ?? fastRowPlacard(reads, database);
+        fastPlacard = singlePassPlacard(read, database) ?? singleUnPlacard(read, database) ?? fastRowPlacard(reads, database);
         if (fastPlacard !== undefined) break;
         // Do not stop after two identical guesses: a frame edge can make two
         // threshold variants repeat the same wrong leading digit. Early exit

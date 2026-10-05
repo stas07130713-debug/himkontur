@@ -26,8 +26,10 @@ let localServer = null;
 let pendingScenario = null;
 let tileCacheRoot = null;
 let updateTimer = null;
+let lastUpdateStatus = { state: 'idle', version: app.getVersion() };
 
 function sendUpdateStatus(status) {
+  lastUpdateStatus = status;
   if (mainWindow !== null && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('himkontur:update-status', status);
   }
@@ -42,8 +44,19 @@ function friendlyUpdateError(error) {
 }
 
 function configureUpdates() {
+  // The GitHub provider first calls api.github.com. Some providers allow the
+  // release download itself but block that API domain, so installed copies
+  // never learn that an update exists. The generic feed follows GitHub's
+  // stable /releases/latest/download redirect and reads the same signed
+  // latest.yml without depending on api.github.com.
+  autoUpdater.setFeedURL({
+    provider: 'generic',
+    url: 'https://github.com/stas07130713-debug/himkontur/releases/latest/download',
+    useMultipleRangeRequest: false
+  });
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.autoRunAppAfterInstall = true;
   autoUpdater.allowPrerelease = false;
   autoUpdater.on('checking-for-update', () => sendUpdateStatus({ state: 'checking' }));
   autoUpdater.on('update-available', (info) => sendUpdateStatus({ state: 'available', version: info.version }));
@@ -56,6 +69,7 @@ function configureUpdates() {
   autoUpdater.on('error', (error) => sendUpdateStatus({ state: 'error', message: friendlyUpdateError(error) }));
 
   ipcMain.handle('himkontur:update-version', () => app.getVersion());
+  ipcMain.handle('himkontur:update-status-current', () => lastUpdateStatus);
   ipcMain.handle('himkontur:update-check', async () => {
     if (!app.isPackaged) return { state: 'development', version: app.getVersion() };
     try {
@@ -261,7 +275,7 @@ async function bootstrap() {
   await startServer();
   await createWindow();
   if (app.isPackaged) {
-    setTimeout(() => void autoUpdater.checkForUpdates().catch(() => undefined), 8_000);
+    setTimeout(() => void autoUpdater.checkForUpdates().catch(() => undefined), 5_000);
     updateTimer = setInterval(() => void autoUpdater.checkForUpdates().catch(() => undefined), 6 * 60 * 60 * 1000);
   }
 }

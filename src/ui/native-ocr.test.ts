@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { numbersFromNativeElements, placardDigitsFromNativeElements, placardDigitsFromNativeRows, type NativeOcrElement } from './native-ocr';
+import { numbersFromNativeElements, placardDigitsFromNativeElements, placardDigitsFromNativeRows, placardDigitsFromNativeUn, type NativeOcrElement } from './native-ocr';
 
 const known = (hazard: string, un: string) => `${hazard}/${un}` === '30/1202';
 const box = (text: string, x: number, y: number, width = 120, height = 55): NativeOcrElement => ({ text, x, y, width, height });
@@ -29,5 +29,10 @@ describe('Android placard OCR result validation', () => {
 
   it('rejects unrelated or horizontally separated numbers', () => {
     expect(placardDigitsFromNativeElements([box('30', 10, 10), box('1202', 600, 90)], known)).toBeUndefined();
+  });
+
+  it('restores the unique Kemler number when a distant orange plate exposes only its UN row', () => {
+    expect(placardDigitsFromNativeUn([box('1203', 10, 90, 140)], (un) => un === '1203' ? '33' : undefined)).toEqual({ hazard: '33', un: '1203' });
+    expect(placardDigitsFromNativeUn([box('1203', 10, 90, 140), box('1017', 10, 140, 140)], () => '33')).toBeUndefined();
   });
 });

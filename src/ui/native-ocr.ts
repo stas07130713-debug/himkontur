@@ -54,6 +54,24 @@ export function placardDigitsFromNativeRows(
   return unique.length === 1 ? unique[0] : undefined;
 }
 
+export function placardDigitsFromNativeUn(
+  elements: readonly NativeOcrElement[],
+  uniqueHazardForUn: (un: string) => string | undefined,
+): NativePlacardDigits | undefined {
+  const candidates = elements.flatMap((element) => {
+    const digits = normalizedNumericText(element.text);
+    const confidence = element.confidence;
+    const confident = confidence === undefined || confidence < 0 || confidence >= .45;
+    return confident && digits.length === 4 ? [digits] : [];
+  });
+  const uniqueUns = [...new Set(candidates)];
+  if (uniqueUns.length !== 1) return undefined;
+  const un = uniqueUns[0];
+  if (un === undefined) return undefined;
+  const hazard = uniqueHazardForUn(un);
+  return hazard === undefined ? undefined : { hazard, un };
+}
+
 export function placardDigitsFromNativeElements(
   elements: readonly NativeOcrElement[],
   isKnownPair: (hazard: string, un: string) => boolean,
