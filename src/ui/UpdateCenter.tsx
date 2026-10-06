@@ -146,8 +146,10 @@ export function UpdateCenter() {
       aria-label={importantAndroidUpdate ? "Доступно обновление ХИМКОНТУР" : undefined}
     >
       <button className="update-center-close" type="button" aria-label="Скрыть уведомление" onClick={() => setState({ mode: "hidden", text: "" })}>×</button>
-      <strong>{state.mode === "ready" || state.mode === "available" ? "Обновление ХИМКОНТУР" : "ХИМКОНТУР"}</strong>
-      <span>{state.text}</span>
+      {importantAndroidUpdate && <div className="update-center-emblem" aria-hidden="true">↓</div>}
+      <strong>{importantAndroidUpdate ? "Доступно новое обновление" : state.mode === "ready" || state.mode === "available" ? "Обновление ХИМКОНТУР" : "ХИМКОНТУР"}</strong>
+      {importantAndroidUpdate && <span className="update-center-version">ХИМКОНТУР · версия {state.version}</span>}
+      <span>{importantAndroidUpdate ? "Установите новую версию, чтобы получить последние исправления и улучшения." : state.text}</span>
       {importantAndroidUpdate && <span className="update-center-note">Будет установлена сразу последняя версия. Промежуточные обновления не требуются.</span>}
       {state.mode === "downloading" && <progress max="100" value={state.percent} />}
       {canInstall && <div className="update-center-actions">

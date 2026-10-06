@@ -33,6 +33,7 @@ try {
   const cases = [];
   let dangerousGoodsAutoReveal = false;
   let expandedSourceCanScroll = false;
+  let updateModalProminent = false;
   for (const size of [{ width: 390, height: 844 }, { width: 430, height: 932 }, { width: 844, height: 390 }]) {
     await command('Emulation.setDeviceMetricsOverride', { ...size, deviceScaleFactor: 1, mobile: true });
     await delay(800);
@@ -103,6 +104,22 @@ try {
     })()`);
     cases.push({ ...size, ...layout });
     if (size.width === 390) {
+      updateModalProminent = await evaluate(`(() => {
+        const backdrop = document.createElement('div');
+        backdrop.className = 'update-center-backdrop';
+        backdrop.innerHTML = '<aside class="update-center update-center-important"><button class="update-center-close">×</button><div class="update-center-emblem">↓</div><strong>Доступно новое обновление</strong><span class="update-center-version">ХИМКОНТУР · версия 0.3.13</span><span>Установите новую версию, чтобы получить последние исправления и улучшения.</span><span class="update-center-note">Будет установлена сразу последняя версия.</span><div class="update-center-actions"><button class="update-center-install">Обновить сейчас</button><button class="update-center-cancel">Отмена</button></div></aside>';
+        document.body.append(backdrop);
+        const dialog = backdrop.querySelector('.update-center-important');
+        const install = backdrop.querySelector('.update-center-install');
+        const cancel = backdrop.querySelector('.update-center-cancel');
+        const rect = dialog?.getBoundingClientRect();
+        const result = Boolean(rect && install && cancel && rect.width >= innerWidth * 0.94 && rect.height >= innerHeight * 0.62 && install.getBoundingClientRect().height >= 58 && cancel.getBoundingClientRect().height >= 58);
+        backdrop.dataset.layoutPassed = String(result);
+        return result;
+      })()`);
+      const updateShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+      writeFileSync(resolve('artifacts', 'mobile-update-modal-390.png'), Buffer.from(updateShot.data, 'base64'));
+      await evaluate(`document.querySelector('.update-center-backdrop')?.remove()`);
       expandedSourceCanScroll = await evaluate(`(async () => {
         document.querySelector('.source-editor:not([open]) > summary')?.click();
         await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -147,7 +164,8 @@ try {
   const failures = cases.filter((item) => item.scrollWidth > item.viewport + 1 || !item.tabs || !item.mobileButton || !item.mobileSubtitle || !item.actionsBalanced || !item.themeSwitch || !item.themeDoesNotOverlapTabs || !item.left || !item.map || !item.fullCloudLabels || !item.compassAvoidsToolbarContent || !item.mapControlsRightAligned || !item.mapOverlayControlsDoNotOverlap || !item.right || !item.mobileOrder || !item.calculate);
   if (!dangerousGoodsAutoReveal) failures.push({ check: 'dangerous-goods-auto-reveal' });
   if (!expandedSourceCanScroll) failures.push({ check: 'expanded-source-mobile-scroll' });
-  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, expandedSourceCanScroll, cases, failures };
+  if (!updateModalProminent) failures.push({ check: 'android-update-modal-prominence' });
+  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, expandedSourceCanScroll, updateModalProminent, cases, failures };
   writeFileSync(resolve('artifacts', 'mobile-layout-audit.json'), JSON.stringify(report, null, 2));
   if (failures.length) throw new Error(`Мобильная компоновка не прошла проверку: ${JSON.stringify(failures)}`);
   console.log(`Мобильная компоновка проверена на ${cases.map((item) => `${item.width}×${item.height}`).join(', ')}: горизонтального сдвига нет; найденный опасный груз открывается автоматически; после ввода следуют результаты, карта и контрольные точки.`);
