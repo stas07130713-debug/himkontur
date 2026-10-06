@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 import packageInformation from "../../package.json";
+import { isNewerVersion } from "./update-version";
 
 const AUTOMATIC_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1_000;
 
@@ -27,20 +28,6 @@ type State = Readonly<{
 
 const androidUpdater = registerPlugin<AndroidUpdater>("HimkonturUpdater");
 
-function cleanVersion(value: string): number[] {
-  return value.replace(/^v/iu, "").split(".").map((part) => Number.parseInt(part, 10) || 0);
-}
-
-function isNewer(candidate: string, current: string): boolean {
-  const left = cleanVersion(candidate);
-  const right = cleanVersion(current);
-  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
-    const difference = (left[index] ?? 0) - (right[index] ?? 0);
-    if (difference !== 0) return difference > 0;
-  }
-  return false;
-}
-
 export function UpdateCenter() {
   const [state, setState] = useState<State>({ mode: "hidden", text: "" });
   const automaticCheck = useRef(true);
@@ -61,7 +48,7 @@ export function UpdateCenter() {
       ]);
       const version = release.tag_name.replace(/^v/iu, "");
       const asset = release.assets.find((item) => /HIMKONTUR.*Android.*\.apk$/iu.test(item.name));
-      if (isNewer(version, installedVersion) && asset !== undefined) {
+      if (isNewerVersion(version, installedVersion) && asset !== undefined) {
         setState({ mode: "available", text: `Доступна новая версия ${version}`, version, url: asset.browser_download_url });
       } else if (manual) {
         setState({ mode: "message", text: `Установлена актуальная версия ${installedVersion}` });
@@ -149,13 +136,25 @@ export function UpdateCenter() {
 
   if (state.mode === "hidden") return null;
   const canInstall = state.mode === "ready" || (state.mode === "available" && isAndroid);
-  return (
-    <aside className="update-center" role="status" aria-live="polite">
+  const importantAndroidUpdate = state.mode === "available" && isAndroid;
+  const notification = (
+    <aside
+      className={`update-center${importantAndroidUpdate ? " update-center-important" : ""}`}
+      role={importantAndroidUpdate ? "dialog" : "status"}
+      aria-modal={importantAndroidUpdate ? "true" : undefined}
+      aria-live="polite"
+      aria-label={importantAndroidUpdate ? "Доступно обновление ХИМКОНТУР" : undefined}
+    >
       <button className="update-center-close" type="button" aria-label="Скрыть уведомление" onClick={() => setState({ mode: "hidden", text: "" })}>×</button>
       <strong>{state.mode === "ready" || state.mode === "available" ? "Обновление ХИМКОНТУР" : "ХИМКОНТУР"}</strong>
       <span>{state.text}</span>
+      {importantAndroidUpdate && <span className="update-center-note">Будет установлена сразу последняя версия. Промежуточные обновления не требуются.</span>}
       {state.mode === "downloading" && <progress max="100" value={state.percent} />}
-      {canInstall && <button className="update-center-install" type="button" onClick={() => void install()}>{state.mode === "ready" ? "Перезапустить и установить" : "Скачать и установить"}</button>}
+      {canInstall && <div className="update-center-actions">
+        <button className="update-center-install" type="button" onClick={() => void install()}>{state.mode === "ready" ? "Перезапустить и установить" : "Обновить сейчас"}</button>
+        {importantAndroidUpdate && <button className="update-center-cancel" type="button" onClick={() => setState({ mode: "hidden", text: "" })}>Отмена</button>}
+      </div>}
     </aside>
   );
+  return importantAndroidUpdate ? <div className="update-center-backdrop">{notification}</div> : notification;
 }

@@ -329,7 +329,7 @@ try {
       source: document.querySelector('.source-marker')?.getAttribute('transform'),
       zoom: document.querySelector('.zoom span')?.textContent
     };
-    check('report map uses one MapLibre canvas and an approved basemap source', (() => { const map = document.querySelector('.offline-vector-map'); const source = map?.dataset.tileSource ?? ''; const origin = source === 'local-pmtiles' ? '' : new URL(source, location.href).origin; return document.querySelectorAll('.offline-vector-map canvas').length === 1 && document.querySelector('.basemap-tile-layer') === null && source !== '' && (source === 'local-pmtiles' || origin === 'https://server.arcgisonline.com'); })(), document.querySelector('.offline-vector-map')?.dataset.tileSource ?? 'missing');
+    check('report map uses one MapLibre canvas and an approved local basemap source', (() => { const source = document.querySelector('.offline-vector-map')?.dataset.tileSource ?? ''; return document.querySelectorAll('.offline-vector-map canvas').length === 1 && document.querySelector('.basemap-tile-layer') === null && ['local-vector-pmtiles', 'local-satellite-pmtiles'].includes(source); })(), document.querySelector('.offline-vector-map')?.dataset.tileSource ?? 'missing');
     clickByText('.result-actions button', 'Сформировать отчёт'); await wait();
     check('report offers PDF and Word instead of printing', document.querySelector('.report-choice')?.textContent?.includes('PDF') && document.querySelector('.report-choice')?.textContent?.includes('Word'));
     clickByText('.report-choice button', 'PDF'); await wait(8000);

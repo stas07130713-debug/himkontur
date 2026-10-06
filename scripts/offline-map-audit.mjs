@@ -55,6 +55,10 @@ try {
       map: Boolean(document.querySelector('.map-column')),
       vector: document.querySelector('.offline-vector-map')?.dataset.mapStatus ?? '',
       vectorError: document.querySelector('.offline-vector-map')?.dataset.mapError ?? '',
+      renderMode: document.querySelector('.offline-vector-map')?.dataset.renderMode ?? '',
+      satelliteLoaded: document.querySelector('.offline-vector-map')?.dataset.satelliteLoaded ?? '',
+      satelliteFailed: document.querySelector('.offline-vector-map')?.dataset.satelliteFailed ?? '',
+      tileSource: document.querySelector('.offline-vector-map')?.dataset.tileSource ?? '',
       raster: document.querySelector('.basemap-tile-layer')?.dataset.rasterStatus ?? '',
       failedTilesVisible: [...document.querySelectorAll('.basemap-tile-layer img')].some((image) => image.style.visibility === 'hidden' && getComputedStyle(image.parentElement).visibility === 'visible'),
       zoom: document.querySelector('.zoom span')?.textContent ?? '',
@@ -67,10 +71,12 @@ try {
     const mapMode = snapshot();
     [...document.querySelectorAll('.segmented button')].find((button) => button.textContent?.includes('Спутник'))?.click();
     document.querySelector('.zoom button[aria-label="Уменьшить карту"]')?.click();
-    await wait(700);
+    const satelliteLimit = Date.now() + 15000;
+    while (Date.now() < satelliteLimit && document.querySelector('.offline-vector-map')?.dataset.renderMode !== 'satellite')
+      await wait(250);
     return { before, mapMode, satelliteMode: snapshot() };
   })()`);
-  const passed = result.before.title === 'Прогноз АХОВ' && result.before.map && ['loaded', 'idle'].includes(result.before.vector) && result.mapMode.zoom !== result.before.zoom && result.satelliteMode.satelliteActive && !result.mapMode.failedTilesVisible && !result.satelliteMode.failedTilesVisible;
+  const passed = result.before.title === 'Прогноз АХОВ' && result.before.map && ['loaded', 'idle'].includes(result.before.vector) && result.mapMode.zoom !== result.before.zoom && result.satelliteMode.satelliteActive && result.satelliteMode.renderMode === 'satellite' && result.satelliteMode.satelliteLoaded === 'true' && result.satelliteMode.satelliteFailed !== 'true' && result.satelliteMode.tileSource === 'local-satellite-pmtiles' && !result.mapMode.failedTilesVisible && !result.satelliteMode.failedTilesVisible;
   if (!passed) throw new Error(`Автономная карта не прошла проверку: ${JSON.stringify(result)}`);
   console.log(`Автономная карта: перезагрузка без сети, схема/спутник, приближение и отдаление работают; пустых квадратов нет. ${JSON.stringify(result)}`);
   socket.close();

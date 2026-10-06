@@ -41,7 +41,7 @@ export default defineConfig({
         // The autonomous Monchegorsk map is deliberately bundled as one
         // PMTiles archive. It must be precached for the installed PWA and the
         // Android WebView, otherwise the UI loads offline but the map does not.
-        maximumFileSizeToCacheInBytes: 30 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 80 * 1024 * 1024,
         navigateFallback: 'index.html',
         runtimeCaching: [
           {

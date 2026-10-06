@@ -47,6 +47,12 @@ public class HimkonturUpdaterPlugin extends Plugin {
                 connection = (HttpURLConnection) new URL(RELEASE_API).openConnection();
                 connection.setConnectTimeout(15_000);
                 connection.setReadTimeout(30_000);
+                // The endpoint always represents the newest stable release.
+                // Never reuse an earlier response: a device may have skipped
+                // several versions and must jump straight to the current one.
+                connection.setUseCaches(false);
+                connection.setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0");
+                connection.setRequestProperty("Pragma", "no-cache");
                 connection.setRequestProperty("Accept", "application/vnd.github+json");
                 connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
                 connection.setRequestProperty("User-Agent", "HIMKONTUR-Android/" + installedVersion());

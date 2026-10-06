@@ -1166,7 +1166,7 @@ export function MapCanvas(props: Props) {
               })}
             </svg>
           </div>
-          {!online && <div className="offline-map-status">{props.basemap === "standard" ? "Без интернета · автономная карта" : "Без интернета · под спутником показана автономная карта"}</div>}
+          {!online && <div className="offline-map-status">{props.basemap === "standard" ? "Без интернета · автономная карта" : "Без интернета · автономный спутник"}</div>}
           {contextMenu !== null && contextMenu.target === "map" && (
             <div
               className="map-context-menu add-control-menu"
@@ -1253,9 +1253,9 @@ export function MapCanvas(props: Props) {
               : "Источник не размещён"}
           </div>
           <div className="map-attribution-html">
-            {props.basemap === "standard" || !online
+            {props.basemap === "standard"
               ? "© OpenStreetMap contributors"
-              : "Источник снимков: Esri World Imagery"}
+              : "EOxCloudless © EOX · Copernicus Sentinel data 2016"}
           </div>
         </div>
       </div>

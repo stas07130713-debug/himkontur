@@ -8,7 +8,8 @@ import type { GeoPoint } from '../core/types';
 import type { Basemap } from './MapCanvas';
 
 let protocolRegistered = false;
-let offlineArchivePromise: Promise<PMTiles> | null = null;
+let offlineVectorArchivePromise: Promise<PMTiles> | null = null;
+let offlineSatelliteArchivePromise: Promise<PMTiles> | null = null;
 let satelliteSourceSequence = 0;
 setWorkerUrl(new URL(mapWorkerUrl, document.baseURI).href);
 
@@ -62,14 +63,18 @@ class OfflineReadyPmtilesSource implements Source {
   }
 }
 
-function getOfflineArchive(): Promise<PMTiles> {
-  if (offlineArchivePromise !== null) return offlineArchivePromise;
-  const archiveUrl = new URL('map-data/monchegorsk-v5.pmtiles', document.baseURI).href;
+function getOfflineArchive(kind: 'vector' | 'satellite'): Promise<PMTiles> {
+  const current = kind === 'vector' ? offlineVectorArchivePromise : offlineSatelliteArchivePromise;
+  if (current !== null) return current;
+  const fileName = kind === 'vector' ? 'monchegorsk-v5.pmtiles' : 'monchegorsk-satellite-v1.pmtiles';
+  const archiveUrl = new URL(`map-data/${fileName}`, document.baseURI).href;
   // PMTiles reads only the header, directory and currently visible tiles via
   // byte ranges. Loading the whole archive here blocked the reference cards
   // and looked like an endless application startup on slower devices.
-  offlineArchivePromise = Promise.resolve(new PMTiles(new OfflineReadyPmtilesSource(archiveUrl)));
-  return offlineArchivePromise;
+  const archive = Promise.resolve(new PMTiles(new OfflineReadyPmtilesSource(archiveUrl)));
+  if (kind === 'vector') offlineVectorArchivePromise = archive;
+  else offlineSatelliteArchivePromise = archive;
+  return archive;
 }
 
 function ensurePmtilesProtocol() {
@@ -78,7 +83,15 @@ function ensurePmtilesProtocol() {
     const coordinates = /\/(\d+)\/(\d+)\/(\d+)$/.exec(request.url);
     if (coordinates === null) return { data: new Uint8Array() };
     const [, zoom, column, row] = coordinates;
-    const archive = await getOfflineArchive();
+    const archive = await getOfflineArchive('vector');
+    const tile = await archive.getZxy(Number(zoom), Number(column), Number(row));
+    return { data: tile?.data ?? new Uint8Array() };
+  });
+  addProtocol('localsatellite', async (request) => {
+    const coordinates = /\/(\d+)\/(\d+)\/(\d+)$/.exec(request.url);
+    if (coordinates === null) return { data: new Uint8Array() };
+    const [, zoom, column, row] = coordinates;
+    const archive = await getOfflineArchive('satellite');
     const tile = await archive.getZxy(Number(zoom), Number(column), Number(row));
     return { data: tile?.data ?? new Uint8Array() };
   });
@@ -86,10 +99,7 @@ function ensurePmtilesProtocol() {
 }
 
 function satelliteTileTemplate(): string {
-  // Use the same endpoint in web, Android and Windows. The former local
-  // development proxy queued many raster requests and made switching appear
-  // frozen even though the imagery service itself was available.
-  return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+  return 'localsatellite://tiles/{z}/{x}/{y}';
 }
 
 const LOCAL_LAYER_IDS = [
@@ -166,9 +176,9 @@ function concealIncompleteSatellite(map: MapLibreMap, container: HTMLDivElement)
 
 function applyBasemap(map: MapLibreMap, basemap: Basemap, container: HTMLDivElement | null) {
   const satellite = basemap === 'satellite';
-  // The local vector map always remains underneath the optional online
-  // imagery. If the network disappears or an imagery tile is unavailable,
-  // the user sees a complete autonomous map instead of empty squares.
+  // Both basemaps are bundled. The vector layer remains underneath until the
+  // complete local satellite frame is decoded, avoiding blank squares while
+  // switching even on slower Android devices.
   setLocalLayersVisible(map, true);
   removeSatelliteLayer(map);
   if (satellite) {
@@ -178,8 +188,8 @@ function applyBasemap(map: MapLibreMap, basemap: Basemap, container: HTMLDivElem
       tiles: [satelliteTileTemplate()],
       tileSize: 256,
       minzoom: 0,
-      maxzoom: 19,
-      attribution: 'Источник снимков: Esri World Imagery',
+      maxzoom: 13,
+      attribution: 'EOxCloudless © EOX IT Services GmbH · Copernicus Sentinel data 2016 · CC BY 4.0',
     });
     map.addLayer({
       id: 'satellite-imagery',
@@ -258,9 +268,9 @@ export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: Geo
       const failedSourceId = (event as typeof event & { sourceId?: string }).sourceId;
       if (failedSourceId?.startsWith('satellite-') === true && failedSourceId !== container.dataset.satelliteSourceId)
         return;
-      // Failure of the optional Internet imagery is not a map failure: the
-      // bundled vector map is still fully usable and stays visible beneath it.
-      const optionalImageryFailure = /satellite|arcgis|map-tiles|tile/iu.test(message) ||
+      // A corrupt local imagery tile is not a total map failure: the bundled
+      // vector map remains visible and the condition is exposed to audits.
+      const optionalImageryFailure = /satellite|local|pmtiles|tile/iu.test(message) ||
         (/failed to fetch/iu.test(message) && container.dataset.sourceReady === 'true');
       if (optionalImageryFailure) {
         delete container.dataset.mapError;
@@ -325,6 +335,6 @@ export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: Geo
     mapRef.current?.jumpTo({ center: [center.longitude, center.latitude], zoom });
   }, [center.latitude, center.longitude, zoom]);
 
-  const tileSource = basemap === 'satellite' ? satelliteTileTemplate() : 'local-pmtiles';
+  const tileSource = basemap === 'satellite' ? 'local-satellite-pmtiles' : 'local-vector-pmtiles';
   return <div className="offline-vector-map" ref={containerRef} data-basemap={basemap} data-tile-source={tileSource} aria-hidden="true" />;
 }
