@@ -756,7 +756,7 @@ export function App() {
         onClose={() => setMobileOpen(false)}
       />
       <footer className="statusbar">
-        <span>ХИМКОНТУР · v0.3.10</span>
+        <span>ХИМКОНТУР · v0.3.11</span>
         <span className="status-ready">● Готов к расчёту</span>
         <span>
           {new Date().toLocaleDateString("ru-RU")} ·{" "}

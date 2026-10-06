@@ -1,4 +1,5 @@
 import type { GeoPoint } from './types';
+import { requestNativeWeather } from './native-weather';
 
 export type WeatherObservation = Readonly<{
   temperatureC: number;
@@ -7,7 +8,7 @@ export type WeatherObservation = Readonly<{
   cloudCoverPercent: number;
   snowDepthM: number;
   observedAt: string;
-  provider: 'Open-Meteo' | 'MET Norway' | 'wttr.in';
+  provider: 'ProjectEOL / NOAA GFS' | 'Open-Meteo' | 'MET Norway' | 'wttr.in';
   dataKind: 'forecast' | 'archive';
 }>;
 
@@ -51,6 +52,23 @@ type WttrResponse = Readonly<{
     date?: string;
     hourly?: readonly WttrHourly[];
   }>[];
+}>;
+
+type ProjectEolValue = Readonly<{
+  value?: number | null;
+  unit?: string;
+}>;
+
+type ProjectEolForecastRow = Readonly<{
+  time?: string;
+  values?: Readonly<Record<string, ProjectEolValue | undefined>>;
+}>;
+
+type ProjectEolResponse = Readonly<{
+  result?: Readonly<{
+    structuredContent?: Readonly<{ forecast?: readonly ProjectEolForecastRow[] }>;
+    content?: readonly Readonly<{ type?: string; text?: string }>[];
+  }>;
 }>;
 
 const DAY_MS = 86_400_000;
@@ -205,6 +223,66 @@ function observationFromWttr(response: WttrResponse, target: Date): WeatherObser
   };
 }
 
+function projectEolRows(response: ProjectEolResponse): readonly ProjectEolForecastRow[] {
+  const structured = response.result?.structuredContent?.forecast;
+  if (structured !== undefined) return structured;
+  const text = response.result?.content?.find((item) => item.type === 'text' && item.text !== undefined)?.text;
+  if (text === undefined) return [];
+  try {
+    const parsed = JSON.parse(text) as Readonly<{ forecast?: readonly ProjectEolForecastRow[] }>;
+    return parsed.forecast ?? [];
+  } catch {
+    return [];
+  }
+}
+
+function observationFromProjectEol(response: ProjectEolResponse, target: Date): WeatherObservation {
+  const rows = projectEolRows(response).flatMap((row) => {
+    const time = row.time === undefined ? Number.NaN : Date.parse(row.time);
+    return Number.isFinite(time) && row.values !== undefined ? [{ time, values: row.values }] : [];
+  });
+  if (rows.length === 0) throw new Error('ProjectEOL не вернул почасовой прогноз.');
+  rows.sort((left, right) => left.time - right.time);
+  const targetMs = target.getTime();
+  let upper = rows.findIndex((row) => row.time >= targetMs);
+  if (upper < 0) upper = rows.length - 1;
+  const lower = Math.max(0, upper - (rows[upper]?.time === targetMs ? 0 : 1));
+  const lowerRow = rows[lower]; const upperRow = rows[upper];
+  if (lowerRow === undefined || upperRow === undefined) throw new Error('ProjectEOL вернул неполный прогноз.');
+  const rawValue = (row: typeof lowerRow, key: string, name: string, fallback?: number): number => {
+    const value = row.values[key]?.value;
+    if (value === null || value === undefined || !Number.isFinite(value)) {
+      if (fallback !== undefined) return fallback;
+      throw new Error(`ProjectEOL не вернул показатель «${name}».`);
+    }
+    return value;
+  };
+  const converted = (row: typeof lowerRow) => {
+    const temperature = rawValue(row, 'air_temperature_2m', 'температура');
+    const cloud = rawValue(row, 'cloud_area_fraction', 'облачность');
+    return {
+      temperatureC: row.values.air_temperature_2m?.unit === 'K' ? temperature - 273.15 : temperature,
+      windSpeedMps: rawValue(row, 'wind_speed_10m', 'скорость ветра'),
+      windFromDegrees: rawValue(row, 'wind_direction_10m', 'направление ветра'),
+      cloudCoverPercent: row.values.cloud_area_fraction?.unit === '1' ? cloud * 100 : cloud,
+      snowDepthM: rawValue(row, 'surface_snow_thickness', 'снежный покров', 0)
+    };
+  };
+  const a = converted(lowerRow); const b = converted(upperRow);
+  const span = Math.max(1, upperRow.time - lowerRow.time);
+  const fraction = lower === upper ? 0 : Math.max(0, Math.min(1, (targetMs - lowerRow.time) / span));
+  return {
+    temperatureC: interpolate(a.temperatureC, b.temperatureC, fraction),
+    windSpeedMps: interpolate(a.windSpeedMps, b.windSpeedMps, fraction),
+    windFromDegrees: interpolateDirection(a.windFromDegrees, b.windFromDegrees, fraction),
+    cloudCoverPercent: interpolate(a.cloudCoverPercent, b.cloudCoverPercent, fraction),
+    snowDepthM: interpolate(a.snowDepthM, b.snowDepthM, fraction),
+    observedAt: target.toISOString(),
+    provider: 'ProjectEOL / NOAA GFS',
+    dataKind: 'forecast'
+  };
+}
+
 export async function fetchWeather(point: GeoPoint, accidentTimeIso: string, signal?: AbortSignal): Promise<WeatherObservation> {
   const target = new Date(accidentTimeIso);
   if (Number.isNaN(target.getTime())) throw new Error('Указана некорректная дата происшествия.');
@@ -240,13 +318,29 @@ export async function fetchWeather(point: GeoPoint, accidentTimeIso: string, sig
       metNorwayUrl.searchParams.set('lon', point.longitude.toFixed(5));
       const wttrUrl = new URL(`https://wttr.in/${point.latitude.toFixed(5)},${point.longitude.toFixed(5)}`);
       wttrUrl.searchParams.set('format', 'j1');
-      // Independent providers are started together. If domains are blocked
-      // by the user's operator, the first valid response is used immediately.
-      observation = await Promise.any([
+      // Browser-compatible reserves start in parallel. Installed Android and
+      // Windows applications first use the Russian-hosted ProjectEOL gateway
+      // through their native HTTP bridge, which is independent of WebView
+      // CORS restrictions and browser/VPN routing.
+      const browserReserve = Promise.any([
         openMeteo(),
         requestJson(metNorwayUrl.href, signal).then((payload) => observationFromMetNorway(payload as MetNorwayResponse, target)),
         requestJson(wttrUrl.href, signal).then((payload) => observationFromWttr(payload as WttrResponse, target))
       ]);
+      void browserReserve.catch(() => undefined);
+      try {
+        const projectEolPayload = await requestNativeWeather({
+          latitude: point.latitude,
+          longitude: point.longitude,
+          start: new Date(target.getTime() - 60 * 60_000).toISOString(),
+          hours: 4
+        });
+        observation = projectEolPayload === undefined
+          ? await browserReserve
+          : observationFromProjectEol(projectEolPayload as ProjectEolResponse, target);
+      } catch {
+        observation = await browserReserve;
+      }
     }
   } catch {
     if (signal?.aborted === true) throw signal.reason;

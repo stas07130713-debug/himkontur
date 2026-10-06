@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(HimkonturUpdaterPlugin.class);
         registerPlugin(HimkonturFilesPlugin.class);
         registerPlugin(HimkonturOcrPlugin.class);
+        registerPlugin(HimkonturWeatherPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

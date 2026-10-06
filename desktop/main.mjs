@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.HIMKONTUR_LOCAL_PORT ?? '32174');
+const PROJECT_EOL_ENDPOINT = 'https://weatherapi.projecteol.ru/mcp/';
 const CURRENT_DIRECTORY = resolve(fileURLToPath(new URL('.', import.meta.url)));
 const { autoUpdater } = electronUpdater;
 const WEB_ROOT = resolve(CURRENT_DIRECTORY, '..', 'dist');
@@ -84,6 +85,55 @@ function configureUpdates() {
   ipcMain.handle('himkontur:update-install', () => {
     autoUpdater.quitAndInstall(false, true);
     return { state: 'installing' };
+  });
+}
+
+function configureWeatherBridge() {
+  ipcMain.handle('himkontur:weather-forecast', async (_event, rawOptions) => {
+    const latitude = Number(rawOptions?.latitude);
+    const longitude = Number(rawOptions?.longitude);
+    const hours = Math.max(1, Math.min(12, Math.round(Number(rawOptions?.hours))));
+    const start = new Date(String(rawOptions?.start ?? ''));
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90
+      || !Number.isFinite(longitude) || longitude < -180 || longitude > 180
+      || !Number.isFinite(hours) || Number.isNaN(start.getTime())) {
+      throw new Error('Некорректные параметры запроса погоды.');
+    }
+    const response = await fetch(PROJECT_EOL_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'User-Agent': `HIMKONTUR-Windows/${app.getVersion()}`
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: `himkontur-${Date.now()}`,
+        method: 'tools/call',
+        params: {
+          name: 'get_weather_forecast',
+          arguments: {
+            latitude,
+            longitude,
+            start: start.toISOString(),
+            hours,
+            parameters: [
+              'air_temperature_2m',
+              'wind_speed_10m',
+              'wind_direction_10m',
+              'cloud_area_fraction',
+              'surface_snow_thickness'
+            ],
+            interpolation: 'linear'
+          }
+        }
+      }),
+      signal: AbortSignal.timeout(8_000)
+    });
+    if (!response.ok) throw new Error(`Сервис погоды вернул HTTP ${response.status}.`);
+    const payload = await response.text();
+    if (payload.length === 0) throw new Error('Сервис погоды вернул пустой ответ.');
+    return { payload };
   });
 }
 
@@ -269,6 +319,7 @@ async function createWindow() {
 async function bootstrap() {
   await app.whenReady();
   configureUpdates();
+  configureWeatherBridge();
   tileCacheRoot = resolve(app.getPath('userData'), 'map-tile-cache');
   mkdirSync(tileCacheRoot, { recursive: true });
   queueScenario(process.argv);

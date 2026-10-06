@@ -11,6 +11,15 @@ type HimkonturUpdateStatus = Readonly<{
 // DOM globals require declaration merging; a type alias cannot augment Window.
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 interface Window {
+  himkonturWeather?: Readonly<{
+    platform: "windows";
+    getForecast: (options: Readonly<{
+      latitude: number;
+      longitude: number;
+      start: string;
+      hours: number;
+    }>) => Promise<Readonly<{ payload: string }>>;
+  }>;
   himkonturUpdates?: Readonly<{
     platform: "windows";
     getVersion: () => Promise<string>;

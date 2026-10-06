@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
+contextBridge.exposeInMainWorld('himkonturWeather', {
+  platform: 'windows',
+  getForecast: (options) => ipcRenderer.invoke('himkontur:weather-forecast', options)
+});
+
 contextBridge.exposeInMainWorld('himkonturUpdates', {
   platform: 'windows',
   getVersion: () => ipcRenderer.invoke('himkontur:update-version'),
