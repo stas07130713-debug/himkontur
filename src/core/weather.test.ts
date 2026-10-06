@@ -57,6 +57,30 @@ describe('weather at the accident date and time', () => {
     expect(weather.windFromDegrees < 10 || weather.windFromDegrees > 350).toBe(true);
   });
 
+  it('uses wttr.in when both model providers are unavailable through the mobile operator', async () => {
+    const accident = new Date(2026, 9, 6, 10, 30);
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      if (!url.includes('wttr.in')) return Promise.reject(new TypeError('Blocked by network operator'));
+      return Promise.resolve(new Response(JSON.stringify({ weather: [{
+        date: '2026-10-06',
+        hourly: [
+          { time: '900', tempC: '6', windspeedKmph: '18', winddirDegree: '350', cloudcover: '40' },
+          { time: '1200', tempC: '9', windspeedKmph: '36', winddirDegree: '20', cloudcover: '100' }
+        ]
+      }] }), { status: 200 }));
+    }));
+
+    const weather = await fetchWeather({ latitude: 68.2, longitude: 33.2 }, accident.toISOString());
+
+    expect(weather.provider).toBe('wttr.in');
+    expect(weather.temperatureC).toBeCloseTo(7.5, 8);
+    expect(weather.windSpeedMps).toBeCloseTo(7.5, 8);
+    expect(weather.windFromDegrees).toBeCloseTo(5, 8);
+    expect(weather.cloudCoverPercent).toBeCloseTo(70, 8);
+    expect(weather.snowDepthM).toBe(0);
+  });
+
   it('uses the historical archive for an old accident and tolerates absent snow data', async () => {
     const accident = new Date(2020, 0, 1, 11, 0);
     let requestedUrl = '';

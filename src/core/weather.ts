@@ -7,7 +7,7 @@ export type WeatherObservation = Readonly<{
   cloudCoverPercent: number;
   snowDepthM: number;
   observedAt: string;
-  provider: 'Open-Meteo' | 'MET Norway';
+  provider: 'Open-Meteo' | 'MET Norway' | 'wttr.in';
   dataKind: 'forecast' | 'archive';
 }>;
 
@@ -36,6 +36,21 @@ type MetNorwayResponse = Readonly<{
       data?: Readonly<{ instant?: Readonly<{ details?: MetNorwayDetails }> }>;
     }>[];
   }>;
+}>;
+
+type WttrHourly = Readonly<{
+  time?: string;
+  tempC?: string;
+  windspeedKmph?: string;
+  winddirDegree?: string;
+  cloudcover?: string;
+}>;
+
+type WttrResponse = Readonly<{
+  weather?: readonly Readonly<{
+    date?: string;
+    hourly?: readonly WttrHourly[];
+  }>[];
 }>;
 
 const DAY_MS = 86_400_000;
@@ -147,6 +162,49 @@ function observationFromMetNorway(response: MetNorwayResponse, target: Date): We
   };
 }
 
+function wttrNumber(value: string | undefined, name: string): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) throw new Error(`wttr.in не вернул показатель «${name}».`);
+  return parsed;
+}
+
+function observationFromWttr(response: WttrResponse, target: Date): WeatherObservation {
+  const rows = response.weather?.flatMap((day) => {
+    if (day.date === undefined) return [];
+    return day.hourly?.flatMap((hour) => {
+      const rawTime = Number(hour.time);
+      if (!Number.isFinite(rawTime)) return [];
+      const hours = Math.floor(rawTime / 100);
+      const minutes = rawTime % 100;
+      const time = new Date(`${day.date}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`).getTime();
+      return Number.isFinite(time) ? [{ time, hour }] : [];
+    }) ?? [];
+  }) ?? [];
+  if (rows.length === 0) throw new Error('wttr.in не вернул почасовой прогноз.');
+
+  const targetMs = target.getTime();
+  let upper = rows.findIndex((row) => row.time >= targetMs);
+  if (upper < 0) upper = rows.length - 1;
+  const lower = Math.max(0, upper - (rows[upper]?.time === targetMs ? 0 : 1));
+  const lowerRow = rows[lower]; const upperRow = rows[upper];
+  if (lowerRow === undefined || upperRow === undefined) throw new Error('wttr.in вернул неполный прогноз.');
+  const span = Math.max(1, upperRow.time - lowerRow.time);
+  const fraction = lower === upper ? 0 : Math.max(0, Math.min(1, (targetMs - lowerRow.time) / span));
+  const value = (row: typeof lowerRow, key: keyof WttrHourly, name: string): number => wttrNumber(row.hour[key], name);
+  return {
+    temperatureC: interpolate(value(lowerRow, 'tempC', 'температура'), value(upperRow, 'tempC', 'температура'), fraction),
+    windSpeedMps: interpolate(value(lowerRow, 'windspeedKmph', 'скорость ветра'), value(upperRow, 'windspeedKmph', 'скорость ветра'), fraction) / 3.6,
+    windFromDegrees: interpolateDirection(value(lowerRow, 'winddirDegree', 'направление ветра'), value(upperRow, 'winddirDegree', 'направление ветра'), fraction),
+    cloudCoverPercent: interpolate(value(lowerRow, 'cloudcover', 'облачность'), value(upperRow, 'cloudcover', 'облачность'), fraction),
+    // wttr.in publishes forecast snowfall, not measured snow depth on the
+    // ground. Do not turn snowfall into a false automatic "snow cover" flag.
+    snowDepthM: 0,
+    observedAt: target.toISOString(),
+    provider: 'wttr.in',
+    dataKind: 'forecast'
+  };
+}
+
 export async function fetchWeather(point: GeoPoint, accidentTimeIso: string, signal?: AbortSignal): Promise<WeatherObservation> {
   const target = new Date(accidentTimeIso);
   if (Number.isNaN(target.getTime())) throw new Error('Указана некорректная дата происшествия.');
@@ -180,12 +238,14 @@ export async function fetchWeather(point: GeoPoint, accidentTimeIso: string, sig
       const metNorwayUrl = new URL('https://api.met.no/weatherapi/locationforecast/2.0/compact');
       metNorwayUrl.searchParams.set('lat', point.latitude.toFixed(5));
       metNorwayUrl.searchParams.set('lon', point.longitude.toFixed(5));
-      // Both independent providers are started together. If one domain is
-      // unavailable through the user's operator, the other result is used
-      // immediately instead of waiting for a VPN or a second manual click.
+      const wttrUrl = new URL(`https://wttr.in/${point.latitude.toFixed(5)},${point.longitude.toFixed(5)}`);
+      wttrUrl.searchParams.set('format', 'j1');
+      // Independent providers are started together. If domains are blocked
+      // by the user's operator, the first valid response is used immediately.
       observation = await Promise.any([
         openMeteo(),
-        requestJson(metNorwayUrl.href, signal).then((payload) => observationFromMetNorway(payload as MetNorwayResponse, target))
+        requestJson(metNorwayUrl.href, signal).then((payload) => observationFromMetNorway(payload as MetNorwayResponse, target)),
+        requestJson(wttrUrl.href, signal).then((payload) => observationFromWttr(payload as WttrResponse, target))
       ]);
     }
   } catch {
