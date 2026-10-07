@@ -8,8 +8,15 @@ import type { GeoPoint } from '../core/types';
 import type { Basemap } from './MapCanvas';
 
 let protocolRegistered = false;
-let offlineVectorArchivePromise: Promise<PMTiles> | null = null;
-let offlineSatelliteArchivePromise: Promise<PMTiles> | null = null;
+type OfflineArchiveKind = 'vector' | 'satellite' | 'satellite-detail-14' | 'satellite-detail-15' | 'satellite-detail-16';
+const offlineArchivePromises: Partial<Record<OfflineArchiveKind, Promise<PMTiles>>> = {};
+const offlineArchiveFiles: Record<OfflineArchiveKind, string> = {
+  vector: 'monchegorsk-v5.pmtiles',
+  satellite: 'monchegorsk-satellite-v1.pmtiles',
+  'satellite-detail-14': 'monchegorsk-satellite-detail-z14-v2.pmtiles',
+  'satellite-detail-15': 'monchegorsk-satellite-detail-z15-v2.pmtiles',
+  'satellite-detail-16': 'monchegorsk-satellite-detail-z16-v2.pmtiles',
+};
 let satelliteSourceSequence = 0;
 setWorkerUrl(new URL(mapWorkerUrl, document.baseURI).href);
 
@@ -63,17 +70,16 @@ class OfflineReadyPmtilesSource implements Source {
   }
 }
 
-function getOfflineArchive(kind: 'vector' | 'satellite'): Promise<PMTiles> {
-  const current = kind === 'vector' ? offlineVectorArchivePromise : offlineSatelliteArchivePromise;
-  if (current !== null) return current;
-  const fileName = kind === 'vector' ? 'monchegorsk-v5.pmtiles' : 'monchegorsk-satellite-v1.pmtiles';
+function getOfflineArchive(kind: OfflineArchiveKind): Promise<PMTiles> {
+  const current = offlineArchivePromises[kind];
+  if (current !== undefined) return current;
+  const fileName = offlineArchiveFiles[kind];
   const archiveUrl = new URL(`map-data/${fileName}`, document.baseURI).href;
   // PMTiles reads only the header, directory and currently visible tiles via
   // byte ranges. Loading the whole archive here blocked the reference cards
   // and looked like an endless application startup on slower devices.
   const archive = Promise.resolve(new PMTiles(new OfflineReadyPmtilesSource(archiveUrl)));
-  if (kind === 'vector') offlineVectorArchivePromise = archive;
-  else offlineSatelliteArchivePromise = archive;
+  offlineArchivePromises[kind] = archive;
   return archive;
 }
 
@@ -95,6 +101,16 @@ function ensurePmtilesProtocol() {
     const tile = await archive.getZxy(Number(zoom), Number(column), Number(row));
     return { data: tile?.data ?? new Uint8Array() };
   });
+  for (const zoom of [14, 15, 16] as const) {
+    addProtocol(`localsatellite${zoom}`, async (request) => {
+      const coordinates = /\/(\d+)\/(\d+)\/(\d+)$/.exec(request.url);
+      if (coordinates === null) return { data: new Uint8Array() };
+      const [, tileZoom, column, row] = coordinates;
+      const archive = await getOfflineArchive(`satellite-detail-${zoom}`);
+      const tile = await archive.getZxy(Number(tileZoom), Number(column), Number(row));
+      return { data: tile?.data ?? new Uint8Array() };
+    });
+  }
   protocolRegistered = true;
 }
 
@@ -138,11 +154,22 @@ function basemapStyle(): StyleSpecification {
 }
 
 function removeSatelliteLayer(map: MapLibreMap) {
-  if (map.getLayer('satellite-imagery') !== undefined) map.removeLayer('satellite-imagery');
+  const satelliteLayers = map.getStyle().layers
+    .map((layer) => layer.id)
+    .filter((layerId) => layerId.startsWith('satellite-'))
+    .reverse();
+  for (const layerId of satelliteLayers)
+    if (map.getLayer(layerId) !== undefined) map.removeLayer(layerId);
   for (const sourceId of Object.keys(map.getStyle().sources)) {
     if (sourceId.startsWith('satellite-') && map.getSource(sourceId) !== undefined)
       map.removeSource(sourceId);
   }
+}
+
+function setSatelliteOpacity(map: MapLibreMap, opacity: number) {
+  for (const layer of map.getStyle().layers)
+    if (layer.id.startsWith('satellite-') && map.getLayer(layer.id) !== undefined)
+      map.setPaintProperty(layer.id, 'raster-opacity', opacity);
 }
 
 function setLocalLayersVisible(map: MapLibreMap, visible: boolean) {
@@ -157,7 +184,7 @@ function revealCompleteSatellite(map: MapLibreMap, container: HTMLDivElement) {
   // Raster tiles arrive independently. Never show a half satellite / half
   // vector mosaic: retain the complete local map until every visible imagery
   // tile is ready, then replace the whole viewport in one repaint.
-  map.setPaintProperty('satellite-imagery', 'raster-opacity', 1);
+  setSatelliteOpacity(map, 1);
   setLocalLayersVisible(map, false);
   container.dataset.satelliteLoaded = 'true';
   container.dataset.renderMode = 'satellite';
@@ -173,7 +200,7 @@ function concealIncompleteSatellite(map: MapLibreMap, container: HTMLDivElement)
     // A zero-opacity raster may be deprioritised by some WebView/MapLibre
     // combinations. This effectively invisible value keeps its requests
     // active while the complete local map remains visually dominant.
-    map.setPaintProperty('satellite-imagery', 'raster-opacity', 0.001);
+    setSatelliteOpacity(map, 0.001);
   setLocalLayersVisible(map, true);
   container.dataset.satelliteLoaded = 'false';
   container.dataset.renderMode = 'standard-fallback';
@@ -202,7 +229,7 @@ function applyBasemap(
       maxzoom: useOnlineDetail ? 19 : 13,
       attribution: useOnlineDetail
         ? 'Source: Esri World Imagery'
-        : 'EOxCloudless © EOX IT Services GmbH · Copernicus Sentinel data 2016 · CC BY 4.0',
+        : 'EOxCloudless © EOX · Esri World Imagery (for Export)',
     });
     map.addLayer({
       id: 'satellite-imagery',
@@ -210,6 +237,26 @@ function applyBasemap(
       source: satelliteSourceId,
       paint: { 'raster-fade-duration': 0, 'raster-opacity': 0.001 },
     });
+    if (!useOnlineDetail) {
+      for (const detailZoom of [14, 15, 16] as const) {
+        const detailSourceId = `satellite-detail-${detailZoom}-${satelliteSourceSequence}`;
+        map.addSource(detailSourceId, {
+          type: 'raster',
+          tiles: [`localsatellite${detailZoom}://tiles/{z}/{x}/{y}`],
+          tileSize: 256,
+          minzoom: detailZoom,
+          maxzoom: detailZoom,
+          attribution: 'Esri World Imagery (for Export)',
+        });
+        map.addLayer({
+          id: `satellite-detail-${detailZoom}`,
+          type: 'raster',
+          source: detailSourceId,
+          minzoom: detailZoom,
+          paint: { 'raster-fade-duration': 0, 'raster-opacity': 0.001 },
+        });
+      }
+    }
   }
   if (container !== null) {
     container.dataset.basemap = basemap;
@@ -219,7 +266,7 @@ function applyBasemap(
     container.dataset.satelliteLoaded = 'false';
     container.dataset.satelliteFailed = 'false';
     container.dataset.satelliteProvider = satellite
-      ? (useOnlineDetail ? 'online-esri-world-imagery' : 'offline-eox-sentinel-2')
+      ? (useOnlineDetail ? 'online-esri-world-imagery' : 'offline-detailed-imagery')
       : 'off';
     container.dataset.renderMode = satellite ? 'standard-fallback' : 'standard';
     delete container.dataset.mapError;

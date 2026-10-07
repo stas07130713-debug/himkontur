@@ -1255,7 +1255,7 @@ export function MapCanvas(props: Props) {
           <div className="map-attribution-html">
             {props.basemap === "standard"
               ? "© OpenStreetMap contributors"
-              : "Спутник: Esri World Imagery · автономно EOX Copernicus"}
+              : "Спутник: Esri World Imagery · автономно до масштаба 16"}
           </div>
         </div>
       </div>

@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 /** Build the licensed offline satellite MBTiles package used by HIMKONTUR.
  *
- * Source: EOX Sentinel-2 cloudless 2016 (CC BY 4.0). Only the configured
- * Monchegorsk rectangle is downloaded. Convert the result with the official
+ * Base source: EOX Sentinel-2 cloudless 2016 (CC BY 4.0). With --detail the
+ * package also receives a nested high-resolution pyramid from Esri World
+ * Imagery (for Export). An ArcGIS token can be supplied with ARCGIS_TOKEN when
+ * the account requires it. The ordinary public World Imagery viewing layer is
+ * deliberately never exported. Convert the result with the official
  * `pmtiles convert` command before placing it in public/map-data.
  */
 import { DatabaseSync } from 'node:sqlite';
@@ -12,8 +15,19 @@ import { resolve } from 'node:path';
 const BOUNDS = [31.515, 67.495, 34.215, 68.355];
 const MIN_ZOOM = 0;
 const MAX_ZOOM = 13;
-const TILE_URL = 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg';
-const ATTRIBUTION = 'EOxCloudless by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2016), CC BY 4.0';
+const EOX_TILE_URL = 'https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg';
+const ARCGIS_EXPORT_TILE_URL = 'https://tiledbasemaps.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const BASE_ATTRIBUTION = 'EOxCloudless by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2016), CC BY 4.0';
+const DETAIL_ATTRIBUTION = 'Esri, Vantor, Earthstar Geographics, and the GIS User Community';
+
+// Higher levels are deliberately nested. The broad operating rectangle stays
+// compact, the city and industrial area get street-level detail, and the KGMK
+// core receives the sharpest level without turning the APK into many gigabytes.
+const DETAIL_TIERS = [
+  { zoom: 14, bounds: [32.45, 67.78, 33.25, 68.07] },
+  { zoom: 15, bounds: [32.58, 67.83, 33.17, 68.03] },
+  { zoom: 16, bounds: [32.70, 67.87, 33.03, 67.99] },
+];
 
 function longitudeToColumn(longitude, zoom) {
   return Math.max(0, Math.min((2 ** zoom) - 1, Math.floor((longitude + 180) / 360 * (2 ** zoom))));
@@ -25,22 +39,39 @@ function latitudeToRow(latitude, zoom) {
   return Math.max(0, Math.min((2 ** zoom) - 1, Math.floor(value * (2 ** zoom))));
 }
 
-function enumerateTiles() {
-  const [west, south, east, north] = BOUNDS;
+function enumerateBounds(bounds, minZoom, maxZoom, provider) {
+  const [west, south, east, north] = bounds;
   const tiles = [];
-  for (let zoom = MIN_ZOOM; zoom <= MAX_ZOOM; zoom += 1) {
+  for (let zoom = minZoom; zoom <= maxZoom; zoom += 1) {
     const left = longitudeToColumn(west, zoom);
     const right = longitudeToColumn(east, zoom);
     const top = latitudeToRow(north, zoom);
     const bottom = latitudeToRow(south, zoom);
     for (let column = left; column <= right; column += 1)
-      for (let row = top; row <= bottom; row += 1) tiles.push({ zoom, column, row });
+      for (let row = top; row <= bottom; row += 1) tiles.push({ zoom, column, row, provider });
   }
   return tiles;
 }
 
-async function downloadTile(tile) {
-  const url = TILE_URL.replace('{z}', tile.zoom).replace('{y}', tile.row).replace('{x}', tile.column);
+function enumerateTiles(includeDetail, selectedTier) {
+  if (selectedTier !== null)
+    return enumerateBounds(selectedTier.bounds, selectedTier.zoom, selectedTier.zoom, 'arcgis-export');
+  const tiles = enumerateBounds(BOUNDS, MIN_ZOOM, MAX_ZOOM, 'eox');
+  if (includeDetail)
+    for (const tier of DETAIL_TIERS)
+      tiles.push(...enumerateBounds(tier.bounds, tier.zoom, tier.zoom, 'arcgis-export'));
+  return tiles;
+}
+
+async function downloadTile(tile, arcgisToken) {
+  const template = tile.provider === 'arcgis-export' ? ARCGIS_EXPORT_TILE_URL : EOX_TILE_URL;
+  const baseUrl = template
+    .replace('{z}', tile.zoom)
+    .replace('{y}', tile.row)
+    .replace('{x}', tile.column);
+  const url = tile.provider === 'arcgis-export' && arcgisToken.length > 0
+    ? `${baseUrl}?token=${encodeURIComponent(arcgisToken)}`
+    : baseUrl;
   let lastError;
   for (let attempt = 1; attempt <= 4; attempt += 1) {
     try {
@@ -59,8 +90,28 @@ async function downloadTile(tile) {
 }
 
 async function main() {
-  const output = resolve(process.argv[2] ?? 'monchegorsk-satellite-v1.mbtiles');
+  const output = resolve(process.argv[2] ?? 'monchegorsk-satellite-v2.mbtiles');
   const workers = Math.max(1, Number.parseInt(process.argv[3] ?? '16', 10) || 16);
+  const includeDetail = process.argv.includes('--detail');
+  const planOnly = process.argv.includes('--plan');
+  const tierArgument = process.argv.find((argument) => argument.startsWith('--tier='));
+  const tierZoom = tierArgument === undefined ? null : Number.parseInt(tierArgument.slice('--tier='.length), 10);
+  const selectedTier = tierZoom === null ? null : DETAIL_TIERS.find((tier) => tier.zoom === tierZoom) ?? null;
+  if (tierArgument !== undefined && selectedTier === null)
+    throw new Error('Неизвестный уровень детализации. Допустимы --tier=14, --tier=15 или --tier=16.');
+  const arcgisToken = process.env.ARCGIS_TOKEN?.trim() ?? '';
+  const tiles = enumerateTiles(includeDetail, selectedTier);
+  const minimumZoom = selectedTier?.zoom ?? MIN_ZOOM;
+  const maximumZoom = selectedTier?.zoom ?? (includeDetail ? DETAIL_TIERS.at(-1).zoom : MAX_ZOOM);
+  console.log(`Prepared ${tiles.length} imagery tiles (z${minimumZoom}-${maximumZoom})`);
+  if (includeDetail && selectedTier === null) {
+    console.log('Detailed tiers:');
+    for (const tier of DETAIL_TIERS) {
+      const count = enumerateBounds(tier.bounds, tier.zoom, tier.zoom, 'arcgis-export').length;
+      console.log(`  z${tier.zoom}: ${count} tiles, ${tier.bounds.join(',')}`);
+    }
+  }
+  if (planOnly) return;
   await mkdir(resolve(output, '..'), { recursive: true });
   await rm(output, { force: true });
 
@@ -73,27 +124,36 @@ async function main() {
     CREATE UNIQUE INDEX tile_index ON tiles (zoom_level, tile_column, tile_row);
   `);
   const insertMetadata = database.prepare('INSERT INTO metadata (name, value) VALUES (?, ?)');
+  const archiveBounds = selectedTier?.bounds ?? BOUNDS;
   const metadata = {
-    name: 'HIMKONTUR Monchegorsk satellite 2016',
+    name: selectedTier !== null
+      ? `HIMKONTUR Monchegorsk offline satellite z${selectedTier.zoom}`
+      : (includeDetail ? 'HIMKONTUR Monchegorsk detailed offline satellite' : 'HIMKONTUR Monchegorsk satellite 2016'),
     type: 'baselayer', version: '1',
-    description: 'Offline Sentinel-2 cloudless imagery for the HIMKONTUR operating area',
-    format: 'jpg', bounds: BOUNDS.join(','), center: '32.86534,67.92528,12',
-    minzoom: String(MIN_ZOOM), maxzoom: String(MAX_ZOOM), attribution: ATTRIBUTION,
+    description: selectedTier !== null
+      ? `Offline high-resolution imagery z${selectedTier.zoom} for the HIMKONTUR operating area`
+      : (includeDetail
+        ? 'Offline Sentinel-2 base with licensed nested high-resolution imagery for the HIMKONTUR operating area'
+        : 'Offline Sentinel-2 cloudless imagery for the HIMKONTUR operating area'),
+    format: 'jpg', bounds: archiveBounds.join(','), center: '32.86534,67.92528,12',
+    minzoom: String(minimumZoom), maxzoom: String(maximumZoom),
+    attribution: selectedTier !== null
+      ? DETAIL_ATTRIBUTION
+      : (includeDetail ? `${BASE_ATTRIBUTION}; ${DETAIL_ATTRIBUTION}` : BASE_ATTRIBUTION),
   };
   database.exec('BEGIN');
   for (const [name, value] of Object.entries(metadata)) insertMetadata.run(name, value);
   database.exec('COMMIT');
   const insertTile = database.prepare('INSERT INTO tiles (zoom_level, tile_column, tile_row, tile_data) VALUES (?, ?, ?, ?)');
 
-  const tiles = enumerateTiles();
-  console.log(`Downloading ${tiles.length} imagery tiles (z${MIN_ZOOM}-${MAX_ZOOM})`);
+  console.log(`Downloading ${tiles.length} imagery tiles (z${MIN_ZOOM}-${maximumZoom})`);
   let next = 0;
   let completed = 0;
   const runWorker = async () => {
     while (next < tiles.length) {
       const tile = tiles[next];
       next += 1;
-      const result = await downloadTile(tile);
+      const result = await downloadTile(tile, arcgisToken);
       const tmsRow = (2 ** result.zoom) - 1 - result.row;
       insertTile.run(result.zoom, result.column, tmsRow, result.data);
       completed += 1;
