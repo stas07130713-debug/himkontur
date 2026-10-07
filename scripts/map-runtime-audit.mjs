@@ -77,6 +77,7 @@ try {
       archiveMode: host?.dataset.archiveMode ?? '',
       satelliteLoaded: host?.dataset.satelliteLoaded ?? '',
       satelliteFailed: host?.dataset.satelliteFailed ?? '',
+      satelliteProvider: host?.dataset.satelliteProvider ?? '',
       renderMode: host?.dataset.renderMode ?? '',
       canvasSignature,
       sourceReady: host?.dataset.sourceReady ?? '',
@@ -198,7 +199,7 @@ try {
     changed: recoveredSatellite.canvasSignature !== beforeRecoverySwitch.canvasSignature,
   });
 
-  const failures = cases.filter((item) => item.status === 'missing' || item.status === 'error' || item.canvasWidth < 100 || item.canvasHeight < 100 || ((item.name.endsWith('-control') || item.name.includes('-switch') || item.name.includes('-persistence') || item.name === 'width-measure-drag') && item.changed !== true) || (item.name.includes('online-satellite') && item.satelliteLoaded !== 'true'));
+  const failures = cases.filter((item) => item.status === 'missing' || item.status === 'error' || item.canvasWidth < 100 || item.canvasHeight < 100 || ((item.name.endsWith('-control') || item.name.includes('-switch') || item.name.includes('-persistence') || item.name === 'width-measure-drag') && item.changed !== true) || (item.name.includes('online-satellite') && (item.satelliteLoaded !== 'true' || item.satelliteProvider !== 'online-esri-world-imagery')) || (item.name === 'offline-satellite' && (item.satelliteLoaded !== 'true' || item.satelliteProvider !== 'offline-eox-sentinel-2')));
   const report = { passed: failures.length === 0 && consoleErrors.length === 0, serviceWorkerReady, cases, consoleErrors, failures };
   writeFileSync(resolve('artifacts', 'map-runtime-audit.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));

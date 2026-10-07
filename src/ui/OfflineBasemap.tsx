@@ -98,8 +98,13 @@ function ensurePmtilesProtocol() {
   protocolRegistered = true;
 }
 
-function satelliteTileTemplate(): string {
-  return 'localsatellite://tiles/{z}/{x}/{y}';
+function satelliteTileTemplate(useOnlineDetail: boolean): string {
+  if (!useOnlineDetail) return 'localsatellite://tiles/{z}/{x}/{y}';
+  // The Windows shell stores successfully opened detailed tiles on disk. Web
+  // and Android builds use the same provider directly; the PWA worker caches
+  // recent tiles where the host WebView supports service workers.
+  if (navigator.userAgent.includes('Electron')) return '/map-tiles/esri/{z}/{y}/{x}';
+  return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 }
 
 const LOCAL_LAYER_IDS = [
@@ -174,8 +179,14 @@ function concealIncompleteSatellite(map: MapLibreMap, container: HTMLDivElement)
   container.dataset.renderMode = 'standard-fallback';
 }
 
-function applyBasemap(map: MapLibreMap, basemap: Basemap, container: HTMLDivElement | null) {
+function applyBasemap(
+  map: MapLibreMap,
+  basemap: Basemap,
+  container: HTMLDivElement | null,
+  satelliteMode: 'auto' | 'local' = 'auto',
+) {
   const satellite = basemap === 'satellite';
+  const useOnlineDetail = satellite && satelliteMode === 'auto' && navigator.onLine;
   // Both basemaps are bundled. The vector layer remains underneath until the
   // complete local satellite frame is decoded, avoiding blank squares while
   // switching even on slower Android devices.
@@ -185,11 +196,13 @@ function applyBasemap(map: MapLibreMap, basemap: Basemap, container: HTMLDivElem
     const satelliteSourceId = `satellite-${++satelliteSourceSequence}`;
     map.addSource(satelliteSourceId, {
       type: 'raster',
-      tiles: [satelliteTileTemplate()],
+      tiles: [satelliteTileTemplate(useOnlineDetail)],
       tileSize: 256,
       minzoom: 0,
-      maxzoom: 13,
-      attribution: 'EOxCloudless © EOX IT Services GmbH · Copernicus Sentinel data 2016 · CC BY 4.0',
+      maxzoom: useOnlineDetail ? 19 : 13,
+      attribution: useOnlineDetail
+        ? 'Source: Esri World Imagery'
+        : 'EOxCloudless © EOX IT Services GmbH · Copernicus Sentinel data 2016 · CC BY 4.0',
     });
     map.addLayer({
       id: 'satellite-imagery',
@@ -205,6 +218,9 @@ function applyBasemap(map: MapLibreMap, basemap: Basemap, container: HTMLDivElem
     else delete container.dataset.satelliteSourceId;
     container.dataset.satelliteLoaded = 'false';
     container.dataset.satelliteFailed = 'false';
+    container.dataset.satelliteProvider = satellite
+      ? (useOnlineDetail ? 'online-esri-world-imagery' : 'offline-eox-sentinel-2')
+      : 'off';
     container.dataset.renderMode = satellite ? 'standard-fallback' : 'standard';
     delete container.dataset.mapError;
     delete container.dataset.satelliteError;
@@ -275,6 +291,15 @@ export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: Geo
       if (optionalImageryFailure) {
         delete container.dataset.mapError;
         if (desiredBasemapRef.current === 'satellite') {
+          if (container.dataset.satelliteProvider === 'online-esri-world-imagery') {
+            container.dataset.satelliteProvider = 'switching-to-offline';
+            window.setTimeout(() => {
+              if (desiredBasemapRef.current !== 'satellite' || !mapReadyRef.current) return;
+              applyBasemap(map, 'satellite', container, 'local');
+              appliedBasemapRef.current = 'satellite';
+            }, 0);
+            return;
+          }
           if (container.dataset.satelliteLoaded === 'true') {
             container.dataset.satelliteError = message;
             return;
@@ -308,12 +333,25 @@ export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: Geo
         }
       }, 1200);
     };
+    const useOfflineSatellite = () => {
+      window.clearTimeout(retryTimer);
+      if (
+        desiredBasemapRef.current === 'satellite' &&
+        mapReadyRef.current &&
+        container.dataset.satelliteProvider === 'online-esri-world-imagery'
+      ) {
+        applyBasemap(map, 'satellite', container, 'local');
+        appliedBasemapRef.current = 'satellite';
+      }
+    };
     window.addEventListener('online', retrySatellite);
+    window.addEventListener('offline', useOfflineSatellite);
     const observer = new ResizeObserver(() => map.resize());
     observer.observe(container);
     return () => {
       observer.disconnect();
       window.removeEventListener('online', retrySatellite);
+      window.removeEventListener('offline', useOfflineSatellite);
       window.clearTimeout(retryTimer);
       window.clearInterval(auditTimer);
       map.remove();
@@ -335,6 +373,8 @@ export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: Geo
     mapRef.current?.jumpTo({ center: [center.longitude, center.latitude], zoom });
   }, [center.latitude, center.longitude, zoom]);
 
-  const tileSource = basemap === 'satellite' ? 'local-satellite-pmtiles' : 'local-vector-pmtiles';
+  const tileSource = basemap === 'satellite'
+    ? 'online-detail-with-local-satellite-fallback'
+    : 'local-vector-pmtiles';
   return <div className="offline-vector-map" ref={containerRef} data-basemap={basemap} data-tile-source={tileSource} aria-hidden="true" />;
 }
