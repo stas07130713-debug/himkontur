@@ -4,7 +4,7 @@ export function cleanVersion(value: string): number[] {
 
 /** Compares the installed build only with the latest published release.
  * There is deliberately no sequential-update rule: 0.3.11 can install
- * 0.3.13 directly when that is the latest stable release.
+ * 0.3.14 directly when that is the latest stable release.
  */
 export function isNewerVersion(candidate: string, installed: string): boolean {
   const left = cleanVersion(candidate);
