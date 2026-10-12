@@ -536,6 +536,36 @@ try {
         }
       }
     }
+    if (photoInput instanceof HTMLInputElement) {
+      // A screenshot of a photograph contains browser chrome, wide orange UI
+      // controls and often an orange tanker body. The compact ADR plate must
+      // outrank those decoys instead of being lost when the screen is reduced.
+      const screen = document.createElement('canvas'); screen.width = 1920; screen.height = 1080;
+      const context = screen.getContext('2d');
+      if (context !== null) {
+        context.fillStyle = '#e9edee'; context.fillRect(0, 0, 1920, 1080);
+        context.fillStyle = '#d6dddd'; context.fillRect(0, 0, 1920, 96);
+        context.fillStyle = '#f8faf9'; context.fillRect(150, 125, 1620, 825);
+        context.fillStyle = '#d66f24'; context.fillRect(330, 260, 1200, 500);
+        context.fillStyle = '#bfc5c5'; context.fillRect(330, 760, 1200, 120);
+        context.fillStyle = '#e7832d'; context.fillRect(1160, 545, 255, 185);
+        context.strokeStyle = '#111'; context.lineWidth = 10; context.strokeRect(1160, 545, 255, 185);
+        context.fillStyle = '#111'; context.textAlign = 'center'; context.font = 'bold 58px Arial';
+        context.fillText('30', 1288, 620); context.fillRect(1170, 635, 235, 9); context.font = 'bold 66px Arial'; context.fillText('1202', 1288, 710);
+        context.fillStyle = '#f08b24'; context.fillRect(60, 970, 620, 70);
+        context.fillStyle = '#fff'; context.font = 'bold 28px Arial'; context.fillText('Открыть фотографию', 370, 1015);
+        const blob = await new Promise((resolveBlob) => screen.toBlob(resolveBlob, 'image/png'));
+        if (blob !== null) {
+          const transfer = new DataTransfer(); transfer.items.add(new File([blob], 'placard-inside-screen.png', { type: 'image/png' }));
+          Object.defineProperty(photoInput, 'files', { configurable: true, value: transfer.files });
+          const startedAt = performance.now(); photoInput.dispatchEvent(new Event('change', { bubbles: true }));
+          for (let attempt = 0; attempt < 120 && (document.querySelector('.recognition-progress') !== null || document.querySelectorAll('.recognized-placard input')[1]?.value !== '1202'); attempt += 1) await wait(150);
+          const pair = [...document.querySelectorAll('.recognized-placard input')].map((input) => input.value).join('/');
+          check('offline OCR recognizes a visible placard inside a full-screen screenshot', pair === '30/1202', pair + ' ' + (document.querySelector('.recognition-error')?.textContent ?? '') + ' OCR=' + (document.documentElement.dataset.ocrDebug ?? ''));
+          check('screen-captured placard stays within the mobile response budget', performance.now() - startedAt <= 18000, Math.round(performance.now() - startedAt) + ' ms');
+        }
+      }
+    }
     check('photo OCR uses only bundled local worker, model and language data', performance.getEntriesByType('resource').filter((entry) => (/tesseract|traineddata/u.test(entry.name) || entry.name.includes('/ocr/')) && new URL(entry.name).origin !== location.origin).length === 0);
     check('photo workflow keeps exactly one confirmed cargo and cannot show competing substances', document.querySelectorAll('.recognized-placard').length === 1);
     check('starting photo recognition clears the search candidate and old substance card', unInput instanceof HTMLInputElement && unInput.value === '' && document.querySelector('.goods-hero') === null);

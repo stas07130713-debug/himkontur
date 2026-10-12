@@ -18,6 +18,11 @@ const offlineArchiveFiles: Record<OfflineArchiveKind, string> = {
   'satellite-detail-16': 'monchegorsk-satellite-detail-z16-v2.pmtiles',
 };
 let satelliteSourceSequence = 0;
+// The application view reaches approximately z16.2 at its 2400% limit. Online
+// Esri sometimes serves an opaque "no data" square at local z14-z16. The
+// verified bundled detail tiers take over there; the online layer stays useful
+// for the wider view and never covers valid local detail with an error tile.
+const ONLINE_SATELLITE_NATIVE_MAX_ZOOM = 13;
 setWorkerUrl(new URL(mapWorkerUrl, document.baseURI).href);
 
 function isNativeMobileRuntime(): boolean {
@@ -220,16 +225,18 @@ function applyBasemap(
   setLocalLayersVisible(map, true);
   removeSatelliteLayer(map);
   if (satellite) {
-    const satelliteSourceId = `satellite-${++satelliteSourceSequence}`;
+    const sequence = ++satelliteSourceSequence;
+    const satelliteSourceId = `satellite-local-${sequence}`;
+    // The complete autonomous stack is always present below the online layer.
+    // A missing or delayed network tile therefore exposes valid local imagery
+    // instead of an empty/error square, including at the maximum map zoom.
     map.addSource(satelliteSourceId, {
       type: 'raster',
-      tiles: [satelliteTileTemplate(useOnlineDetail)],
+      tiles: [satelliteTileTemplate(false)],
       tileSize: 256,
       minzoom: 0,
-      maxzoom: useOnlineDetail ? 19 : 13,
-      attribution: useOnlineDetail
-        ? 'Source: Esri World Imagery'
-        : 'EOxCloudless © EOX · Esri World Imagery (for Export)',
+      maxzoom: 13,
+      attribution: 'EOxCloudless © EOX · Esri World Imagery (for Export)',
     });
     map.addLayer({
       id: 'satellite-imagery',
@@ -237,25 +244,43 @@ function applyBasemap(
       source: satelliteSourceId,
       paint: { 'raster-fade-duration': 0, 'raster-opacity': 0.001 },
     });
-    if (!useOnlineDetail) {
-      for (const detailZoom of [14, 15, 16] as const) {
-        const detailSourceId = `satellite-detail-${detailZoom}-${satelliteSourceSequence}`;
-        map.addSource(detailSourceId, {
-          type: 'raster',
-          tiles: [`localsatellite${detailZoom}://tiles/{z}/{x}/{y}`],
-          tileSize: 256,
-          minzoom: detailZoom,
-          maxzoom: detailZoom,
-          attribution: 'Esri World Imagery (for Export)',
-        });
-        map.addLayer({
-          id: `satellite-detail-${detailZoom}`,
-          type: 'raster',
-          source: detailSourceId,
-          minzoom: detailZoom,
-          paint: { 'raster-fade-duration': 0, 'raster-opacity': 0.001 },
-        });
-      }
+    if (useOnlineDetail) {
+      const onlineSourceId = `satellite-online-${sequence}`;
+      map.addSource(onlineSourceId, {
+        type: 'raster',
+        tiles: [satelliteTileTemplate(true)],
+        tileSize: 256,
+        minzoom: 0,
+        maxzoom: ONLINE_SATELLITE_NATIVE_MAX_ZOOM,
+        attribution: 'Source: Esri World Imagery',
+      });
+      map.addLayer({
+        id: 'satellite-online-imagery',
+        type: 'raster',
+        source: onlineSourceId,
+        paint: { 'raster-fade-duration': 0, 'raster-opacity': 0.001 },
+      });
+    }
+    // Add verified local detail after the online layer so it is visually on
+    // top at close zooms. This is what guarantees that even an HTTP-200 Esri
+    // "no imagery" bitmap cannot hide the map with coloured squares.
+    for (const detailZoom of [14, 15, 16] as const) {
+      const detailSourceId = `satellite-detail-${detailZoom}-${sequence}`;
+      map.addSource(detailSourceId, {
+        type: 'raster',
+        tiles: [`localsatellite${detailZoom}://tiles/{z}/{x}/{y}`],
+        tileSize: 256,
+        minzoom: detailZoom,
+        maxzoom: detailZoom,
+        attribution: 'Esri World Imagery (for Export)',
+      });
+      map.addLayer({
+        id: `satellite-detail-${detailZoom}`,
+        type: 'raster',
+        source: detailSourceId,
+        minzoom: detailZoom,
+        paint: { 'raster-fade-duration': 0, 'raster-opacity': 0.001 },
+      });
     }
   }
   if (container !== null) {

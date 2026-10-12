@@ -158,6 +158,20 @@ try {
     ...satelliteAfterZoom,
     changed: satelliteAfterZoom.satelliteLoaded === 'true' && satelliteAfterZoom.renderMode === 'satellite',
   });
+  for (let step = 0; step < 45; step += 1)
+    await evaluate(`document.querySelector('button[aria-label="Увеличить карту"]')?.click()`);
+  await delay(2600);
+  const satelliteAtMaximum = await inspect();
+  cases.push({
+    name: 'online-satellite-maximum-zoom',
+    ...satelliteAtMaximum,
+    changed: Number(satelliteAtMaximum.zoom) >= 15.5 && satelliteAtMaximum.satelliteLoaded === 'true' && satelliteAtMaximum.renderMode === 'satellite',
+  });
+  const maximumShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+  writeFileSync(resolve('artifacts', 'map-online-maximum-audit.png'), Buffer.from(maximumShot.data, 'base64'));
+  for (let step = 0; step < 12; step += 1)
+    await evaluate(`document.querySelector('button[aria-label="Уменьшить карту"]')?.click()`);
+  await delay(300);
   await evaluate(`document.querySelector('.map-toolbar .segmented button:nth-child(1)')?.click()`);
   await delay(1200);
   const standardAgain = await inspect();
@@ -211,7 +225,7 @@ try {
     changed: recoveredSatellite.canvasSignature !== beforeRecoverySwitch.canvasSignature,
   });
 
-  const failures = cases.filter((item) => item.status === 'missing' || item.status === 'error' || item.canvasWidth < 100 || item.canvasHeight < 100 || ((item.name.endsWith('-control') || item.name.includes('-switch') || item.name.includes('-persistence') || item.name === 'width-measure-drag' || item.name === 'offline-satellite-detail-zoom') && item.changed !== true) || (item.name.includes('online-satellite') && (item.satelliteLoaded !== 'true' || item.satelliteProvider !== 'online-esri-world-imagery')) || (item.name.startsWith('offline-satellite') && (item.satelliteLoaded !== 'true' || item.satelliteProvider !== 'offline-detailed-imagery')));
+  const failures = cases.filter((item) => item.status === 'missing' || item.status === 'error' || item.canvasWidth < 100 || item.canvasHeight < 100 || ((item.name.endsWith('-control') || item.name.includes('-switch') || item.name.includes('-persistence') || item.name.includes('maximum-zoom') || item.name === 'width-measure-drag' || item.name === 'offline-satellite-detail-zoom') && item.changed !== true) || (item.name.includes('online-satellite') && (item.satelliteLoaded !== 'true' || item.satelliteProvider !== 'online-esri-world-imagery')) || (item.name.startsWith('offline-satellite') && (item.satelliteLoaded !== 'true' || item.satelliteProvider !== 'offline-detailed-imagery')));
   const report = { passed: failures.length === 0 && consoleErrors.length === 0, serviceWorkerReady, cases, consoleErrors, failures };
   writeFileSync(resolve('artifacts', 'map-runtime-audit.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));

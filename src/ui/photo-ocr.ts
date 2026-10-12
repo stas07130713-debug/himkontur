@@ -4,9 +4,13 @@ type Rectangle = Readonly<{ x: number; y: number; width: number; height: number;
 
 function orangePixel(red: number, green: number, blue: number): boolean {
   // Real placards are frequently photographed in shade or overexposed by a
-  // phone camera. A narrow RGB interval rejected both pale yellow-orange and
-  // dark orange plates even though their hue was still unambiguous.
-  return red >= 105 && green >= 30 && blue <= 175 && red - green >= 18 && red - blue >= 35 && green >= blue * .75;
+  // phone camera. Screenshots and photos of a display additionally desaturate
+  // orange through colour profiles, anti-aliasing and moire. Use relative
+  // channel distances instead of the former narrow RGB interval, while the
+  // geometry/density checks below keep beige UI panels out of the candidates.
+  const maximum = Math.max(red, green, blue); const minimum = Math.min(red, green, blue);
+  const saturation = maximum === 0 ? 0 : (maximum - minimum) / maximum;
+  return red >= 90 && red >= green && green >= blue * .55 && red - green >= 10 && red - blue >= 22 && blue <= 215 && saturation >= .11;
 }
 
 function orangeRectangles(image: ImageData): readonly Rectangle[] {
@@ -44,10 +48,16 @@ function orangeRectangles(image: ImageData): readonly Rectangle[] {
     // latter merely because the orange field is large.
     if (boxWidth < 12 || boxHeight < 7 || ratio < .55 || ratio > 4.5 || relativeArea < .00008 || relativeArea > .82 || density < .08) continue;
     const sizeScore = Math.min(1, relativeArea / .012);
+    // A complete ADR orange plate is approximately square, whereas orange
+    // buttons and notification bars in a screenshot are usually very wide.
+    // Prioritising this geometry lets a visible plate inside a screen capture
+    // outrank the surrounding application/browser UI without discarding an
+    // isolated, wider UN-number row from a distant tanker photograph.
+    const shapeQuality = ratio >= .68 && ratio <= 2.35 ? 1 : ratio <= 3.4 ? .45 : .18;
     const meanX = sumX / count; const meanY = sumY / count;
     const covarianceXX = sumXX / count - meanX * meanX; const covarianceYY = sumYY / count - meanY * meanY; const covarianceXY = sumXY / count - meanX * meanY;
     const angle = .5 * Math.atan2(2 * covarianceXY, covarianceXX - covarianceYY);
-    rectangles.push({ x: minX, y: minY, width: boxWidth, height: boxHeight, score: density * (.8 + sizeScore), angle });
+    rectangles.push({ x: minX, y: minY, width: boxWidth, height: boxHeight, score: density * (.8 + sizeScore) * (.45 + shapeQuality), angle });
   }
   return rectangles.sort((left, right) => right.score - left.score).slice(0, 16);
 }
@@ -70,13 +80,13 @@ function stackedPlacards(rectangles: readonly Rectangle[]): readonly Rectangle[]
     const horizontalMatch = overlap / Math.max(1, Math.min(upper.width, lower.width));
     const centreDifference = Math.abs((upper.x + upper.width / 2) - (lower.x + lower.width / 2));
     const verticalGap = lower.y - (upper.y + upper.height);
-    if (horizontalMatch < .72 || centreDifference > Math.max(upper.width, lower.width) * .22 || verticalGap < -Math.min(upper.height, lower.height) * .2 || verticalGap > Math.max(upper.height, lower.height) * .65) continue;
+    if (horizontalMatch < .55 || centreDifference > Math.max(upper.width, lower.width) * .32 || verticalGap < -Math.min(upper.height, lower.height) * .3 || verticalGap > Math.max(upper.height, lower.height) * 1.1) continue;
     const x = Math.min(upper.x, lower.x); const y = upper.y;
     const width = Math.max(upper.x + upper.width, lower.x + lower.width) - x;
     const height = lower.y + lower.height - y;
     const ratio = width / Math.max(1, height);
-    if (ratio < .65 || ratio > 2.8) continue;
-    merged.push({ x, y, width, height, score: (upper.score + lower.score) / 2 + .35, angle: (upper.angle ?? 0) * .5 + (lower.angle ?? 0) * .5 });
+    if (ratio < .55 || ratio > 3.2) continue;
+    merged.push({ x, y, width, height, score: (upper.score + lower.score) / 2 + .7, angle: (upper.angle ?? 0) * .5 + (lower.angle ?? 0) * .5 });
   }
   return merged;
 }
@@ -189,7 +199,10 @@ function contextCandidates(bitmap: ImageBitmap, rectangle: Rectangle, index: num
 export async function prepareOcrCandidates(file: File): Promise<readonly OcrCandidate[]> {
   const bitmap = await createImageBitmap(file);
   try {
-    const analysisScale = Math.min(1, 900 / bitmap.width, 900 / bitmap.height);
+    // A screenshot may contain a clearly visible placard in only a small part
+    // of the frame. Preserve a little more localization detail than ordinary
+    // camera photographs without sending the full multi-megapixel image to OCR.
+    const analysisScale = Math.min(1, 1100 / bitmap.width, 1100 / bitmap.height);
     const analysis = document.createElement('canvas'); analysis.width = Math.max(1, Math.round(bitmap.width * analysisScale)); analysis.height = Math.max(1, Math.round(bitmap.height * analysisScale));
     const context = analysis.getContext('2d', { willReadFrequently: true });
     if (context === null) return [];
@@ -219,15 +232,23 @@ export async function prepareOcrCandidates(file: File): Promise<readonly OcrCand
       ];
       if (index === 0) primaryCandidates.push(...main);
       else secondaryCandidates.push(...main);
+      // Raw row crops are important for screenshots: display scaling may make
+      // thresholded digits thinner than the originals. Keep the lightweight
+      // raw trio for both shortlisted regions; expensive enhancement variants
+      // remain limited to the strongest one.
+      const raw = [
+        cropCandidate(bitmap, rectangle, `исходная табличка целиком ${index + 1}`, index, 'whole'),
+        cropCandidate(bitmap, upper, `исходная верхняя строка ${index + 1}`, index, 'upper'),
+        cropCandidate(bitmap, lower, `исходная нижняя строка ${index + 1}`, index, 'lower'),
+      ];
       if (index === 0) fallbackCandidates.push(
-        cropCandidate(bitmap, rectangle, 'исходная табличка целиком 1', index, 'whole'),
-        cropCandidate(bitmap, upper, 'исходная верхняя строка 1', index, 'upper'),
-        cropCandidate(bitmap, lower, 'исходная нижняя строка 1', index, 'lower'),
+        ...raw,
         cropCandidate(bitmap, lower, 'мягкая нижняя строка 1', index, 'lower', -24),
         cropCandidate(bitmap, upper, 'очищенная верхняя строка 1', index, 'upper', 0, .055, true),
         cropCandidate(bitmap, lower, 'очищенная нижняя строка 1', index, 'lower', 0, .055, true),
         cropCandidate(bitmap, lower, 'нижняя строка без рамки 1', index, 'lower', 0, .095)
       );
+      else secondaryCandidates.push(...raw);
     }
     const closeUpCandidates: OcrCandidate[] = [];
     // A close-up of the orange plate is a common mobile input. Always add a
