@@ -11,12 +11,19 @@ import { evaluateControlPoint } from "../core/geo";
 import { round } from "../core/math";
 import { buildPlumeBands } from "../core/plume-shape";
 import type { CalculationResult, GeoPoint } from "../core/types";
-import { MAP_BOUNDS } from "./defaults";
+import { MAP_BOUNDS, MAP_INITIAL_CENTER } from "./defaults";
 import { MapLegend } from "./MapLegend";
 import type { ControlTemplate } from "./ControlPalette";
 import type { SourceConfiguration, SourceKind } from "./source-library";
 import { appAssetUrl } from "./app-url";
 import { OfflineBasemap } from "./OfflineBasemap";
+import type { DistrictMapObject } from "./district-map-model";
+import { DistrictMapMarker } from "./DistrictMapMarker";
+import { declutterDistrictMarkers } from "./district-marker-layout";
+import { DistrictObjectToolbar } from "./DistrictObjectToolbar";
+import { CompassRose } from "./CompassRose";
+import { UiIcon } from "./UiIcon";
+import { MapRulerOverlay } from "./MapRulerOverlay";
 
 export type ControlPoint = Readonly<{
   id: string;
@@ -28,6 +35,7 @@ export type Basemap = "standard" | "satellite";
 type Props = Readonly<{
   result: CalculationResult | null;
   calculationStarted: boolean;
+  calculationRevision?: number;
   sourcePlaced: boolean;
   sourcePoint: GeoPoint;
   sourceLabel: string;
@@ -36,6 +44,7 @@ type Props = Readonly<{
   windFromDegrees: number;
   windSpeedMps: number;
   controls: readonly ControlPoint[];
+  districtObjects?: readonly DistrictMapObject[];
   basemap: Basemap;
   onBasemapChange: (basemap: Basemap) => void;
   onSourceChange: (point: GeoPoint) => void;
@@ -170,58 +179,6 @@ function MapBuildingIcon({
     />
   );
 }
-function CompassRose({ rotation }: Readonly<{ rotation: number }>) {
-  return (
-    <div
-      className="compass-rose"
-      title="Стороны света"
-      style={{ transform: `rotate(${rotation}deg)` }}
-    >
-      <svg viewBox="0 0 120 120" aria-hidden="true">
-        <defs>
-          <radialGradient id="compass-face" cx="42%" cy="35%">
-            <stop offset="0" stopColor="#164d5f" />
-            <stop offset="1" stopColor="#031e2c" />
-          </radialGradient>
-          <filter id="compass-glow">
-            <feDropShadow
-              dx="0"
-              dy="2"
-              stdDeviation="2"
-              floodColor="#00151f"
-              floodOpacity=".65"
-            />
-          </filter>
-        </defs>
-        <circle className="compass-bezel" cx="60" cy="60" r="55" />
-        <circle className="compass-disc" cx="60" cy="60" r="49" />
-        <circle className="compass-ring" cx="60" cy="60" r="38" />
-        <path
-          className="compass-minor-ticks"
-          d="M60 13v5M60 102v5M13 60h5M102 60h5M27 27l4 4M89 89l4 4M93 27l-4 4M31 89l-4 4"
-        />
-        <path className="compass-north" d="M60 23 69 60 60 54 51 60Z" />
-        <path className="compass-south" d="M60 97 69 60 60 66 51 60Z" />
-        <circle className="compass-hub-outer" cx="60" cy="60" r="6" />
-        <circle className="compass-hub" cx="60" cy="60" r="3" />
-        <g className="compass-cardinals">
-          <text x="60" y="12">
-            С
-          </text>
-          <text x="60" y="111">
-            Ю
-          </text>
-          <text x="11" y="63">
-            З
-          </text>
-          <text x="109" y="63">
-            В
-          </text>
-        </g>
-      </svg>
-    </div>
-  );
-}
 function plumePath(
   x: number,
   y: number,
@@ -263,16 +220,25 @@ function plumeBandPath(
 }
 
 export function MapCanvas(props: Props) {
-  const [zoom, setZoom] = useState(1);
-  const [mapCenter, setMapCenter] = useState<GeoPoint>(props.sourcePoint);
-  const [rotation, setRotation] = useState(0);
+  const [zoom, setZoom] = useState(1.65);
+  const [mapCenter, setMapCenter] = useState<GeoPoint>(MAP_INITIAL_CENTER);
+  const rotation = 0;
   const [showPrimary, setShowPrimary] = useState(true);
   const [showSecondary, setShowSecondary] = useState(true);
+  const [showDistrictBuildings, setShowDistrictBuildings] = useState(false);
+  const [showDistrictHydrants, setShowDistrictHydrants] = useState(false);
+  const [districtToolsOpen, setDistrictToolsOpen] = useState(false);
+  const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null);
+  const [hoveredDistrictId, setHoveredDistrictId] = useState<string | null>(null);
+  const [searchDistrictId, setSearchDistrictId] = useState<string | null>(null);
   const [objectsLocked, setObjectsLocked] = useState(false);
   const [online, setOnline] = useState(() => navigator.onLine);
   const [draggingSource, setDraggingSource] = useState(false);
   const [panning, setPanning] = useState(false);
   const [widthMeasureFraction, setWidthMeasureFraction] = useState<number | null>(null);
+  const [rulerActive, setRulerActive] = useState(false);
+  const [rulerPoints, setRulerPoints] = useState<readonly GeoPoint[]>([]);
+  const [searchResetSignal, setSearchResetSignal] = useState(0);
   const [contextMenu, setContextMenu] = useState<
     | { target: "control"; control: ControlPoint; x: number; y: number }
     | { target: "source"; x: number; y: number }
@@ -298,6 +264,15 @@ export function MapCanvas(props: Props) {
     clientY: number;
     center: GeoPoint;
   } | null>(null);
+  const rulerRightPanRef = useRef<{
+    pointerId: number;
+    clientX: number;
+    clientY: number;
+    center: GeoPoint;
+    timer: number;
+    active: boolean;
+  } | null>(null);
+  const suppressRulerContextMenuRef = useRef(false);
   const touchPointsRef = useRef(new Map<number, { clientX: number; clientY: number }>());
   const pinchRef = useRef<{ distance: number } | null>(null);
   const longPressRef = useRef<{ timer: number; pointerId: number; clientX: number; clientY: number } | null>(null);
@@ -366,7 +341,13 @@ export function MapCanvas(props: Props) {
   }, [viewHeight, viewWidth, zoom]);
   useEffect(() => {
     setObjectsLocked(props.calculationStarted);
-  }, [props.calculationStarted]);
+    if (props.calculationStarted) {
+      setDistrictToolsOpen(false);
+      setShowDistrictBuildings(false);
+      setShowDistrictHydrants(false);
+      setSearchDistrictId(null);
+    }
+  }, [props.calculationRevision, props.calculationStarted]);
   useEffect(() => {
     setWidthMeasureFraction(null);
   }, [props.result]);
@@ -389,9 +370,7 @@ export function MapCanvas(props: Props) {
     () => Math.max(0, Math.min(22, Math.log2(projection.worldPixels / 512))),
     [projection.worldPixels],
   );
-  const rotationRadians = (rotation * Math.PI) / 180;
-  const rotationCoverScale =
-    Math.abs(Math.cos(rotationRadians)) + Math.abs(Math.sin(rotationRadians));
+  const rotationCoverScale = 1;
   const inverseRotation = (x: number, y: number) => {
     const angle = (rotation * Math.PI) / 180;
     return {
@@ -453,7 +432,7 @@ export function MapCanvas(props: Props) {
   const onSourcePointerDown = (event: ReactPointerEvent<SVGGElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    if (event.button !== 0 || objectsLocked) return;
+    if (event.button !== 0 || objectsLocked || rulerActive) return;
     sourcePointerRef.current = { pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, active: false };
     svgRef.current?.setPointerCapture(event.pointerId);
   };
@@ -463,7 +442,7 @@ export function MapCanvas(props: Props) {
   ) => {
     event.preventDefault();
     event.stopPropagation();
-    if (event.button !== 0 || objectsLocked) return;
+    if (event.button !== 0 || objectsLocked || rulerActive) return;
     props.onControlDragStart?.(control);
     controlPointerRef.current = { pointerId: event.pointerId, id: control.id };
     svgRef.current?.setPointerCapture(event.pointerId);
@@ -471,12 +450,31 @@ export function MapCanvas(props: Props) {
   const onWidthPointerDown = (event: ReactPointerEvent<SVGGElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    if (event.button !== 0 || props.result === null) return;
+    if (event.button !== 0 || props.result === null || rulerActive) return;
     widthPointerRef.current = { pointerId: event.pointerId };
     svgRef.current?.setPointerCapture(event.pointerId);
   };
   const onMapPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
     setContextMenu(null);
+    if (rulerActive && event.button === 2) {
+      event.preventDefault();
+      const held = {
+        pointerId: event.pointerId,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        center: mapCenter,
+        timer: 0,
+        active: false,
+      };
+      held.timer = window.setTimeout(() => {
+        if (rulerRightPanRef.current?.pointerId !== event.pointerId) return;
+        rulerRightPanRef.current.active = true;
+        setPanning(true);
+      }, 320);
+      rulerRightPanRef.current = held;
+      svgRef.current?.setPointerCapture(event.pointerId);
+      return;
+    }
     if (
       event.button !== 0 ||
       sourcePointerRef.current !== null ||
@@ -485,6 +483,11 @@ export function MapCanvas(props: Props) {
     )
       return;
     event.preventDefault();
+    if (rulerActive) {
+      const point = locate(event.clientX, event.clientY);
+      if (point !== null) setRulerPoints((current) => [...current, point]);
+      return;
+    }
     if (event.pointerType === 'touch') {
       touchPointsRef.current.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
       if (touchPointsRef.current.size === 1) {
@@ -516,6 +519,20 @@ export function MapCanvas(props: Props) {
     setPanning(true);
   };
   const onPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
+    const rulerPan = rulerRightPanRef.current;
+    if (rulerPan?.pointerId === event.pointerId) {
+      if (!rulerPan.active) return;
+      const stage = stageRef.current;
+      if (stage === null) return;
+      const rect = stage.getBoundingClientRect();
+      const delta = inverseRotation(event.clientX - rulerPan.clientX, event.clientY - rulerPan.clientY);
+      const startWorld = worldCoordinate(rulerPan.center);
+      setMapCenter(clampMapCenter(geoFromWorld(
+        startWorld.x - ((delta.x / rotationCoverScale) * viewWidth) / rect.width / projection.worldPixels,
+        startWorld.y - ((delta.y / rotationCoverScale) * viewHeight) / rect.height / projection.worldPixels,
+      ), viewWidth, viewHeight, zoom));
+      return;
+    }
     if (event.pointerType === 'touch' && touchPointsRef.current.has(event.pointerId)) {
       const previous = touchPointsRef.current.get(event.pointerId);
       touchPointsRef.current.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
@@ -590,6 +607,14 @@ export function MapCanvas(props: Props) {
     ), viewWidth, viewHeight, zoom));
   };
   const finishPointer = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (rulerRightPanRef.current?.pointerId === event.pointerId) {
+      const completed = rulerRightPanRef.current;
+      window.clearTimeout(completed.timer);
+      rulerRightPanRef.current = null;
+      if (completed.active) suppressRulerContextMenuRef.current = true;
+      else setRulerPoints([]);
+      setPanning(false);
+    }
     if (longPressRef.current?.pointerId === event.pointerId) { window.clearTimeout(longPressRef.current.timer); longPressRef.current = null; }
     touchPointsRef.current.delete(event.pointerId);
     if (touchPointsRef.current.size < 2) pinchRef.current = null;
@@ -723,46 +748,75 @@ export function MapCanvas(props: Props) {
         : SOURCE_IMAGE_PATHS[props.sourceKind]
       : appAssetUrl(props.sourceImageDataUrl);
   const hasControls = props.controls.length > 0;
+  const districtObjects = props.districtObjects ?? [];
+  const visibleDistrictObjects = districtObjects.filter((object) =>
+    object.id === searchDistrictId || (object.kind === "building" ? showDistrictBuildings : showDistrictHydrants),
+  );
+  const districtMarkerDetailLevel = zoom >= 4.2 ? "full" : "compact";
+  const districtMarkerScale = Math.max(0.2, Math.min(1, zoom / 4.8));
+  const districtMarkerPlacements = [...declutterDistrictMarkers(
+    visibleDistrictObjects.map((object) => ({ object, ...projection.project(object.point) })),
+    viewWidth,
+    viewHeight,
+  )].sort((left, right) => {
+    const priority = (id: string) => id === hoveredDistrictId ? 2 : id === selectedDistrictId || id === searchDistrictId ? 1 : 0;
+    return priority(left.object.id) - priority(right.object.id);
+  });
+  const focusDistrictObject = (object: DistrictMapObject) => {
+    setMapCenter(clampMapCenter(object.point, viewWidth, viewHeight, 5));
+    setZoom((current) => Math.max(current, 5));
+    setSelectedDistrictId(object.id);
+  };
   return (
     <main className="map-column">
       <div className="map-toolbar">
-        <div className="map-tool-group">
-          <div className="segmented">
-            <button
-              className={props.basemap === "standard" ? "active" : ""}
-              onClick={() => props.onBasemapChange("standard")}
-            >
-              Карта
-            </button>
-            <button
-              className={props.basemap === "satellite" ? "active" : ""}
-              onClick={() => props.onBasemapChange("satellite")}
-            >
-              Спутник
-            </button>
+        <div className="map-tool-stack">
+          <div className="map-tool-group">
+            <div className="segmented">
+              <button
+                className={props.basemap === "standard" ? "active" : ""}
+                onClick={() => props.onBasemapChange("standard")}
+              >
+                Карта
+              </button>
+              <button
+                className={props.basemap === "satellite" ? "active" : ""}
+                onClick={() => props.onBasemapChange("satellite")}
+              >
+                Спутник
+              </button>
+            </div>
+            <div className="layer-toggles">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={showPrimary}
+                  onChange={(event) => setShowPrimary(event.currentTarget.checked)}
+                />
+                Первичное облако АХОВ
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={showSecondary}
+                  onChange={(event) => setShowSecondary(event.currentTarget.checked)}
+                />
+                Вторичное облако АХОВ
+              </label>
+            </div>
+            <button type="button" className={`district-tools-toggle${districtToolsOpen ? ' active' : ''}`} aria-expanded={districtToolsOpen} title="Поиск и отображение объектов района выезда" aria-label="Показать поиск зданий и пожарных гидрантов" onClick={() => setDistrictToolsOpen((current) => !current)}><UiIcon name="chevronDown" /></button>
           </div>
-          <div className="layer-toggles">
-            <label>
-              <input
-                type="checkbox"
-                checked={showPrimary}
-                onChange={(event) =>
-                  setShowPrimary(event.currentTarget.checked)
-                }
-              />
-              Первичное облако АХОВ
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={showSecondary}
-                onChange={(event) =>
-                  setShowSecondary(event.currentTarget.checked)
-                }
-              />
-              Вторичное облако АХОВ
-            </label>
-          </div>
+          {districtToolsOpen && <DistrictObjectToolbar
+            objects={districtObjects}
+            showBuildings={showDistrictBuildings}
+            showHydrants={showDistrictHydrants}
+            onShowBuildingsChange={setShowDistrictBuildings}
+            onShowHydrantsChange={setShowDistrictHydrants}
+            onFocus={focusDistrictObject}
+            onSearchSelectionChange={(object) => setSearchDistrictId(object?.id ?? null)}
+            resetSignal={searchResetSignal}
+            compact
+          />}
         </div>
         {props.sourcePlaced && (
           <div className="toolbar-wind-summary">
@@ -780,26 +834,6 @@ export function MapCanvas(props: Props) {
           </div>
         )}
       </div>
-        <div className="rotation-controls" aria-label="Поворот карты">
-          <button
-            title="Повернуть карту на 15° против часовой стрелки"
-            onClick={() => setRotation((value) => (value + 345) % 360)}
-          >
-            −15°
-          </button>
-          <button
-            title="Сбросить поворот: север вверх"
-            onClick={() => setRotation(0)}
-          >
-            Север ↑ · {rotation}°
-          </button>
-          <button
-            title="Повернуть карту на 15° по часовой стрелке"
-            onClick={() => setRotation((value) => (value + 15) % 360)}
-          >
-            +15°
-          </button>
-        </div>
         <div className="zoom">
           <button
             aria-label="Уменьшить карту"
@@ -837,6 +871,7 @@ export function MapCanvas(props: Props) {
           className={objectsLocked ? "source-lock locked" : "source-lock"}
           onClick={() => setObjectsLocked((value) => !value)}
         />
+        <button type="button" className={`map-ruler-control calculation-ruler-control${rulerActive ? ' active' : ''}`} aria-pressed={rulerActive} title="Линейка: ЛКМ — точки; удержание ПКМ — перемещение карты; короткая ПКМ — сброс" aria-label="Измерить расстояние" onClick={() => { setRulerActive((current) => !current); setRulerPoints([]); }}><img src={appAssetUrl('assets/ruler-glossy.png')} alt="" /></button>
       <div className={`map-surface ${props.basemap}`}>
         <div className="map-stage" ref={stageRef}>
           <div
@@ -849,7 +884,7 @@ export function MapCanvas(props: Props) {
             <OfflineBasemap center={mapCenter} zoom={mapLibreZoom} basemap={props.basemap} />
             <svg
               ref={svgRef}
-              className={panning ? "panning" : ""}
+              className={`${panning ? "panning" : ""}${rulerActive ? " ruler-active" : ""}`.trim()}
               viewBox={`0 0 ${viewWidth} ${viewHeight}`}
               onDrop={onDrop}
               onDragOver={(event) => event.preventDefault()}
@@ -860,6 +895,14 @@ export function MapCanvas(props: Props) {
               onLostPointerCapture={finishPointer}
               onContextMenu={(event) => {
                 event.preventDefault();
+                if (suppressRulerContextMenuRef.current) {
+                  suppressRulerContextMenuRef.current = false;
+                  return;
+                }
+                if (rulerActive) {
+                  setRulerPoints([]);
+                  return;
+                }
                 const rect = stageRef.current?.getBoundingClientRect();
                 const point = locate(event.clientX, event.clientY);
                 if (rect !== undefined && point !== null)
@@ -869,6 +912,14 @@ export function MapCanvas(props: Props) {
                     x: event.clientX - rect.left,
                     y: event.clientY - rect.top,
                   });
+              }}
+              onClick={(event) => {
+                const target = event.target as SVGElement;
+                if (target === event.currentTarget || target.classList.contains('map-base')) {
+                  setSelectedDistrictId(null);
+                  setSearchDistrictId(null);
+                  setSearchResetSignal((current) => current + 1);
+                }
               }}
               aria-label="Карта расчётной зоны"
             >
@@ -1164,6 +1215,24 @@ export function MapCanvas(props: Props) {
                   </g>
                 );
               })}
+              {districtMarkerPlacements.map(({ object, x, y }) => {
+                return (
+                  <DistrictMapMarker
+                    key={object.id}
+                    object={object}
+                    x={x}
+                    y={y}
+                    selected={selectedDistrictId === object.id}
+                    highlighted={searchDistrictId === object.id}
+                    interactionDisabled={rulerActive}
+                    detailLevel={districtMarkerDetailLevel}
+                    scale={districtMarkerScale}
+                    onSelect={() => setSelectedDistrictId(object.id)}
+                    onHoverChange={(hovered) => setHoveredDistrictId(hovered ? object.id : null)}
+                  />
+                );
+              })}
+              <MapRulerOverlay points={rulerPoints} project={projection.project} />
             </svg>
           </div>
           {!online && <div className="offline-map-status">{props.basemap === "standard" ? "Без интернета · автономная карта" : "Без интернета · автономный спутник"}</div>}

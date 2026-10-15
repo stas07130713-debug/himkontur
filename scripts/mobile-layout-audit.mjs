@@ -52,7 +52,7 @@ try {
           const actions = [...document.querySelectorAll('.file-actions > button:not(.history-action)')]
             .map((node) => node.getBoundingClientRect());
           const bar = document.querySelector('.file-actions')?.getBoundingClientRect();
-          return Boolean(bar && actions.length === 2 && Math.abs(actions[0].width - actions[1].width) <= 2 && actions[0].left >= bar.left && actions[1].right <= bar.right);
+          return Boolean(bar && actions.length === 2 && actions.every((rect) => Math.abs(actions[0].width - rect.width) <= 2 && rect.left >= bar.left && rect.right <= bar.right));
         })(),
         themeSwitch: visible('.topbar > .theme-switch'),
         themeDoesNotOverlapTabs: (() => {
@@ -72,19 +72,19 @@ try {
         })(),
         mapControlsRightAligned: (() => {
           const map = document.querySelector('.map-column')?.getBoundingClientRect();
-          const controls = [...document.querySelectorAll('.rotation-controls, .zoom, .source-focus, .source-lock')]
+          const controls = [...document.querySelectorAll('.zoom, .source-focus, .source-lock, .calculation-ruler-control')]
             .map((node) => node.getBoundingClientRect());
           return Boolean(map && controls.length === 4 && controls.every((rect) => rect.left >= map.left && rect.top >= map.top && rect.bottom <= map.bottom && Math.abs(map.right - rect.right) <= 12));
         })(),
         mapOverlayControlsDoNotOverlap: (() => {
           const map = document.querySelector('.map-column')?.getBoundingClientRect();
-          const controls = [...document.querySelectorAll('.compass-rose, .rotation-controls, .zoom, .source-focus, .source-lock')]
+          const controls = [...document.querySelectorAll('.compass-rose, .zoom, .source-focus, .source-lock, .calculation-ruler-control')]
             .map((node) => node.getBoundingClientRect());
           const overlaps = (a, b) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
           const insideMap = Boolean(map && controls.length === 5 && controls.every((rect) => rect.left >= map.left && rect.right <= map.right && rect.top >= map.top && rect.bottom <= map.bottom));
           return insideMap && controls.every((rect, index) => controls.slice(index + 1).every((other) => !overlaps(rect, other)));
         })(),
-        mapOverlayRects: [...document.querySelectorAll('.compass-rose, .rotation-controls, .zoom, .source-focus, .source-lock')]
+        mapOverlayRects: [...document.querySelectorAll('.compass-rose, .zoom, .source-focus, .source-lock, .calculation-ruler-control')]
           .map((node) => ({ className: node.className, ...node.getBoundingClientRect().toJSON() })),
         mapRect: document.querySelector('.map-column')?.getBoundingClientRect().toJSON(),
         right: visible('.right-column .results') && visible('.right-column .control-palette'),

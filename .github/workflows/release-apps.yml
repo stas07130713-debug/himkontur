@@ -99,6 +99,10 @@ jobs:
         with:
           path: release-assets
           merge-multiple: true
+      - name: Подготовить манифест последней Android-версии
+        shell: bash
+        run: |
+          printf '%s\n' '{"tag_name":"${{ github.ref_name }}","assets":[{"name":"HIMKONTUR-Android.apk","browser_download_url":"https://github.com/stas07130713-debug/himkontur/releases/latest/download/HIMKONTUR-Android.apk"}]}' > release-assets/latest-android.json
       - name: Опубликовать выпуск
         uses: softprops/action-gh-release@v2
         with:

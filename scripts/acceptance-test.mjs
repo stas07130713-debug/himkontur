@@ -166,7 +166,7 @@ try {
     check('compass matches the circular needle design', document.querySelector('.compass-disc') !== null && document.querySelector('.compass-north') !== null && document.querySelector('.compass-south') !== null && document.querySelector('.compass-star') === null);
     check('lock control is a compact colored icon', (() => { const lock = document.querySelector('.source-lock'); return lock && lock.clientWidth <= 50 && getComputedStyle(lock).boxShadow !== 'none'; })());
     check('return control is a centered accident-marker button', (() => { const button = document.querySelector('.source-focus'); return button && getComputedStyle(button).borderRadius === '50%' && button.clientWidth === button.clientHeight; })());
-    check('right map controls are ordered compass, rotation, zoom, return, lock', (() => { const compass = document.querySelector('.compass-rose')?.getBoundingClientRect(); const rotation = document.querySelector('.rotation-controls')?.getBoundingClientRect(); const zoom = document.querySelector('.zoom')?.getBoundingClientRect(); const focus = document.querySelector('.source-focus')?.getBoundingClientRect(); const lock = document.querySelector('.source-lock')?.getBoundingClientRect(); return compass && rotation && zoom && focus && lock && compass.top < rotation.top && rotation.top < zoom.top && zoom.top < focus.top && focus.top < lock.top; })());
+    check('right map controls are ordered compass, zoom, return, lock, ruler', (() => { const compass = document.querySelector('.compass-rose')?.getBoundingClientRect(); const zoom = document.querySelector('.zoom')?.getBoundingClientRect(); const focus = document.querySelector('.source-focus')?.getBoundingClientRect(); const lock = document.querySelector('.source-lock')?.getBoundingClientRect(); const ruler = document.querySelector('.calculation-ruler-control')?.getBoundingClientRect(); return compass && zoom && focus && lock && ruler && compass.top < zoom.top && zoom.top < focus.top && focus.top < lock.top && lock.top < ruler.top; })());
     check('map fills central pane', (() => { const a = document.querySelector('.map-stage'); const b = document.querySelector('.map-surface'); return a && b && Math.abs(a.clientWidth-b.clientWidth)<2 && Math.abs(a.clientHeight-b.clientHeight)<2; })());
     check('page not zoomed', visualViewport?.scale === 1, String(visualViewport?.scale));
     check('no horizontal overflow', document.documentElement.scrollWidth <= innerWidth + 1, document.documentElement.scrollWidth + '/' + innerWidth);
@@ -208,12 +208,8 @@ try {
     clickByText('.segmented button', 'Спутник'); await wait(300);
 
     const rotatable = document.querySelector('.map-rotatable');
-    const rotationBefore = rotatable?.style.transform;
-    document.querySelector('button[title="Повернуть карту на 15° по часовой стрелке"]')?.click(); await wait();
-    check('map rotation works', rotatable?.style.transform !== rotationBefore && rotatable?.style.transform.includes('15deg'), rotatable?.style.transform ?? '');
-    check('rotation scales the canvas to cover corners', (() => { const transform = rotatable?.style.transform ?? ''; const scale = Number(transform.split('scale(')[1]?.split(')')[0]); return scale > 1; })(), rotatable?.style.transform ?? '');
-    document.querySelector('button[title="Сбросить поворот: север вверх"]')?.click(); await wait();
-    check('north-up reset works', rotatable?.style.transform.includes('0deg'), rotatable?.style.transform ?? '');
+    check('map rotation controls are removed', document.querySelector('.rotation-controls') === null);
+    check('map remains north-up', rotatable?.style.transform.includes('rotate(0deg)'), rotatable?.style.transform ?? '');
 
     const windInput = [...document.querySelectorAll('label')].find((element) => element.textContent?.startsWith('Ветер, м/с'))?.querySelector('input');
     const depthBefore = document.querySelector('.main-result strong')?.textContent;

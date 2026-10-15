@@ -1,6 +1,15 @@
-type Props = Readonly<{ kind: "plume" | "placard" }>;
+type Props = Readonly<{ kind: "plume" | "placard" | "map" }>;
 
 export function MainTabIcon({ kind }: Props) {
+  if (kind === "map") {
+    return (
+      <svg className="main-tab-icon district-tab-icon" viewBox="0 0 36 34" aria-hidden="true">
+        <path d="m3 7 9-4 12 4 9-4v24l-9 4-12-4-9 4V7Z" />
+        <path d="M12 3v24M24 7v24" />
+        <circle cx="18" cy="16" r="3.5" />
+      </svg>
+    );
+  }
   if (kind === "placard") {
     return (
       <svg className="main-tab-icon placard-tab-icon" viewBox="0 0 34 34" aria-hidden="true">

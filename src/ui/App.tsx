@@ -31,15 +31,27 @@ import { evaluateControlPoint } from "../core/geo";
 import { round } from "../core/math";
 import { MobileAccessDialog } from "./MobileAccessDialog";
 import { UpdateCenter } from "./UpdateCenter";
+import { DistrictMapPage } from "./DistrictMapPage";
+import {
+  fetchPublishedDistrictMapProject,
+  isPublishedProjectNewer,
+  loadDistrictMapProject,
+  publishDistrictMapProject,
+  saveDistrictMapProject,
+  type DistrictMapObject,
+  type DistrictMapProject,
+} from "./district-map-model";
 
-type Tab = "calculation" | "goods";
+type Tab = "calculation" | "goods" | "district";
 type Theme = "light" | "dark";
+type DistrictSyncState = "ready" | "pending" | "publishing" | "error";
 type Snapshot = Readonly<{
   input: CalculationInput;
   source: SourceConfiguration;
   sourcePlaced: boolean;
   controls: readonly ControlPoint[];
   basemap: Basemap;
+  districtProject: DistrictMapProject;
 }>;
 
 function message(error: unknown): string {
@@ -63,10 +75,18 @@ export function App() {
   // imagery is an optional online/cached layer selected by the user.
   const [basemap, setBasemap] = useState<Basemap>("standard");
   const [calculationStarted, setCalculationStarted] = useState(false);
+  const [calculationRevision, setCalculationRevision] = useState(0);
   const [traceOpen, setTraceOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportBusy, setReportBusy] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [districtProject, setDistrictProject] = useState(loadDistrictMapProject);
+  const [districtSyncState, setDistrictSyncState] = useState<DistrictSyncState>("ready");
+  const [districtAdmin, setDistrictAdmin] = useState(false);
+  const [districtManagementOpen, setDistrictManagementOpen] = useState(false);
+  const [adminLoginOpen, setAdminLoginOpen] = useState(false);
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminPasswordError, setAdminPasswordError] = useState("");
   const [weather, setWeather] = useState<WeatherObservation | null>(null);
   const [weatherError, setWeatherError] = useState<string | null>(null);
   const [weatherBusy, setWeatherBusy] = useState(false);
@@ -74,10 +94,43 @@ export function App() {
   const pastRef = useRef<{ snapshot: Snapshot; label: string }[]>([]);
   const futureRef = useRef<{ snapshot: Snapshot; label: string }[]>([]);
   const [, setHistoryRevision] = useState(0);
+  const districtChangeRememberedRef = useRef(false);
+  const districtProjectRef = useRef(districtProject);
+  const pendingDistrictProjectRef = useRef<DistrictMapProject | null>(null);
+  const districtPublishingRef = useRef(false);
+  const adminPasswordRef = useRef("");
+  useEffect(() => { districtProjectRef.current = districtProject; }, [districtProject]);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     window.localStorage.setItem("himkontur-theme", theme);
   }, [theme]);
+  useEffect(() => {
+    if (tab !== "district") setDistrictManagementOpen(false);
+  }, [tab]);
+  useEffect(() => {
+    if (districtAdmin) return;
+    let cancelled = false;
+    const refresh = async () => {
+      const remote = await fetchPublishedDistrictMapProject();
+      if (cancelled || remote === null) return;
+      setDistrictSyncState("ready");
+      setDistrictProject((current) => {
+        if (!isPublishedProjectNewer(remote, current)) return current;
+        const next = { ...remote, draft: remote.published };
+        saveDistrictMapProject(next);
+        return next;
+      });
+    };
+    const onVisibility = () => { if (document.visibilityState === "visible") void refresh(); };
+    void refresh();
+    const interval = window.setInterval(() => void refresh(), 30 * 1000);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [districtAdmin]);
 
   const snapshot = (): Snapshot => ({
     input,
@@ -85,6 +138,7 @@ export function App() {
     sourcePlaced,
     controls,
     basemap,
+    districtProject,
   });
   const remember = (label: string) => {
     pastRef.current = [
@@ -100,6 +154,16 @@ export function App() {
     setSourcePlaced(value.sourcePlaced);
     setControls(value.controls);
     setBasemap(value.basemap);
+    const restoredProject = value.districtProject === districtProject
+      ? value.districtProject
+      : {
+          ...value.districtProject,
+          revision: Math.max(value.districtProject.revision, districtProject.revision) + 1,
+          draftSavedAtIso: new Date().toISOString(),
+          publishedAtIso: new Date().toISOString(),
+        };
+    setDistrictProject(restoredProject);
+    saveDistrictMapProject(restoredProject);
   };
   const undo = () => {
     const item = pastRef.current.at(-1);
@@ -342,6 +406,49 @@ export function App() {
 
   const undoLabel = pastRef.current.at(-1)?.label;
   const redoLabel = futureRef.current.at(0)?.label;
+  const changeDistrictObjects = (objects: readonly DistrictMapObject[]) => {
+    setDistrictProject((current) => ({ ...current, draft: objects }));
+  };
+  const publishPendingDistrictProject = async () => {
+    if (districtPublishingRef.current || adminPasswordRef.current === "") return;
+    districtPublishingRef.current = true;
+    try {
+      while (pendingDistrictProjectRef.current !== null) {
+        const pending = pendingDistrictProjectRef.current;
+        setDistrictSyncState("publishing");
+        const synchronized = await publishDistrictMapProject(pending, adminPasswordRef.current);
+        if (pendingDistrictProjectRef.current === pending) pendingDistrictProjectRef.current = null;
+        if (pendingDistrictProjectRef.current === null) {
+          const next = { ...synchronized, draft: synchronized.published };
+          districtProjectRef.current = next;
+          setDistrictProject(next);
+          saveDistrictMapProject(next);
+          setDistrictSyncState("ready");
+        }
+      }
+    } catch (error) {
+      setDistrictSyncState("error");
+      setNotice(`Изменения сохранены на этом устройстве, но пока не отправлены: ${message(error)}`);
+      window.setTimeout(() => {
+        if (pendingDistrictProjectRef.current !== null) void publishPendingDistrictProject();
+      }, 30_000);
+    } finally {
+      districtPublishingRef.current = false;
+    }
+  };
+  const commitDistrictObjects = (objects: readonly DistrictMapObject[]) => {
+    if (!districtChangeRememberedRef.current) remember("Изменена карта района выезда");
+    districtChangeRememberedRef.current = false;
+    const current = districtProjectRef.current;
+    const now = new Date().toISOString();
+    const published = { ...current, revision: current.revision + 1, draft: objects, published: objects, draftSavedAtIso: now, publishedAtIso: now };
+    districtProjectRef.current = published;
+    pendingDistrictProjectRef.current = published;
+    setDistrictProject(published);
+    saveDistrictMapProject(published);
+    setDistrictSyncState("pending");
+    void publishPendingDistrictProject();
+  };
 
   return (
     <div className="app-shell" data-theme={theme}>
@@ -363,12 +470,30 @@ export function App() {
             <MainTabIcon kind="placard" />
             Опасный груз
           </button>
+          <button
+            className={tab === "district" ? "active" : ""}
+            onClick={() => setTab("district")}
+          >
+            <MainTabIcon kind="map" />
+            Карта района выезда
+          </button>
         </nav>
-        <div className="file-actions">
-          <button className="new-calculation" title="Начать новый расчёт и очистить введённые данные" aria-label="Новый расчёт — очистить введённые данные" onClick={newCalculation}>
+        <div className={`file-actions${tab === "calculation" ? " calculation-actions" : ""}${tab === "district" ? " district-actions" : ""}`}>
+          {tab === "calculation" && <button className="new-calculation" title="Начать новый расчёт и очистить введённые данные" aria-label="Новый расчёт — очистить введённые данные" onClick={newCalculation}>
             <UiIcon name="new" />
             <span className="action-label">Новый расчёт</span>
-          </button>
+          </button>}
+          {tab === "district" && <button className={`map-settings-action${districtAdmin ? " active" : ""}`} title="Настройка карты района выезда" aria-label="Настройка карты" onClick={() => {
+            if (districtAdmin) setDistrictManagementOpen(true);
+            else {
+              setAdminPassword("");
+              setAdminPasswordError("");
+              setAdminLoginOpen(true);
+            }
+          }}>
+            <UiIcon name="settings" />
+            <span className="action-label">Настройка карты</span>
+          </button>}
           <button
             className="mobile-access-action"
             title="Загрузить приложение"
@@ -424,6 +549,29 @@ export function App() {
       </header>
       {tab === "goods" ? (
         <DangerousGoodsPanel initialQuery={goodsQuery} />
+      ) : tab === "district" ? (
+        <DistrictMapPage
+          project={districtProject}
+          objects={districtAdmin ? districtProject.draft : districtProject.published}
+          adminMode={districtAdmin}
+          basemap={basemap}
+          onBasemapChange={setBasemap}
+          onObjectsChange={changeDistrictObjects}
+          onObjectChangeStart={() => {
+            if (districtChangeRememberedRef.current) return;
+            remember("Перемещён объект карты района выезда");
+            districtChangeRememberedRef.current = true;
+          }}
+          onCommitObjects={commitDistrictObjects}
+          managementOpen={districtManagementOpen}
+          onCloseManagement={() => setDistrictManagementOpen(false)}
+          onExitAdmin={() => {
+            adminPasswordRef.current = "";
+            setAdminPassword("");
+            setDistrictManagementOpen(false);
+            setDistrictAdmin(false);
+          }}
+        />
       ) : (
         <>
           <div className="workspace">
@@ -519,6 +667,7 @@ export function App() {
                 }}
                 onCalculate={() => {
                   setCalculationStarted(true);
+                  setCalculationRevision((current) => current + 1);
                   setNotice("Расчёт выполнен и автоматически проверен.");
                 }}
               />
@@ -526,6 +675,7 @@ export function App() {
             <MapCanvas
               result={calculation.result}
               calculationStarted={calculationStarted}
+              calculationRevision={calculationRevision}
               sourcePlaced={sourcePlaced}
               sourcePoint={effectiveInput.sourcePoint}
               sourceLabel={source.label}
@@ -534,6 +684,7 @@ export function App() {
               windFromDegrees={effectiveInput.windFromDegrees}
               windSpeedMps={effectiveInput.windSpeedMps}
               controls={controls}
+              districtObjects={districtProject.published}
               basemap={basemap}
               onBasemapChange={(value) => {
                 remember("Переключена подложка карты");
@@ -722,7 +873,7 @@ export function App() {
               disabled={reportBusy}
               onClick={() => setReportOpen(false)}
             >
-              ×
+              <UiIcon name="close" />
             </button>
             <h2 id="report-choice-title">Сформировать отчёт</h2>
             <p>
@@ -755,9 +906,38 @@ export function App() {
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
       />
+      {adminLoginOpen && (
+        <div className="dialog-backdrop admin-login-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setAdminLoginOpen(false); }}>
+          <form
+            className="admin-login-dialog"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (adminPassword !== "1234") {
+                setAdminPasswordError("Неверный пароль.");
+                return;
+              }
+              adminPasswordRef.current = adminPassword;
+              setDistrictAdmin(true);
+              setDistrictManagementOpen(true);
+              setAdminLoginOpen(false);
+              setTab("district");
+            }}
+          >
+            <button type="button" className="dialog-close" aria-label="Закрыть" onClick={() => setAdminLoginOpen(false)}><UiIcon name="close" /></button>
+            <div className="admin-login-icon"><UiIcon name="settings" /></div>
+            <h2>Настройка карты</h2>
+            <p>Введите общий пароль администратора, чтобы добавлять и редактировать объекты.</p>
+            <label>Пароль<input autoFocus type="password" value={adminPassword} onChange={(event) => { setAdminPassword(event.currentTarget.value); setAdminPasswordError(""); }} /></label>
+            {adminPasswordError !== "" && <p className="admin-login-error">{adminPasswordError}</p>}
+            <button className="primary" type="submit">Войти в режим настройки</button>
+          </form>
+        </div>
+      )}
       <footer className="statusbar">
-        <span>ХИМКОНТУР · v0.3.15</span>
-        <span className="status-ready">● Готов к расчёту</span>
+        <span>ХИМКОНТУР · v0.3.16 (база от {new Date(districtProject.publishedAtIso).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })})</span>
+        <span className={`status-ready district-sync-${districtSyncState}`}>
+          {districtSyncState === "ready" ? "● Данные синхронизированы" : districtSyncState === "publishing" ? "● Публикация данных…" : districtSyncState === "pending" ? "● Ожидает публикации" : "● Нет связи с базой"}
+        </span>
         <span>
           {new Date().toLocaleDateString("ru-RU")} ·{" "}
           {new Date().toLocaleTimeString("ru-RU", {

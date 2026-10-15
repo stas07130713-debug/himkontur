@@ -8,21 +8,22 @@ import type { GeoPoint } from '../core/types';
 import type { Basemap } from './MapCanvas';
 
 let protocolRegistered = false;
-type OfflineArchiveKind = 'vector' | 'satellite' | 'satellite-detail-14' | 'satellite-detail-15' | 'satellite-detail-16';
+type OfflineArchiveKind = 'vector' | 'satellite' | 'satellite-overview' | 'satellite-detail-14' | 'satellite-detail-15' | 'satellite-detail-16';
 const offlineArchivePromises: Partial<Record<OfflineArchiveKind, Promise<PMTiles>>> = {};
 const offlineArchiveFiles: Record<OfflineArchiveKind, string> = {
   vector: 'monchegorsk-v5.pmtiles',
   satellite: 'monchegorsk-satellite-v1.pmtiles',
+  'satellite-overview': 'monchegorsk-satellite-overview-z10-13-v3.pmtiles',
   'satellite-detail-14': 'monchegorsk-satellite-detail-z14-v2.pmtiles',
   'satellite-detail-15': 'monchegorsk-satellite-detail-z15-v2.pmtiles',
   'satellite-detail-16': 'monchegorsk-satellite-detail-z16-v2.pmtiles',
 };
 let satelliteSourceSequence = 0;
-// The application view reaches approximately z16.2 at its 2400% limit. Online
-// Esri sometimes serves an opaque "no data" square at local z14-z16. The
-// verified bundled detail tiers take over there; the online layer stays useful
-// for the wider view and never covers valid local detail with an error tile.
-const ONLINE_SATELLITE_NATIVE_MAX_ZOOM = 13;
+// The application view reaches approximately z16.5 at its 2400% limit. The
+// verified bundled detail tiers own z14-z16; only the final fractional zoom
+// uses the provider's native higher-resolution tile while online. Offline mode
+// keeps overscaling the complete local z16 tier and never exposes empty tiles.
+const ONLINE_SATELLITE_NATIVE_MAX_ZOOM = 19;
 setWorkerUrl(new URL(mapWorkerUrl, document.baseURI).href);
 
 function isNativeMobileRuntime(): boolean {
@@ -106,16 +107,22 @@ function ensurePmtilesProtocol() {
     const tile = await archive.getZxy(Number(zoom), Number(column), Number(row));
     return { data: tile?.data ?? new Uint8Array() };
   });
-  for (const zoom of [14, 15, 16] as const) {
-    addProtocol(`localsatellite${zoom}`, async (request) => {
-      const coordinates = /\/(\d+)\/(\d+)\/(\d+)$/.exec(request.url);
-      if (coordinates === null) return { data: new Uint8Array() };
-      const [, tileZoom, column, row] = coordinates;
-      const archive = await getOfflineArchive(`satellite-detail-${zoom}`);
-      const tile = await archive.getZxy(Number(tileZoom), Number(column), Number(row));
-      return { data: tile?.data ?? new Uint8Array() };
-    });
-  }
+  addProtocol('localsatellitesharp', async (request) => {
+    const coordinates = /\/(\d+)\/(\d+)\/(\d+)$/.exec(request.url);
+    if (coordinates === null) return { data: new Uint8Array() };
+    const [, zoomValue, column, row] = coordinates;
+    const zoom = Number(zoomValue);
+    const kind: OfflineArchiveKind = zoom >= 16
+      ? 'satellite-detail-16'
+      : zoom === 15
+      ? 'satellite-detail-15'
+      : zoom === 14
+      ? 'satellite-detail-14'
+      : 'satellite-overview';
+    const archive = await getOfflineArchive(kind);
+    const tile = await archive.getZxy(zoom, Number(column), Number(row));
+    return { data: tile?.data ?? new Uint8Array() };
+  });
   protocolRegistered = true;
 }
 
@@ -226,24 +233,42 @@ function applyBasemap(
   removeSatelliteLayer(map);
   if (satellite) {
     const sequence = ++satelliteSourceSequence;
-    const satelliteSourceId = `satellite-local-${sequence}`;
-    // The complete autonomous stack is always present below the online layer.
-    // A missing or delayed network tile therefore exposes valid local imagery
-    // instead of an empty/error square, including at the maximum map zoom.
-    map.addSource(satelliteSourceId, {
+    const broadSourceId = `satellite-local-${sequence}`;
+    map.addSource(broadSourceId, {
       type: 'raster',
       tiles: [satelliteTileTemplate(false)],
       tileSize: 256,
       minzoom: 0,
       maxzoom: 13,
-      attribution: 'EOxCloudless © EOX · Esri World Imagery (for Export)',
+      attribution: 'EOxCloudless © EOX',
     });
     map.addLayer({
       id: 'satellite-imagery',
       type: 'raster',
-      source: satelliteSourceId,
-      paint: { 'raster-fade-duration': 0, 'raster-opacity': 0.001 },
+      source: broadSourceId,
+      maxzoom: 10.01,
+      paint: { 'raster-fade-duration': 0, 'raster-resampling': 'nearest', 'raster-opacity': 0.001 },
     });
+    // One continuous local source selects the native archive for z10-z16.
+    // Keeping all detailed zooms in a single raster layer prevents the
+    // horizontal seams and unequal blur produced by overlapping sources.
+    const sharpSourceId = `satellite-sharp-${sequence}`;
+    map.addSource(sharpSourceId, {
+      type: 'raster',
+      tiles: ['localsatellitesharp://tiles/{z}/{x}/{y}'],
+      tileSize: 256,
+      minzoom: 10,
+      maxzoom: 16,
+      attribution: 'Esri World Imagery (autonomous copy)',
+    });
+    map.addLayer({
+      id: 'satellite-sharp-imagery',
+      type: 'raster',
+      source: sharpSourceId,
+      minzoom: 9.99,
+      paint: { 'raster-fade-duration': 0, 'raster-resampling': 'nearest', 'raster-contrast': 0.06, 'raster-opacity': 0.001 },
+    });
+    let primarySourceId = sharpSourceId;
     if (useOnlineDetail) {
       const onlineSourceId = `satellite-online-${sequence}`;
       map.addSource(onlineSourceId, {
@@ -258,36 +283,19 @@ function applyBasemap(
         id: 'satellite-online-imagery',
         type: 'raster',
         source: onlineSourceId,
-        paint: { 'raster-fade-duration': 0, 'raster-opacity': 0.001 },
+        minzoom: 0,
+        paint: { 'raster-fade-duration': 0, 'raster-resampling': 'nearest', 'raster-contrast': 0.04, 'raster-opacity': 0.001 },
       });
+      primarySourceId = onlineSourceId;
     }
-    // Add verified local detail after the online layer so it is visually on
-    // top at close zooms. This is what guarantees that even an HTTP-200 Esri
-    // "no imagery" bitmap cannot hide the map with coloured squares.
-    for (const detailZoom of [14, 15, 16] as const) {
-      const detailSourceId = `satellite-detail-${detailZoom}-${sequence}`;
-      map.addSource(detailSourceId, {
-        type: 'raster',
-        tiles: [`localsatellite${detailZoom}://tiles/{z}/{x}/{y}`],
-        tileSize: 256,
-        minzoom: detailZoom,
-        maxzoom: detailZoom,
-        attribution: 'Esri World Imagery (for Export)',
-      });
-      map.addLayer({
-        id: `satellite-detail-${detailZoom}`,
-        type: 'raster',
-        source: detailSourceId,
-        minzoom: detailZoom,
-        paint: { 'raster-fade-duration': 0, 'raster-opacity': 0.001 },
-      });
-    }
+    if (container !== null) container.dataset.satelliteSourceId = primarySourceId;
   }
   if (container !== null) {
     container.dataset.basemap = basemap;
     container.dataset.satelliteRequested = String(satellite);
-    if (satellite) container.dataset.satelliteSourceId = map.getLayer('satellite-imagery')?.source ?? '';
-    else delete container.dataset.satelliteSourceId;
+    if (satellite) {
+      container.dataset.satelliteSourceId ??= map.getLayer('satellite-sharp-imagery')?.source ?? '';
+    } else delete container.dataset.satelliteSourceId;
     container.dataset.satelliteLoaded = 'false';
     container.dataset.satelliteFailed = 'false';
     container.dataset.satelliteProvider = satellite

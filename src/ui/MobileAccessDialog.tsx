@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import QRCode from "qrcode";
+import { UiIcon } from "./UiIcon";
 
 type Props = Readonly<{ open: boolean; onClose: () => void }>;
 
@@ -66,7 +67,7 @@ export function MobileAccessDialog({ open, onClose }: Props) {
         aria-labelledby="mobile-access-title"
       >
         <button className="dialog-close" aria-label="Закрыть" onClick={onClose}>
-          ×
+          <UiIcon name="close" />
         </button>
         <div className="mobile-dialog-heading">
           <span className="mobile-dialog-icon"><DownloadMark /></span>

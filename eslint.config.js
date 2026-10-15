@@ -27,6 +27,6 @@ export default tseslint.config(
   {
     files: ['desktop/**/*.mjs', 'scripts/**/*.mjs'],
     extends: [tseslint.configs.disableTypeChecked],
-    languageOptions: { globals: globals.node }
+    languageOptions: { globals: { ...globals.node, ...globals.serviceworker } }
   }
 );

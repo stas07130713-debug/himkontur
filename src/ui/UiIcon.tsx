@@ -1,4 +1,4 @@
-type IconName = 'data' | 'source' | 'clock' | 'weather' | 'forecast' | 'settings' | 'pin' | 'new' | 'open' | 'save' | 'mobile' | 'qr' | 'report' | 'cloud' | 'cargo' | 'info' | 'feedback';
+type IconName = 'data' | 'source' | 'clock' | 'weather' | 'forecast' | 'settings' | 'search' | 'upload' | 'check' | 'close' | 'plus' | 'publish' | 'pin' | 'new' | 'open' | 'save' | 'mobile' | 'qr' | 'report' | 'cloud' | 'cargo' | 'info' | 'feedback' | 'chevronDown' | 'ruler';
 type Props = Readonly<{ name: IconName; className?: string }>;
 
 const paths: Record<IconName, string> = {
@@ -7,7 +7,13 @@ const paths: Record<IconName, string> = {
   clock: 'M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9Zm0 4v6l4 2',
   weather: 'M7 18h11a4 4 0 0 0 0-8 7 7 0 0 0-13-1A4.5 4.5 0 0 0 7 18Z',
   forecast: 'M12 3a9 9 0 1 0 9 9m-9-5v5l3 2m6-11v5h-5',
-  settings: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0-5 1 3 3 1 3-1 2 3-2 2v3l2 2-2 3-3-1-3 1-1 3H9l-1-3-3-1-3 1-2-3 2-2v-3L0 9l2-3 3 1 3-1 1-3h3Z',
+  settings: 'M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm7.4 3.5a7.5 7.5 0 0 0-.12-1.33l2.02-1.57-2-3.46-2.46 1a8 8 0 0 0-2.3-1.33L14.2 2.7h-4l-.36 2.61a8 8 0 0 0-2.3 1.33l-2.46-1-2 3.46 2.02 1.57A7.5 7.5 0 0 0 4.98 12c0 .45.04.9.12 1.33L3.08 14.9l2 3.46 2.46-1a8 8 0 0 0 2.3 1.33l.36 2.61h4l.36-2.61a8 8 0 0 0 2.3-1.33l2.46 1 2-3.46-2.02-1.57c.08-.43.12-.88.12-1.33Z',
+  search: 'm20 20-4.4-4.4m2.4-5.1a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z',
+  upload: 'M12 16V4m-5 5 5-5 5 5M4 15v5h16v-5',
+  check: 'm4 12 5 5L20 6',
+  close: 'M5 5l14 14M19 5 5 19',
+  plus: 'M12 5v14M5 12h14',
+  publish: 'M12 16V3m-5 5 5-5 5 5M5 13v7h14v-7',
   pin: 'M12 22s7-7 7-13a7 7 0 1 0-14 0c0 6 7 13 7 13Zm0-10a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z',
   new: 'M5 8V3l3 3a8 8 0 1 1-2.2 10.9M5 3v5h5',
   open: 'M3 19V6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v2M3 19l3-9h16l-3 9H3Z',
@@ -18,7 +24,9 @@ const paths: Record<IconName, string> = {
   cloud: 'M6 18h12a4 4 0 0 0 0-8 7 7 0 0 0-13-1A4.5 4.5 0 0 0 6 18Zm6-13v5m-3-2 3 3 3-3',
   cargo: 'M3 6h11v10H3V6Zm11 4h4l3 3v3h-7v-6ZM7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm10 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z',
   info: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 8v6m0-10h.01',
-  feedback: 'M4 4h16v12H9l-5 4V4Zm8 3v5m0 2h.01'
+  feedback: 'M4 4h16v12H9l-5 4V4Zm8 3v5m0 2h.01',
+  chevronDown: 'm5 9 7 7 7-7',
+  ruler: 'M3 7h18v10H3V7Zm4 0v5m4-5v3m4-3v5m4-5v3'
 };
 
 export function UiIcon({ name, className = '' }: Props) {

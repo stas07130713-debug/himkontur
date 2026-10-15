@@ -29,7 +29,7 @@ import org.json.JSONObject;
 
 @CapacitorPlugin(name = "HimkonturUpdater")
 public class HimkonturUpdaterPlugin extends Plugin {
-    private static final String RELEASE_API = "https://api.github.com/repos/stas07130713-debug/himkontur/releases/latest";
+    private static final String RELEASE_MANIFEST_URL = "https://github.com/stas07130713-debug/himkontur/releases/latest/download/latest-android.json";
 
     @PluginMethod
     public void getVersion(PluginCall call) {
@@ -44,7 +44,7 @@ public class HimkonturUpdaterPlugin extends Plugin {
         getBridge().execute(() -> {
             HttpURLConnection connection = null;
             try {
-                connection = (HttpURLConnection) new URL(RELEASE_API).openConnection();
+                connection = (HttpURLConnection) new URL(RELEASE_MANIFEST_URL).openConnection();
                 connection.setConnectTimeout(15_000);
                 connection.setReadTimeout(30_000);
                 // The endpoint always represents the newest stable release.
@@ -53,8 +53,7 @@ public class HimkonturUpdaterPlugin extends Plugin {
                 connection.setUseCaches(false);
                 connection.setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0");
                 connection.setRequestProperty("Pragma", "no-cache");
-                connection.setRequestProperty("Accept", "application/vnd.github+json");
-                connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
+                connection.setRequestProperty("Accept", "application/json");
                 connection.setRequestProperty("User-Agent", "HIMKONTUR-Android/" + installedVersion());
                 connection.connect();
                 int status = connection.getResponseCode();

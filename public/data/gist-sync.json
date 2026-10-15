@@ -1,0 +1,11 @@
+{
+  "gistId": "4680bd012672437d695a7f691a59db5d",
+  "owner": "stas07130713-debug",
+  "fileName": "district-map.json",
+  "encryptedToken": {
+    "salt": "0piwsUdDjgE9szHZzY0lMg==",
+    "iv": "k7/hfvJ6DpdZ37OI",
+    "ciphertext": "D8VZe6zOmSHO7q66UBjiLTPI0fxSZeizYRx7PZX1iBDRqJc4zteSVc2hIk5Q3prK6BHRNMhVEL0=",
+    "iterations": 210000
+  }
+}

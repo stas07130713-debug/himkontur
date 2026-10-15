@@ -28,6 +28,7 @@ const DETAIL_TIERS = [
   { zoom: 15, bounds: [32.58, 67.83, 33.17, 68.03] },
   { zoom: 16, bounds: [32.70, 67.87, 33.03, 67.99] },
 ];
+const OVERVIEW_DETAIL = { minZoom: 10, maxZoom: 13, bounds: [32.45, 67.78, 33.25, 68.07] };
 
 function longitudeToColumn(longitude, zoom) {
   return Math.max(0, Math.min((2 ** zoom) - 1, Math.floor((longitude + 180) / 360 * (2 ** zoom))));
@@ -53,7 +54,9 @@ function enumerateBounds(bounds, minZoom, maxZoom, provider) {
   return tiles;
 }
 
-function enumerateTiles(includeDetail, selectedTier) {
+function enumerateTiles(includeDetail, selectedTier, overviewDetail) {
+  if (overviewDetail)
+    return enumerateBounds(OVERVIEW_DETAIL.bounds, OVERVIEW_DETAIL.minZoom, OVERVIEW_DETAIL.maxZoom, 'arcgis-export');
   if (selectedTier !== null)
     return enumerateBounds(selectedTier.bounds, selectedTier.zoom, selectedTier.zoom, 'arcgis-export');
   const tiles = enumerateBounds(BOUNDS, MIN_ZOOM, MAX_ZOOM, 'eox');
@@ -94,15 +97,16 @@ async function main() {
   const workers = Math.max(1, Number.parseInt(process.argv[3] ?? '16', 10) || 16);
   const includeDetail = process.argv.includes('--detail');
   const planOnly = process.argv.includes('--plan');
+  const overviewDetail = process.argv.includes('--overview-detail');
   const tierArgument = process.argv.find((argument) => argument.startsWith('--tier='));
   const tierZoom = tierArgument === undefined ? null : Number.parseInt(tierArgument.slice('--tier='.length), 10);
   const selectedTier = tierZoom === null ? null : DETAIL_TIERS.find((tier) => tier.zoom === tierZoom) ?? null;
   if (tierArgument !== undefined && selectedTier === null)
     throw new Error('Неизвестный уровень детализации. Допустимы --tier=14, --tier=15 или --tier=16.');
   const arcgisToken = process.env.ARCGIS_TOKEN?.trim() ?? '';
-  const tiles = enumerateTiles(includeDetail, selectedTier);
-  const minimumZoom = selectedTier?.zoom ?? MIN_ZOOM;
-  const maximumZoom = selectedTier?.zoom ?? (includeDetail ? DETAIL_TIERS.at(-1).zoom : MAX_ZOOM);
+  const tiles = enumerateTiles(includeDetail, selectedTier, overviewDetail);
+  const minimumZoom = overviewDetail ? OVERVIEW_DETAIL.minZoom : (selectedTier?.zoom ?? MIN_ZOOM);
+  const maximumZoom = overviewDetail ? OVERVIEW_DETAIL.maxZoom : (selectedTier?.zoom ?? (includeDetail ? DETAIL_TIERS.at(-1).zoom : MAX_ZOOM));
   console.log(`Prepared ${tiles.length} imagery tiles (z${minimumZoom}-${maximumZoom})`);
   if (includeDetail && selectedTier === null) {
     console.log('Detailed tiers:');
@@ -124,13 +128,17 @@ async function main() {
     CREATE UNIQUE INDEX tile_index ON tiles (zoom_level, tile_column, tile_row);
   `);
   const insertMetadata = database.prepare('INSERT INTO metadata (name, value) VALUES (?, ?)');
-  const archiveBounds = selectedTier?.bounds ?? BOUNDS;
+  const archiveBounds = overviewDetail ? OVERVIEW_DETAIL.bounds : (selectedTier?.bounds ?? BOUNDS);
   const metadata = {
-    name: selectedTier !== null
+    name: overviewDetail
+      ? 'HIMKONTUR Monchegorsk offline satellite overview z10-z13'
+      : selectedTier !== null
       ? `HIMKONTUR Monchegorsk offline satellite z${selectedTier.zoom}`
       : (includeDetail ? 'HIMKONTUR Monchegorsk detailed offline satellite' : 'HIMKONTUR Monchegorsk satellite 2016'),
     type: 'baselayer', version: '1',
-    description: selectedTier !== null
+    description: overviewDetail
+      ? 'Offline high-resolution overview imagery z10-z13 for the HIMKONTUR industrial area'
+      : selectedTier !== null
       ? `Offline high-resolution imagery z${selectedTier.zoom} for the HIMKONTUR operating area`
       : (includeDetail
         ? 'Offline Sentinel-2 base with licensed nested high-resolution imagery for the HIMKONTUR operating area'

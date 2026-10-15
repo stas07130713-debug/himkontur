@@ -7,7 +7,8 @@ export const MAP_BOUNDS = {
   north: 67.955323
 } as const;
 
-export const DEFAULT_POINT: GeoPoint = { longitude: 32.865336, latitude: 67.925279 };
+export const MAP_INITIAL_CENTER: GeoPoint = { longitude: 32.83579, latitude: 67.91755 };
+export const DEFAULT_POINT: GeoPoint = MAP_INITIAL_CENTER;
 
 export function currentMinuteIso(): string {
   const value = new Date();
