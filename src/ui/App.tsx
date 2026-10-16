@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import packageInformation from "../../package.json";
 import { calculate } from "../core/calculation";
 import { verifyCalculation } from "../core/verifier";
 import { fetchWeather, type WeatherObservation } from "../core/weather";
@@ -952,7 +953,7 @@ export function App() {
         </div>
       )}
       <footer className="statusbar">
-        <span>ХИМКОНТУР · v0.3.18 (база от {new Date(districtProject.publishedAtIso).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })})</span>
+        <span>ХИМКОНТУР · v{packageInformation.version} (база от {new Date(districtProject.publishedAtIso).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })})</span>
         <span className={`status-ready district-sync-${districtSyncState}`}>
           {districtSyncState === "ready" ? "● Данные синхронизированы" : districtSyncState === "publishing" ? "● Публикация данных…" : districtSyncState === "pending" ? "● Ожидает публикации" : "● Нет связи с базой"}
         </span>

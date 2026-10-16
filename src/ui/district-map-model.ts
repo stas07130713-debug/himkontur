@@ -69,6 +69,7 @@ export type DistrictMapProject = Readonly<{
 }>;
 
 const STORAGE_KEY = 'himkontur-district-map-project-v1';
+const MAP_SYNC_CONFIG_URL = './data/map-sync.json';
 const GIST_CONFIG_URL = './data/gist-sync.json';
 const GITHUB_DATA_API = 'https://api.github.com/repos/stas07130713-debug/himkontur/contents/public/data/district-map.json?ref=main';
 const PUBLISHED_DATA_URLS = [
@@ -80,12 +81,11 @@ type GistSyncConfig = Readonly<{
   gistId: string;
   owner: string;
   fileName: string;
-  encryptedToken: Readonly<{
-    salt: string;
-    iv: string;
-    ciphertext: string;
-    iterations: number;
-  }>;
+}>;
+
+type MapSyncConfig = Readonly<{
+  apiUrl: string;
+  legacyGist: GistSyncConfig | null;
 }>;
 
 const PREVIEW_OBJECTS: readonly DistrictMapObject[] = [
@@ -333,27 +333,16 @@ async function fetchDirectPublishedDistrictMapProject(): Promise<DistrictMapProj
   return null;
 }
 
-function byteArray(base64: string): Uint8Array<ArrayBuffer> {
-  const binary = window.atob(base64);
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
-}
-
 async function fetchGistSyncConfig(): Promise<GistSyncConfig | null> {
   try {
     const response = await fetch(`${GIST_CONFIG_URL}?ts=${Date.now()}`, { cache: 'no-store' });
     if (!response.ok) return null;
     const value: unknown = await response.json();
-    if (!isObject(value) || !isObject(value.encryptedToken)) return null;
+    if (!isObject(value)) return null;
     const config: GistSyncConfig = {
       gistId: text(value.gistId),
       owner: text(value.owner),
       fileName: text(value.fileName) || 'district-map.json',
-      encryptedToken: {
-        salt: text(value.encryptedToken.salt),
-        iv: text(value.encryptedToken.iv),
-        ciphertext: text(value.encryptedToken.ciphertext),
-        iterations: typeof value.encryptedToken.iterations === 'number' ? value.encryptedToken.iterations : 210_000,
-      },
     };
     return config.gistId === '' || config.owner === '' ? null : config;
   } catch {
@@ -361,11 +350,54 @@ async function fetchGistSyncConfig(): Promise<GistSyncConfig | null> {
   }
 }
 
+async function fetchMapSyncConfig(): Promise<MapSyncConfig | null> {
+  try {
+    const response = await fetch(`${MAP_SYNC_CONFIG_URL}?ts=${Date.now()}`, { cache: 'no-store' });
+    if (!response.ok) return null;
+    const value: unknown = await response.json();
+    if (!isObject(value)) return null;
+    const legacy = isObject(value.legacyGist) ? value.legacyGist : null;
+    const legacyGist: GistSyncConfig | null = legacy === null ? null : {
+      gistId: text(legacy.gistId),
+      owner: text(legacy.owner),
+      fileName: text(legacy.fileName) || 'district-map.json',
+    };
+    const apiUrl = text(value.apiUrl).replace(/\/+$/u, '');
+    return apiUrl === '' ? null : {
+      apiUrl,
+      legacyGist: legacyGist?.gistId && legacyGist.owner ? legacyGist : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function fetchSynchronizedDistrictMapProject(): Promise<DistrictMapProject | null> {
-  const config = await fetchGistSyncConfig();
+  const mapConfig = await fetchMapSyncConfig();
+  const config = mapConfig?.legacyGist ?? await fetchGistSyncConfig();
   if (config === null) return null;
   const rawUrl = `https://gist.githubusercontent.com/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.gistId)}/raw/${encodeURIComponent(config.fileName)}`;
   return fetchPlainDistrictMapProject(rawUrl);
+}
+
+async function fetchCloudDistrictMapProject(): Promise<DistrictMapProject | null> {
+  const config = await fetchMapSyncConfig();
+  if (config === null) return null;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 10_000);
+  try {
+    const response = await fetch(`${config.apiUrl}?ts=${Date.now()}`, {
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    const payload: unknown = await response.json();
+    return isObject(payload) ? normalizeDistrictMapProject(payload.project) : null;
+  } catch {
+    return null;
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
 
 async function fetchGithubDistrictMapProject(): Promise<DistrictMapProject | null> {
@@ -391,13 +423,14 @@ async function fetchGithubDistrictMapProject(): Promise<DistrictMapProject | nul
 }
 
 export async function fetchPublishedDistrictMapProject(): Promise<DistrictMapProject | null> {
-  const [synchronized, bundled, direct] = await Promise.all([
+  const [cloud, synchronized, bundled, direct] = await Promise.all([
+    fetchCloudDistrictMapProject(),
     fetchSynchronizedDistrictMapProject(),
     fetchBundledDistrictMapProject(),
     fetchDirectPublishedDistrictMapProject(),
   ]);
   const remote = direct ?? await fetchGithubDistrictMapProject();
-  return [synchronized, remote, bundled]
+  return [cloud, synchronized, remote, bundled]
     .filter((project): project is DistrictMapProject => project !== null)
     .reduce<DistrictMapProject | null>((newest, project) => (
       newest === null || isPublishedProjectNewer(project, newest) ? project : newest
@@ -405,60 +438,32 @@ export async function fetchPublishedDistrictMapProject(): Promise<DistrictMapPro
 }
 
 export async function publishDistrictMapProject(project: DistrictMapProject, adminPassword: string): Promise<DistrictMapProject> {
-  const config = await fetchGistSyncConfig();
-  if (config === null || config.encryptedToken.ciphertext === '') throw new Error('Синхронизация GitHub ещё не настроена.');
+  const config = await fetchMapSyncConfig();
+  if (config === null) throw new Error('Облачная синхронизация ещё не настроена.');
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 15_000);
+  const timeout = window.setTimeout(() => controller.abort(), 20_000);
   try {
-    const passwordKey = await window.crypto.subtle.importKey(
-      'raw',
-      new TextEncoder().encode(adminPassword),
-      'PBKDF2',
-      false,
-      ['deriveKey'],
-    );
-    const encryptionKey = await window.crypto.subtle.deriveKey({
-      name: 'PBKDF2',
-      salt: byteArray(config.encryptedToken.salt),
-      iterations: config.encryptedToken.iterations,
-      hash: 'SHA-256',
-    }, passwordKey, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
-    let token: string;
-    try {
-      const decrypted = await window.crypto.subtle.decrypt({
-        name: 'AES-GCM',
-        iv: byteArray(config.encryptedToken.iv),
-      }, encryptionKey, byteArray(config.encryptedToken.ciphertext));
-      token = new TextDecoder().decode(decrypted);
-    } catch {
-      throw new Error('Неверный пароль администратора.');
-    }
-    const synchronized = await fetchSynchronizedDistrictMapProject();
-    const now = new Date().toISOString();
-    const published: DistrictMapProject = {
-      ...project,
-      revision: Math.max(project.revision, (synchronized?.revision ?? 0) + 1),
-      draft: project.published,
-      draftSavedAtIso: now,
-      publishedAtIso: now,
-    };
-    const response = await fetch(`https://api.github.com/gists/${encodeURIComponent(config.gistId)}`, {
-      method: 'PATCH',
+    const response = await fetch(config.apiUrl, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${token}`,
-        'X-GitHub-Api-Version': '2022-11-28',
       },
       body: JSON.stringify({
-        description: 'ХИМКОНТУР — актуальная база карты района выезда',
-        files: { [config.fileName]: { content: JSON.stringify(published, null, 2) } },
+        adminPassword,
+        project,
+        updatedBy: 'Администратор ХИМКОНТУР',
       }),
       cache: 'no-store',
       signal: controller.signal,
     });
-    if (response.status === 401 || response.status === 403) throw new Error('GitHub отклонил ключ публикации.');
-    if (!response.ok) throw new Error(`GitHub вернул ошибку ${response.status}.`);
+    const payload: unknown = await response.json().catch(() => null);
+    if (response.status === 403) throw new Error('Неверный пароль администратора.');
+    if (!response.ok) {
+      const message = isObject(payload) ? text(payload.error) : '';
+      throw new Error(message || `Сервис синхронизации вернул ошибку ${response.status}.`);
+    }
+    const published = isObject(payload) ? normalizeDistrictMapProject(payload.project) : null;
+    if (published === null) throw new Error('Сервис синхронизации вернул некорректные данные.');
     return published;
   } catch (error) {
     if (controller.signal.aborted) throw new Error('Сервис синхронизации не ответил вовремя.');

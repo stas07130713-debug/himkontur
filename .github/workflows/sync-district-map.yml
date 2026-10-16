@@ -23,17 +23,18 @@ jobs:
 
       - name: Download and validate shared database
         env:
-          GIST_URL: https://gist.githubusercontent.com/stas07130713-debug/4680bd012672437d695a7f691a59db5d/raw/district-map.json
+          MAP_API_URL: https://functions.yandexcloud.net/d4eqi6k1daj25oqpk6bp
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --location "${GIST_URL}?ts=$(date +%s)" --output /tmp/district-map.json
+          curl --fail --silent --show-error --location "${MAP_API_URL}?ts=$(date +%s)" --output /tmp/district-map-response.json
           node - <<'NODE'
           const fs = require('node:fs');
-          const data = JSON.parse(fs.readFileSync('/tmp/district-map.json', 'utf8'));
+          const payload = JSON.parse(fs.readFileSync('/tmp/district-map-response.json', 'utf8'));
+          const data = payload.project;
           if (data.id !== 'district-map-main') throw new Error('Unexpected district-map id.');
           if (!Array.isArray(data.draft) || !Array.isArray(data.published)) throw new Error('Invalid district-map arrays.');
           if (!Number.isSafeInteger(data.revision) || data.revision < 1) throw new Error('Invalid district-map revision.');
-          fs.copyFileSync('/tmp/district-map.json', 'public/data/district-map.json');
+          fs.writeFileSync('public/data/district-map.json', `${JSON.stringify(data, null, 2)}\n`);
           NODE
 
       - name: Commit a new database revision
