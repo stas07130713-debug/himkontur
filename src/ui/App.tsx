@@ -530,6 +530,24 @@ export function App() {
         </div>
         <div className="theme-switch" aria-label="Тема оформления">
           <button
+            className="mobile-history-action"
+            title={undoLabel === undefined ? "Нет действий для отмены" : `Отменить: ${undoLabel}`}
+            aria-label={undoLabel === undefined ? "Нет действий для отмены" : `Отменить: ${undoLabel}`}
+            disabled={pastRef.current.length === 0}
+            onClick={undo}
+          >
+            ↶
+          </button>
+          <button
+            className="mobile-history-action"
+            title={redoLabel === undefined ? "Нет действий для возврата" : `Вернуть: ${redoLabel}`}
+            aria-label={redoLabel === undefined ? "Нет действий для возврата" : `Вернуть: ${redoLabel}`}
+            disabled={futureRef.current.length === 0}
+            onClick={redo}
+          >
+            ↷
+          </button>
+          <button
             className={theme === "light" ? "active" : ""}
             title="Светлая тема"
             aria-label="Включить светлую тему"
@@ -934,7 +952,7 @@ export function App() {
         </div>
       )}
       <footer className="statusbar">
-        <span>ХИМКОНТУР · v0.3.17 (база от {new Date(districtProject.publishedAtIso).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })})</span>
+        <span>ХИМКОНТУР · v0.3.18 (база от {new Date(districtProject.publishedAtIso).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })})</span>
         <span className={`status-ready district-sync-${districtSyncState}`}>
           {districtSyncState === "ready" ? "● Данные синхронизированы" : districtSyncState === "publishing" ? "● Публикация данных…" : districtSyncState === "pending" ? "● Ожидает публикации" : "● Нет связи с базой"}
         </span>

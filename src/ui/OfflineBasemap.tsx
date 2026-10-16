@@ -19,11 +19,13 @@ const offlineArchiveFiles: Record<OfflineArchiveKind, string> = {
   'satellite-detail-16': 'monchegorsk-satellite-detail-z16-v2.pmtiles',
 };
 let satelliteSourceSequence = 0;
-// The application view reaches approximately z16.5 at its 2400% limit. The
-// verified bundled detail tiers own z14-z16; only the final fractional zoom
-// uses the provider's native higher-resolution tile while online. Offline mode
-// keeps overscaling the complete local z16 tier and never exposes empty tiles.
-const ONLINE_SATELLITE_NATIVE_MAX_ZOOM = 19;
+// The application view reaches approximately z16.5 at its 2400% limit. Esri
+// has placeholder "imagery unavailable" tiles for parts of Monchegorsk above
+// z16. Capping the native request at the last verified complete tier lets
+// MapLibre overscale that imagery for the final fractional zoom instead of
+// replacing the map with a provider placeholder. The bundled offline source
+// follows the same z16 ceiling, so browser, Windows and Android stay aligned.
+const ONLINE_SATELLITE_NATIVE_MAX_ZOOM = 16;
 setWorkerUrl(new URL(mapWorkerUrl, document.baseURI).href);
 
 function isNativeMobileRuntime(): boolean {
