@@ -274,6 +274,8 @@ export function MapCanvas(props: Props) {
   } | null>(null);
   const suppressRulerContextMenuRef = useRef(false);
   const touchPointsRef = useRef(new Map<number, { clientX: number; clientY: number }>());
+  const touchTapRef = useRef(new Map<number, { clientX: number; clientY: number; moved: boolean }>());
+  const touchHadMultipleRef = useRef(false);
   const pinchRef = useRef<{ distance: number } | null>(null);
   const longPressRef = useRef<{ timer: number; pointerId: number; clientX: number; clientY: number } | null>(null);
   const viewWidth = viewSize.width;
@@ -430,9 +432,10 @@ export function MapCanvas(props: Props) {
       }
   };
   const onSourcePointerDown = (event: ReactPointerEvent<SVGGElement>) => {
+    if (rulerActive) return;
     event.preventDefault();
     event.stopPropagation();
-    if (event.button !== 0 || objectsLocked || rulerActive) return;
+    if (event.button !== 0 || objectsLocked) return;
     sourcePointerRef.current = { pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, active: false };
     svgRef.current?.setPointerCapture(event.pointerId);
   };
@@ -440,17 +443,19 @@ export function MapCanvas(props: Props) {
     event: ReactPointerEvent<SVGGElement>,
     control: ControlPoint,
   ) => {
+    if (rulerActive) return;
     event.preventDefault();
     event.stopPropagation();
-    if (event.button !== 0 || objectsLocked || rulerActive) return;
+    if (event.button !== 0 || objectsLocked) return;
     props.onControlDragStart?.(control);
     controlPointerRef.current = { pointerId: event.pointerId, id: control.id };
     svgRef.current?.setPointerCapture(event.pointerId);
   };
   const onWidthPointerDown = (event: ReactPointerEvent<SVGGElement>) => {
+    if (rulerActive) return;
     event.preventDefault();
     event.stopPropagation();
-    if (event.button !== 0 || props.result === null || rulerActive) return;
+    if (event.button !== 0 || props.result === null) return;
     widthPointerRef.current = { pointerId: event.pointerId };
     svgRef.current?.setPointerCapture(event.pointerId);
   };
@@ -483,24 +488,24 @@ export function MapCanvas(props: Props) {
     )
       return;
     event.preventDefault();
-    if (rulerActive) {
-      const point = locate(event.clientX, event.clientY);
-      if (point !== null) setRulerPoints((current) => [...current, point]);
-      return;
-    }
     if (event.pointerType === 'touch') {
+      if (touchPointsRef.current.size === 0) touchHadMultipleRef.current = false;
       touchPointsRef.current.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
+      touchTapRef.current.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY, moved: false });
       if (touchPointsRef.current.size === 1) {
-        const timer = window.setTimeout(() => {
-          const held = longPressRef.current;
-          if (held?.pointerId !== event.pointerId) return;
-          const rect = stageRef.current?.getBoundingClientRect();
-          const point = locate(held.clientX, held.clientY);
-          if (rect && point) setContextMenu({ target: 'map', point, x: held.clientX - rect.left, y: held.clientY - rect.top });
-          panRef.current = null; setPanning(false); longPressRef.current = null;
-        }, 650);
-        longPressRef.current = { timer, pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY };
+        if (!rulerActive) {
+          const timer = window.setTimeout(() => {
+            const held = longPressRef.current;
+            if (held?.pointerId !== event.pointerId) return;
+            const rect = stageRef.current?.getBoundingClientRect();
+            const point = locate(held.clientX, held.clientY);
+            if (rect && point) setContextMenu({ target: 'map', point, x: held.clientX - rect.left, y: held.clientY - rect.top });
+            panRef.current = null; setPanning(false); longPressRef.current = null;
+          }, 650);
+          longPressRef.current = { timer, pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY };
+        }
       } else if (touchPointsRef.current.size === 2) {
+        touchHadMultipleRef.current = true;
         if (longPressRef.current !== null) window.clearTimeout(longPressRef.current.timer);
         longPressRef.current = null; panRef.current = null; setPanning(false);
         const [first, second] = [...touchPointsRef.current.values()];
@@ -508,6 +513,10 @@ export function MapCanvas(props: Props) {
         svgRef.current?.setPointerCapture(event.pointerId);
         return;
       }
+    } else if (rulerActive) {
+      const point = locate(event.clientX, event.clientY);
+      if (point !== null) setRulerPoints((current) => [...current, point]);
+      return;
     }
     panRef.current = {
       pointerId: event.pointerId,
@@ -536,6 +545,8 @@ export function MapCanvas(props: Props) {
     if (event.pointerType === 'touch' && touchPointsRef.current.has(event.pointerId)) {
       const previous = touchPointsRef.current.get(event.pointerId);
       touchPointsRef.current.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
+      const tap = touchTapRef.current.get(event.pointerId);
+      if (tap !== undefined && Math.hypot(event.clientX - tap.clientX, event.clientY - tap.clientY) > 8) tap.moved = true;
       const held = longPressRef.current;
       if (held !== null && held.pointerId === event.pointerId && Math.hypot(event.clientX - held.clientX, event.clientY - held.clientY) > 8) { window.clearTimeout(held.timer); longPressRef.current = null; }
       if (touchPointsRef.current.size >= 2) {
@@ -616,8 +627,20 @@ export function MapCanvas(props: Props) {
       setPanning(false);
     }
     if (longPressRef.current?.pointerId === event.pointerId) { window.clearTimeout(longPressRef.current.timer); longPressRef.current = null; }
+    const touchTap = event.pointerType === 'touch' ? touchTapRef.current.get(event.pointerId) : undefined;
+    const shouldAddRulerPoint = rulerActive
+      && event.type !== 'pointercancel'
+      && touchTap !== undefined
+      && !touchTap.moved
+      && !touchHadMultipleRef.current;
+    touchTapRef.current.delete(event.pointerId);
     touchPointsRef.current.delete(event.pointerId);
     if (touchPointsRef.current.size < 2) pinchRef.current = null;
+    if (touchPointsRef.current.size === 0) touchHadMultipleRef.current = false;
+    if (shouldAddRulerPoint) {
+      const point = locate(event.clientX, event.clientY);
+      if (point !== null) setRulerPoints((current) => [...current, point]);
+    }
     if (sourcePointerRef.current?.pointerId === event.pointerId) {
       sourcePointerRef.current = null;
       setDraggingSource(false);

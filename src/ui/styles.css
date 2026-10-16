@@ -2797,16 +2797,19 @@ button.wide { width: 100%; margin-top: 10px; }
   width: 42px;
   height: 38px;
   min-height: 38px;
-  padding: 7px !important;
-  display: grid;
-  place-items: center;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
   border: 1px solid #416b77 !important;
   border-radius: 7px !important;
   background: #062f40eb !important;
   color: #fff !important;
   box-shadow: 0 2px 9px #001c2c66;
+  line-height: 0;
+  overflow: hidden;
 }
-.map-ruler-control img { width: 30px; height: 30px; display: block; object-fit: cover; border-radius: 6px; }
+.map-ruler-control img { width: 28px; height: 28px; display: block; margin: 0; flex: 0 0 28px; object-fit: cover; object-position: center; border-radius: 6px; }
 .map-ruler-control.active { border-color: #2ae7e1 !important; background: #087481 !important; color: #efffff !important; box-shadow: 0 0 0 2px #20dcd744, 0 2px 9px #001c2c66; }
 .map-column > .zoom { top: 110px; right: 12px; }
 .map-column > .source-focus { top: 184px; right: 12px; }

@@ -58,6 +58,8 @@ try {
   };
   await command('Runtime.enable');
   await command('DOM.enable');
+  await command('Network.enable');
+  await command('Network.setBlockedURLs', { urls: ['https://api.github.com/gists/*'] });
   await delay(2500);
   await evaluate(`(async () => {
     const wait = (ms) => new Promise((done) => setTimeout(done, ms));

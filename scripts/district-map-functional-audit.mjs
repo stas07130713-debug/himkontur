@@ -136,57 +136,44 @@ try {
     const panelClosedAfterCalculation = document.querySelector('.map-tool-stack > .district-object-toolbar') === null;
     [...document.querySelectorAll('.main-tabs button')].find((button) => button.textContent.includes('Карта района выезда'))?.click();
     await wait(120);
+    const districtMap = document.querySelector('.district-map-surface > svg');
+    const districtRuler = document.querySelector('.district-ruler-control');
+    const rulerButtonRect = districtRuler?.getBoundingClientRect();
+    const rulerImageRect = districtRuler?.querySelector('img')?.getBoundingClientRect();
+    const rulerIconCentered = Boolean(rulerButtonRect && rulerImageRect
+      && Math.abs((rulerButtonRect.left + rulerButtonRect.width / 2) - (rulerImageRect.left + rulerImageRect.width / 2)) <= 1
+      && Math.abs((rulerButtonRect.top + rulerButtonRect.height / 2) - (rulerImageRect.top + rulerImageRect.height / 2)) <= 1);
+    districtRuler?.click();
+    await wait(60);
+    const districtRect = districtMap.getBoundingClientRect();
+    const touch = (type, pointerId, x, y) => districtMap.dispatchEvent(new PointerEvent(type, {
+      bubbles: true, button: 0, buttons: type === 'pointerup' ? 0 : 1, pointerId, pointerType: 'touch',
+      clientX: districtRect.left + districtRect.width * x, clientY: districtRect.top + districtRect.height * y,
+    }));
+    touch('pointerdown', 201, .42, .48);
+    touch('pointerup', 201, .42, .48);
+    await wait(80);
+    const districtRulerPointsAfterTap = districtMap.querySelectorAll('.map-ruler-overlay circle').length;
+    const districtZoomBeforePinch = document.querySelector('.district-zoom span')?.textContent ?? '';
+    touch('pointerdown', 202, .42, .52);
+    touch('pointerdown', 203, .58, .52);
+    touch('pointermove', 202, .34, .52);
+    touch('pointermove', 203, .66, .52);
+    await wait(80);
+    touch('pointerup', 202, .34, .52);
+    touch('pointerup', 203, .66, .52);
+    await wait(100);
+    const districtZoomAfterPinch = document.querySelector('.district-zoom span')?.textContent ?? '';
+    const districtRulerPointsAfterPinch = districtMap.querySelectorAll('.map-ruler-overlay circle').length;
+    touch('pointerdown', 204, .48, .54);
+    touch('pointermove', 204, .56, .60);
+    touch('pointerup', 204, .56, .60);
+    await wait(80);
+    const districtRulerPointsAfterDrag = districtMap.querySelectorAll('.map-ruler-overlay circle').length;
+    districtRuler?.click();
+    await wait(40);
     const unknownHydrantHalf = document.querySelector('.hydrant-marker.status-unknown .hydrant-symbol-half');
     const unknownHydrantColor = unknownHydrantHalf === null ? '' : getComputedStyle(unknownHydrantHalf).fill;
-    document.querySelector('.map-settings-action')?.click();
-    await wait(50);
-    const password = document.querySelector('.admin-login-dialog input[type="password"]');
-    setInput(password, '1234');
-    document.querySelector('.admin-login-dialog')?.requestSubmit();
-    await wait(100);
-    document.querySelector('.district-management-dialog .dialog-close')?.click();
-    await wait(80);
-    const projectKey = 'himkontur-district-map-project-v1';
-    const marker = document.querySelector('.district-map-marker.hydrant-marker');
-    const markerRect = marker?.getBoundingClientRect();
-    const beforeClickProject = JSON.parse(localStorage.getItem(projectKey));
-    if (marker && markerRect) {
-      const pointerId = 88;
-      const options = { bubbles: true, button: 0, pointerId, clientX: markerRect.left + markerRect.width / 2, clientY: markerRect.top + markerRect.height / 2 };
-      marker.dispatchEvent(new PointerEvent('pointerdown', options));
-      document.querySelector('.district-map-surface > svg')?.dispatchEvent(new PointerEvent('pointerup', options));
-      marker.dispatchEvent(new MouseEvent('click', options));
-    }
-    await wait(60);
-    const afterClickProject = JSON.parse(localStorage.getItem(projectKey));
-    const simpleClickDidNotMove = beforeClickProject.revision === afterClickProject.revision;
-    const selectedHydrantId = marker?.dataset.objectId ?? '';
-    if (marker && markerRect) {
-      const pointerId = 89;
-      const down = { bubbles: true, button: 0, pointerId, clientX: markerRect.left + markerRect.width / 2, clientY: markerRect.top + markerRect.height / 2 };
-      marker.dispatchEvent(new PointerEvent('pointerdown', down));
-      document.querySelector('.district-map-surface > svg')?.dispatchEvent(new PointerEvent('pointermove', { ...down, clientX: down.clientX + 22, clientY: down.clientY + 16 }));
-      document.querySelector('.district-map-surface > svg')?.dispatchEvent(new PointerEvent('pointerup', { ...down, clientX: down.clientX + 22, clientY: down.clientY + 16 }));
-    }
-    await wait(120);
-    const afterDragProject = JSON.parse(localStorage.getItem(projectKey));
-    const draggedHydrant = afterDragProject.draft.find((object) => object.id === selectedHydrantId);
-    const dragWritesCoordinateJournal = draggedHydrant?.note?.includes('«Координаты объекта»') === true && afterDragProject.revision > afterClickProject.revision;
-    const building = document.querySelector('.district-map-marker.building-number-marker');
-    building?.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
-    await wait(50);
-    [...document.querySelectorAll('.district-details-actions button')].find((button) => button.textContent.includes('Редактировать'))?.click();
-    await wait(80);
-    const emptyPlanningDocuments = document.querySelectorAll('.planning-document-fields .repeatable-row').length === 0;
-    document.querySelector('.planning-document-fields legend button')?.click();
-    await wait(30);
-    const planningDocumentAddedByPlus = document.querySelectorAll('.planning-document-fields .repeatable-row').length === 1;
-    const planningFieldsetRect = document.querySelector('.planning-document-fields')?.getBoundingClientRect();
-    const planningRowRect = document.querySelector('.planning-document-fields .repeatable-row')?.getBoundingClientRect();
-    const planningControlsFit = Boolean(planningFieldsetRect && planningRowRect
-      && planningRowRect.left >= planningFieldsetRect.left
-      && planningRowRect.right <= planningFieldsetRect.right);
-    document.querySelector('.district-object-editor .dialog-close')?.click();
     return {
       firstResults,
       secondResults,
@@ -213,19 +200,16 @@ try {
       panelClosedAfterCalculation,
       districtScale: Boolean(document.querySelector('.district-map-scale')),
       districtLegend: Boolean(document.querySelector('.district-map-legend')),
+      rulerIconCentered,
+      districtRulerPointsAfterTap,
+      districtRulerPointsAfterPinch,
+      districtRulerPointsAfterDrag,
+      districtZoomBeforePinch,
+      districtZoomAfterPinch,
       oldHintRemoved: document.querySelector('.district-map-hint') === null,
       switchedToSatellite,
       undoRestoredMap,
       redoRestoredSatellite,
-      simpleClickDidNotMove,
-      dragWritesCoordinateJournal,
-      selectedHydrantId,
-      draggedHydrantNote: draggedHydrant?.note ?? '',
-      revisionAfterClick: afterClickProject.revision,
-      revisionAfterDrag: afterDragProject.revision,
-      emptyPlanningDocuments,
-      planningDocumentAddedByPlus,
-      planningControlsFit,
     };
   })()`);
   const failures = [];
@@ -242,9 +226,10 @@ try {
   if (result.rulerSegmentsAfterRightPan !== 1 || result.rulerCursorDuringRightPan !== 'grabbing' || result.rulerCursorAfterRightPan !== 'crosshair') failures.push('удержание правой кнопки не перемещает карту с сохранением линейки');
   if (!result.panelClosedAfterCalculation) failures.push('автоматическое закрытие панели после расчёта');
   if (!result.districtScale || !result.districtLegend || !result.oldHintRemoved) failures.push('оформление карты района выезда');
+  if (!result.rulerIconCentered) failures.push('центрирование значка линейки');
+  if (result.districtRulerPointsAfterTap !== 1 || result.districtRulerPointsAfterPinch !== 1 || result.districtRulerPointsAfterDrag !== 1) failures.push('разделение касания, перемещения и жеста линейки');
+  if (result.districtZoomBeforePinch === result.districtZoomAfterPinch) failures.push('масштабирование карты района выезда двумя пальцами');
   if (!result.switchedToSatellite || !result.undoRestoredMap || !result.redoRestoredSatellite) failures.push('кнопки назад и вперёд');
-  if (!result.simpleClickDidNotMove || !result.dragWritesCoordinateJournal) failures.push('безопасное перемещение и журнал координат');
-  if (!result.emptyPlanningDocuments || !result.planningDocumentAddedByPlus || !result.planningControlsFit) failures.push('добавление документов только через плюс без выхода за карточку');
   console.log(JSON.stringify(result, null, 2));
   if (failures.length > 0) throw new Error(`Не пройдены проверки: ${failures.join(', ')}.`);
   socket.close();

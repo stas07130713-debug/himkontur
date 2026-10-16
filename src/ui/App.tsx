@@ -934,7 +934,7 @@ export function App() {
         </div>
       )}
       <footer className="statusbar">
-        <span>ХИМКОНТУР · v0.3.16 (база от {new Date(districtProject.publishedAtIso).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })})</span>
+        <span>ХИМКОНТУР · v0.3.17 (база от {new Date(districtProject.publishedAtIso).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })})</span>
         <span className={`status-ready district-sync-${districtSyncState}`}>
           {districtSyncState === "ready" ? "● Данные синхронизированы" : districtSyncState === "publishing" ? "● Публикация данных…" : districtSyncState === "pending" ? "● Ожидает публикации" : "● Нет связи с базой"}
         </span>

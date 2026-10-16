@@ -375,6 +375,10 @@ export function DistrictMapPage(props: Props) {
   const panRef = useRef<{ pointerId: number; clientX: number; clientY: number; center: GeoPoint } | null>(null);
   const rulerRightPanRef = useRef<{ pointerId: number; clientX: number; clientY: number; center: GeoPoint; timer: number; active: boolean } | null>(null);
   const suppressRulerContextMenuRef = useRef(false);
+  const touchPointsRef = useRef(new Map<number, { clientX: number; clientY: number }>());
+  const touchTapRef = useRef(new Map<number, { clientX: number; clientY: number; moved: boolean }>());
+  const touchHadMultipleRef = useRef(false);
+  const pinchRef = useRef<{ distance: number } | null>(null);
   const dragRef = useRef<{ pointerId: number; objectId: string; clientX: number; clientY: number; active: boolean } | null>(null);
   const markerInteractionRef = useRef(false);
   const objectsRef = useRef(props.objects);
@@ -437,7 +441,21 @@ export function DistrictMapPage(props: Props) {
     setSearchHighlightedId(null);
     setSearchResetSignal((current) => current + 1);
   };
-  const changeZoom = (factor: number) => setZoom((current) => Math.max(0.45, Math.min(24, current * factor)));
+  const changeZoom = (factor: number, anchor?: GeoPoint) => setZoom((currentZoom) => {
+    const nextZoom = Math.max(0.45, Math.min(24, currentZoom * factor));
+    const appliedFactor = nextZoom / currentZoom;
+    if (anchor !== undefined && Math.abs(appliedFactor - 1) > 0.0001) {
+      setCenter((currentCenter) => {
+        const anchorWorld = worldCoordinate(anchor);
+        const currentWorld = worldCoordinate(currentCenter);
+        return clampCenter(geoFromWorld(
+          anchorWorld.x - (anchorWorld.x - currentWorld.x) / appliedFactor,
+          anchorWorld.y - (anchorWorld.y - currentWorld.y) / appliedFactor,
+        ));
+      });
+    }
+    return nextZoom;
+  });
   useEffect(() => {
     const element = stageRef.current;
     if (element === null) return;
@@ -571,6 +589,27 @@ export function DistrictMapPage(props: Props) {
       return;
     }
     if (event.button !== 0 || dragRef.current !== null) return;
+    if (event.pointerType === 'touch') {
+      event.preventDefault();
+      if (touchPointsRef.current.size === 0) touchHadMultipleRef.current = false;
+      touchPointsRef.current.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
+      touchTapRef.current.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY, moved: false });
+      if (touchPointsRef.current.size >= 2) {
+        touchHadMultipleRef.current = true;
+        panRef.current = null;
+        setPanning(false);
+        const [first, second] = [...touchPointsRef.current.values()];
+        if (first !== undefined && second !== undefined) {
+          pinchRef.current = { distance: Math.max(1, Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY)) };
+        }
+      } else {
+        setContextMenu(null);
+        panRef.current = { pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, center };
+        setPanning(true);
+      }
+      svgRef.current?.setPointerCapture(event.pointerId);
+      return;
+    }
     if (rulerActive) {
       event.preventDefault();
       const point = locate(event.clientX, event.clientY);
@@ -595,6 +634,22 @@ export function DistrictMapPage(props: Props) {
         startWorld.y - ((event.clientY - rulerPan.clientY) / rect.height * viewSize.height) / projection.worldPixels,
       )));
       return;
+    }
+    if (event.pointerType === 'touch' && touchPointsRef.current.has(event.pointerId)) {
+      touchPointsRef.current.set(event.pointerId, { clientX: event.clientX, clientY: event.clientY });
+      const tap = touchTapRef.current.get(event.pointerId);
+      if (tap !== undefined && Math.hypot(event.clientX - tap.clientX, event.clientY - tap.clientY) > 8) tap.moved = true;
+      if (touchPointsRef.current.size >= 2) {
+        const [first, second] = [...touchPointsRef.current.values()];
+        if (first !== undefined && second !== undefined) {
+          const distance = Math.max(1, Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY));
+          const prior = pinchRef.current?.distance ?? distance;
+          const anchor = locate((first.clientX + second.clientX) / 2, (first.clientY + second.clientY) / 2);
+          if (Math.abs(distance - prior) > 1) changeZoom(distance / prior, anchor ?? undefined);
+          pinchRef.current = { distance };
+        }
+        return;
+      }
     }
     if (dragRef.current?.pointerId === event.pointerId) {
       if (!dragRef.current.active) {
@@ -628,7 +683,21 @@ export function DistrictMapPage(props: Props) {
       if (completed.active) suppressRulerContextMenuRef.current = true;
       else setRulerPoints([]);
     }
+    const touchTap = event.pointerType === 'touch' ? touchTapRef.current.get(event.pointerId) : undefined;
+    const shouldAddRulerPoint = rulerActive
+      && event.type !== 'pointercancel'
+      && touchTap !== undefined
+      && !touchTap.moved
+      && !touchHadMultipleRef.current;
+    touchTapRef.current.delete(event.pointerId);
+    touchPointsRef.current.delete(event.pointerId);
+    if (touchPointsRef.current.size < 2) pinchRef.current = null;
+    if (touchPointsRef.current.size === 0) touchHadMultipleRef.current = false;
     if (panRef.current?.pointerId === event.pointerId) panRef.current = null;
+    if (shouldAddRulerPoint) {
+      const point = locate(event.clientX, event.clientY);
+      if (point !== null) setRulerPoints((current) => [...current, point]);
+    }
     if (dragRef.current?.pointerId === event.pointerId) {
       const completedDrag = dragRef.current;
       dragRef.current = null;
@@ -674,6 +743,7 @@ export function DistrictMapPage(props: Props) {
             onPointerMove={onPointerMove}
             onPointerUp={finishPointer}
             onPointerCancel={finishPointer}
+            onLostPointerCapture={finishPointer}
             onContextMenu={(event) => {
               event.preventDefault();
               if (suppressRulerContextMenuRef.current) {
