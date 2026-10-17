@@ -53,10 +53,15 @@ export default defineConfig({
             urlPattern: /^https:\/\/server\.arcgisonline\.com\/.*$/u,
             handler: 'CacheFirst',
             options: { cacheName: 'himkontur-esri-tiles', expiration: { maxEntries: 700, maxAgeSeconds: 60 * 60 * 24 * 90 }, cacheableResponse: { statuses: [0, 200] } }
+          },
+          {
+            urlPattern: /^https:\/\/tiledbasemaps\.arcgis\.com\/.*$/u,
+            handler: 'CacheFirst',
+            options: { cacheName: 'himkontur-esri-detail-tiles', expiration: { maxEntries: 900, maxAgeSeconds: 60 * 60 * 24 * 90 }, cacheableResponse: { statuses: [0, 200] } }
           }
         ]
       }
     })
   ],
-  test: { environment: 'node', include: ['src/**/*.test.ts'] }
+  test: { environment: 'node', include: ['src/**/*.test.ts', 'src/**/*.test.tsx'] }
 });

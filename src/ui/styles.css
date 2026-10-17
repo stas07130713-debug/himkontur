@@ -2140,7 +2140,18 @@ button.wide { width: 100%; margin-top: 10px; }
 .marker-hit-area { fill: transparent; }
 .marker-leader { stroke: #0a5b9b; stroke-width: 1.4; stroke-dasharray: 3 2; pointer-events: none; }
 .marker-anchor { fill: #fff; stroke: #0a5b9b; stroke-width: 2; pointer-events: none; }
-.building-number-marker > path { fill: #073d52; stroke: #fff; stroke-width: 2.3; filter: drop-shadow(0 2px 3px #001b28aa); }
+.building-number-marker { --object-color: #2d6fd0; }
+.building-number-marker.prefix-0 { --object-color: #191d20; }
+.building-number-marker.prefix-1 { --object-color: #2d6fd0; }
+.building-number-marker.prefix-2 { --object-color: #1e633f; }
+.building-number-marker.prefix-3 { --object-color: #d36f9d; }
+.building-number-marker.prefix-4 { --object-color: #d9ad22; }
+.building-number-marker.prefix-5 { --object-color: #e56d69; }
+.building-number-marker.prefix-6 { --object-color: #79293d; }
+.building-number-marker.prefix-7 { --object-color: #707981; }
+.building-number-marker.prefix-8 { --object-color: #78b947; }
+.building-number-marker.prefix-9 { --object-color: #e17d2d; }
+.building-number-marker > path { fill: var(--object-color); stroke: #fff; stroke-width: 2.3; filter: drop-shadow(0 2px 3px #001b28aa); }
 .building-number-marker > text { fill: #fff; stroke: #001d28; stroke-width: 2.5px; paint-order: stroke; font-size: 14px; font-weight: 900; pointer-events: none; }
 .building-number-marker.selected > path { fill: #078997; stroke: #38f2eb; stroke-width: 3; }
 .hydrant-network-line { stroke: #0868b1; stroke-width: 3; stroke-linecap: square; pointer-events: none; filter: drop-shadow(0 1px 1px #fff); }
@@ -2163,6 +2174,15 @@ button.wide { width: 100%; margin-top: 10px; }
 .hydrant-marker.status-disabled .hydrant-symbol-half { fill: #b36c00; }
 .hydrant-marker.selected .hydrant-symbol-outline { stroke: #20e5df; stroke-width: 4; }
 .hydrant-plan-symbol { display: block; overflow: visible; }
+.reservoir-symbol-square { fill: #0878bf; stroke: #fff; stroke-width: 1.8; filter: drop-shadow(0 1px 2px #001c28aa); }
+.reservoir-symbol-letters { fill: #fff; font-size: 10px; font-weight: 950; pointer-events: none; }
+.reservoir-symbol-pipe { fill: #fff; pointer-events: none; }
+.reservoir-symbol-water { fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; pointer-events: none; }
+.reservoir-label-back { fill: #f7fbffe8; stroke: #e32620; stroke-width: 1; pointer-events: none; }
+.reservoir-map-label { fill: #142b40; font-size: 7px; font-weight: 900; pointer-events: none; }
+.reservoir-marker.status-disabled .reservoir-symbol-square { fill: #b36c00; }
+.reservoir-marker.selected .reservoir-symbol-square { stroke: #20e5df; stroke-width: 3; }
+.reservoir-plan-symbol { display: block; overflow: visible; }
 
 .district-zoom { position: absolute; z-index: 10; top: 14px; right: 14px; width: 65px; overflow: hidden; display: grid; border: 1px solid #416b77; border-radius: 8px; background: #062f40eb; box-shadow: 0 3px 12px #001a2b77; }
 .district-zoom button { min-height: 34px; border: 0; border-radius: 0; background: transparent; color: #fff; font-size: 19px; }
@@ -2174,6 +2194,47 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-add-menu strong { padding: 3px; font-size: 10px; }
 .district-add-menu button { min-height: 31px; border: 1px solid #3e6e79; border-radius: 5px; background: #0b485a; color: #fff; font-size: 9px; }
 .district-add-menu button.secondary { background: transparent; color: #c6dbdf; }
+.district-object-contour { --object-color: #2d6fd0; fill: color-mix(in srgb, var(--object-color) 24%, transparent); stroke: var(--object-color); stroke-width: 3; vector-effect: non-scaling-stroke; cursor: pointer; transition: fill .16s ease, stroke-width .16s ease, filter .16s ease; }
+.district-object-contour.prefix-0 { --object-color: #191d20; }
+.district-object-contour.prefix-1 { --object-color: #2d6fd0; }
+.district-object-contour.prefix-2 { --object-color: #1e633f; }
+.district-object-contour.prefix-3 { --object-color: #d36f9d; }
+.district-object-contour.prefix-4 { --object-color: #d9ad22; }
+.district-object-contour.prefix-5 { --object-color: #e56d69; }
+.district-object-contour.prefix-6 { --object-color: #79293d; }
+.district-object-contour.prefix-7 { --object-color: #707981; }
+.district-object-contour.prefix-8 { --object-color: #78b947; }
+.district-object-contour.prefix-9 { --object-color: #e17d2d; }
+.district-object-contour:hover, .district-object-contour.selected, .district-object-contour.search-highlight { fill: color-mix(in srgb, var(--object-color) 42%, transparent); stroke-width: 5; filter: drop-shadow(0 0 5px #fff); }
+.district-object-contour.interaction-disabled { pointer-events: none; }
+.district-contour-draft polygon { fill: #00d8d52b; stroke: #00b7bd; stroke-width: 3; stroke-dasharray: 8 5; vector-effect: non-scaling-stroke; }
+.district-contour-draft.automatic polygon { fill: #39e8bb35; stroke: #09a983; stroke-dasharray: none; }
+.district-contour-draft.response-boundary-draft polyline {
+  fill: none;
+  stroke: #e3262e;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 3px #5e0000);
+}
+.district-map-surface svg.contour-drawing { cursor: crosshair; }
+.district-map-surface > svg.contour-drawing.panning { cursor: grabbing; }
+.district-contour-edge-hit { fill: none; stroke: transparent; stroke-width: 18; pointer-events: stroke; cursor: move; }
+.district-contour-vertex { fill: #fff; stroke: #008f9b; stroke-width: 3; vector-effect: non-scaling-stroke; cursor: move; }
+.district-contour-vertex.first { fill: #ffdb38; }
+.district-contour-draft.response-boundary-draft .district-contour-vertex { fill: #fff; stroke: #e3262e; }
+.district-contour-draft.response-boundary-draft .district-contour-vertex.first { fill: #ffcf32; }
+.district-contour-add-point { cursor: crosshair; }
+.district-contour-add-point circle { fill: #087f8d; stroke: #fff; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.district-contour-add-point path { fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: none; }
+.district-contour-panel { position: absolute; z-index: 31; left: 50%; bottom: 22px; translate: -50% 0; width: min(520px, calc(100% - 24px)); padding: 10px 12px; display: grid; gap: 6px; border: 1px solid #43aeb3; border-radius: 9px; background: #063847f2; color: #fff; box-shadow: 0 8px 26px #00192399; }
+.district-contour-panel strong { font-size: 12px; }
+.district-contour-panel span { color: #cce8ea; font-size: 9px; }
+.district-contour-panel > div { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+.district-contour-panel button { min-height: 30px; padding: 5px 10px; font-size: 9px; }
+.district-auto-workshop { padding: 9px 11px; display: flex; gap: 7px; align-items: center; border: 1px solid #b7d9dc; border-radius: 7px; background: #eef8f8; color: #365c63; font-size: 10px; }
+.district-auto-workshop strong { color: #075c66; }
 
 .district-details-panel { min-width: 0; min-height: 0; overflow: auto; display: flex; flex-direction: column; border: 1px solid #a7c8cc; border-top: 3px solid #08abb3; border-radius: 10px; background: #f9fdfd; box-shadow: 0 2px 8px #06364418; }
 .district-panel-heading { padding: 13px 14px 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid #d2e2e4; }
@@ -2216,6 +2277,7 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-editor-heading { margin-bottom: 15px; display: flex; align-items: center; gap: 11px; }
 .district-editor-heading > span { width: 56px; height: 48px; display: grid; place-items: center; border-radius: 8px; background: #087c89; color: #fff; font-size: 18px; font-weight: 900; }
 .district-editor-heading > .editor-hydrant-symbol { width: 112px; height: 48px; flex: 0 0 112px; }
+.district-editor-heading > .editor-reservoir-symbol { width: 74px; height: 62px; flex: 0 0 74px; }
 .district-editor-heading small { color: #778d91; font-size: 9px; text-transform: uppercase; }
 .district-editor-heading h2 { margin: 1px 0 0; color: #073c58; font-size: 21px; }
 .district-editor-fields { display: grid; gap: 9px; }
@@ -2342,7 +2404,7 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-search > button .ui-mini-icon { width: 13px; height: 13px; margin: auto; stroke: currentColor; }
 .district-map-surface > .district-compass { z-index: 10; top: 64px; right: 14px; width: 92px; height: 92px; }
 .district-map-surface > .district-zoom { top: 164px; right: 27px; width: 65px; }
-.building-number-marker g > path { fill: #073d52; stroke: #fff; stroke-width: 2.3; filter: drop-shadow(0 2px 3px #001b28aa); }
+.building-number-marker g > path { fill: var(--object-color); stroke: #fff; stroke-width: 2.3; filter: drop-shadow(0 2px 3px #001b28aa); }
 .building-number-marker g > text { fill: #fff; stroke: #001d28; stroke-width: 2.5px; paint-order: stroke; font-size: 14px; font-weight: 900; pointer-events: none; }
 .building-number-marker.selected g > path { fill: #078997; stroke: #38f2eb; stroke-width: 3; }
 .district-details-card.hydrant .district-details-title { grid-template-columns: minmax(0, 1fr); }
@@ -2615,6 +2677,33 @@ button.wide { width: 100%; margin-top: 10px; }
   margin: 0 auto;
 }
 .district-details-card .district-hydrant-plate { width: 150px; max-width: 150px; }
+.district-details-card.reservoir .district-details-title,
+.district-details-card.hydrant .district-details-title { grid-template-columns: minmax(0, 1fr); }
+
+.district-reservoir-plate {
+  width: min(240px, 100%);
+  margin: 0 auto 12px;
+  display: grid;
+  border: 1px solid #c7d3df;
+  border-radius: 7px;
+  overflow: hidden;
+  background: #eef3f9;
+  color: #071b38;
+  box-shadow: 0 3px 10px #1c26352d;
+}
+.reservoir-plate-pictogram { width: 100%; aspect-ratio: 1.12; display: block; background: #fff; }
+.reservoir-sign-background { fill: #e32620; }
+.reservoir-sign-fill { fill: #fff; }
+.reservoir-sign-stroke { fill: none; stroke: #fff; stroke-width: 4; }
+.reservoir-sign-water { fill: none; stroke: #fff; stroke-width: 4; stroke-linecap: round; }
+.reservoir-sign-water-lower { stroke-width: 3; stroke-dasharray: 8 7; }
+.reservoir-plate-values { min-height: 64px; padding: 7px 10px; display: grid; place-content: center; gap: 2px; font-size: 18px; font-weight: 850; line-height: 1.15; text-align: center; }
+.reservoir-plate-values span { display: flex; align-items: center; justify-content: center; gap: 5px; }
+.reservoir-plate-values b { font: inherit; }
+.district-reservoir-plate.editable { width: min(280px, 100%); }
+.district-reservoir-plate.editable .reservoir-plate-values { min-height: 76px; }
+.district-reservoir-plate.editable input { width: 82px; min-height: 31px; padding: 3px 5px; border-color: #9eafc1; font-size: 15px; font-weight: 850; text-align: center; }
+.reservoir-editor-layout > .district-reservoir-plate { margin-bottom: 2px; }
 
 .district-management-dialog {
   position: relative;
@@ -2708,7 +2797,7 @@ button.wide { width: 100%; margin-top: 10px; }
   .district-management-dialog { padding: 16px; }
 }
 
-/* Раздельный компактный поиск зданий и пожарных гидрантов. */
+/* Раздельный компактный поиск зданий и элементов НППВ. */
 .district-object-toolbar,
 .district-object-toolbar.compact {
   height: auto;
@@ -2850,6 +2939,7 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-legend-hydrant { position: relative; width: 31px; height: 18px; display: block; }
 .district-legend-hydrant::before { content: ''; position: absolute; top: 8px; left: 1px; right: 1px; border-top: 3px solid #0868b1; }
 .district-legend-hydrant::after { content: ''; position: absolute; top: 2px; left: 10px; width: 12px; height: 12px; border: 3px solid #0868b1; border-radius: 50%; background: linear-gradient(90deg, #fff 50%, #0868b1 50%); }
+.district-legend-reservoir { width: 23px; height: 18px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 2px; background: #0878bf; color: #fff; font-style: normal; font-size: 7px; line-height: 1; }
 
 .planning-document-fields { margin-top: 1px; }
 .planning-document-fields:not(:has(.repeatable-row)) { min-height: 43px; }
@@ -3004,4 +3094,257 @@ button.wide { width: 100%; margin-top: 10px; }
   min-height: 38px;
   box-sizing: border-box;
   margin-top: 0;
+}
+
+/* Жёстко закреплённые контуры, измерение граней и поиск по геометрии. */
+.district-object-contour-group.interaction-disabled { pointer-events: none; }
+.district-object-contour { pointer-events: all; }
+.district-object-contour.territory {
+  fill: transparent;
+  stroke: transparent;
+  filter: none;
+}
+.district-object-contour.territory.hovered,
+.district-object-contour.territory.search-highlight {
+  fill: transparent;
+  stroke: var(--object-color);
+  stroke-width: 5;
+  filter: drop-shadow(0 0 5px #fff);
+}
+.district-object-contour.territory.response-boundary,
+.district-object-contour.territory.response-boundary.hovered,
+.district-object-contour.territory.response-boundary.search-highlight {
+  --object-color: #e3262e;
+  fill: transparent;
+  stroke: #e3262e;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: none;
+  filter: drop-shadow(0 0 3px #630000) drop-shadow(0 0 2px #fff);
+  pointer-events: stroke;
+}
+.district-object-contour.rescue-service,
+.district-object-contour.rescue-service:hover,
+.district-object-contour.rescue-service.selected,
+.district-object-contour.rescue-service.search-highlight {
+  --object-color: #ff4b35;
+  fill: #ff4b3542;
+  stroke: #ff4b35;
+  stroke-width: 5;
+  filter: drop-shadow(0 0 5px #fff) drop-shadow(0 0 7px #ffb000);
+}
+.district-object-contour.search-highlight {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: district-contour-search-pulse .82s ease-in-out 3;
+}
+@keyframes district-contour-search-pulse {
+  0%, 100% { opacity: .7; filter: drop-shadow(0 0 3px #fff); }
+  50% { opacity: 1; filter: drop-shadow(0 0 11px #2ff8ee); }
+}
+.district-contour-edge-measure {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  vector-effect: non-scaling-stroke;
+  pointer-events: stroke;
+  cursor: help;
+}
+.district-contour-length-label {
+  pointer-events: none;
+  fill: #fff;
+  stroke: #062f40;
+  stroke-width: 3px;
+  paint-order: stroke;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+/* Цвет карточки здания совпадает с цветом его контура и номера. */
+.district-details-card.building { --object-color: #2d6fd0; }
+.district-details-card.building.prefix-0 { --object-color: #191d20; }
+.district-details-card.building.prefix-1 { --object-color: #2d6fd0; }
+.district-details-card.building.prefix-2 { --object-color: #1e633f; }
+.district-details-card.building.prefix-3 { --object-color: #d36f9d; }
+.district-details-card.building.prefix-4 { --object-color: #d9ad22; }
+.district-details-card.building.prefix-5 { --object-color: #e56d69; }
+.district-details-card.building.prefix-6 { --object-color: #79293d; }
+.district-details-card.building.prefix-7 { --object-color: #707981; }
+.district-details-card.building.prefix-8 { --object-color: #78b947; }
+.district-details-card.building.prefix-9 { --object-color: #e17d2d; }
+.district-details-card.building .district-details-title > span {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--object-color) 88%, #fff), var(--object-color));
+}
+.district-editor-heading > .editor-building-symbol { --object-color: #2d6fd0; background: var(--object-color); }
+.district-editor-heading > .editor-building-symbol.prefix-0 { --object-color: #191d20; }
+.district-editor-heading > .editor-building-symbol.prefix-1 { --object-color: #2d6fd0; }
+.district-editor-heading > .editor-building-symbol.prefix-2 { --object-color: #1e633f; }
+.district-editor-heading > .editor-building-symbol.prefix-3 { --object-color: #d36f9d; }
+.district-editor-heading > .editor-building-symbol.prefix-4 { --object-color: #d9ad22; }
+.district-editor-heading > .editor-building-symbol.prefix-5 { --object-color: #e56d69; }
+.district-editor-heading > .editor-building-symbol.prefix-6 { --object-color: #79293d; }
+.district-editor-heading > .editor-building-symbol.prefix-7 { --object-color: #707981; }
+.district-editor-heading > .editor-building-symbol.prefix-8 { --object-color: #78b947; }
+.district-editor-heading > .editor-building-symbol.prefix-9 { --object-color: #e17d2d; }
+.building-prefix-one-selector { display: grid; grid-template-columns: minmax(0, 1fr); }
+.district-special-role-banner {
+  margin: 4px 0 10px;
+  padding: 8px 10px;
+  border-left: 4px solid #12bfc4;
+  border-radius: 6px;
+  background: #e7f8f8;
+  color: #075466;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+/* Интерактивные условные обозначения слоёв карты. */
+.district-map-legend {
+  z-index: 12;
+  width: 190px;
+  max-height: calc(100% - 86px);
+  padding: 8px;
+  gap: 4px;
+  overflow: auto;
+  border: 1px solid #62a9af;
+  border-radius: 8px;
+  background: #052f3fe8;
+  box-shadow: 0 4px 16px #00192388;
+  text-shadow: none;
+  pointer-events: auto;
+}
+.district-legend-heading { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.district-legend-heading strong { min-width: 0; color: #fff; font-size: 10px; }
+.district-legend-heading button {
+  width: auto;
+  min-width: max-content;
+  flex: 0 0 auto;
+  min-height: 23px;
+  padding: 3px 6px;
+  border: 1px solid #6aa6ad;
+  border-radius: 5px;
+  background: #0b5261;
+  color: #fff;
+  font-size: 7px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.district-legend-building-list { display: grid; gap: 2px; }
+.district-legend-building-list label,
+.district-legend-row {
+  min-width: 0;
+  min-height: 20px;
+  display: grid;
+  grid-template-columns: 15px 31px minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+  color: #f5ffff;
+  font-size: 8px;
+  line-height: 1.08;
+  cursor: pointer;
+  margin: 0;
+}
+.district-legend-building-list input,
+.district-legend-row input { width: 13px; height: 13px; min-height: 13px; max-height: 13px; margin: 0; accent-color: #0fc4c4; }
+.district-legend-building { --object-color: #2d6fd0; background: var(--object-color); }
+.district-legend-building.prefix-0 { --object-color: #191d20; }
+.district-legend-building.prefix-1 { --object-color: #2d6fd0; }
+.district-legend-building.prefix-2 { --object-color: #1e633f; }
+.district-legend-building.prefix-3 { --object-color: #d36f9d; }
+.district-legend-building.prefix-4 { --object-color: #d9ad22; }
+.district-legend-building.prefix-5 { --object-color: #e56d69; }
+.district-legend-building.prefix-6 { --object-color: #79293d; }
+.district-legend-building.prefix-7 { --object-color: #707981; }
+.district-legend-building.prefix-8 { --object-color: #78b947; }
+.district-legend-building.prefix-9 { --object-color: #e17d2d; }
+.district-legend-row .district-legend-hydrant,
+.district-legend-row .district-legend-reservoir { justify-self: center; }
+.district-legend-special-list {
+  margin-top: 3px;
+  padding-top: 4px;
+  display: grid;
+  gap: 3px;
+  border-top: 1px solid #6aa6ad66;
+}
+.district-legend-row.special { min-height: 24px; }
+.district-legend-boundary {
+  width: 29px;
+  height: 16px;
+  position: relative;
+  display: block;
+  justify-self: center;
+  font-style: normal;
+}
+.district-legend-boundary::after {
+  content: '';
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  top: 50%;
+  border-top: 3px solid #e3262e;
+  border-radius: 999px;
+  box-shadow: 0 0 2px #fff, 0 0 3px #630000;
+  transform: translateY(-50%);
+}
+.district-legend-ass {
+  width: 29px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  justify-self: center;
+  border: 1.5px solid #fff3a0;
+  border-radius: 4px;
+  background: #e23d2d;
+  color: #fff;
+  box-shadow: 0 0 4px #ffb300aa;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 950;
+  line-height: 1;
+}
+.calculation-special-layer-toggles {
+  margin-top: 4px;
+  padding: 5px 7px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  border: 1px solid #477d87;
+  border-radius: 7px;
+  background: #073a49e8;
+}
+.calculation-special-layer-toggles label {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 14px 29px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  color: #fff;
+  font-size: 8px;
+  font-weight: 750;
+  line-height: 1;
+  cursor: pointer;
+}
+.calculation-special-layer-toggles input {
+  width: 13px;
+  height: 13px;
+  min-height: 13px;
+  margin: 0;
+  accent-color: #0fc4c4;
+}
+.building-number-marker.rescue-service-marker g > path {
+  fill: #e23d2d;
+  stroke: #fff3a0;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 5px #ffb300) drop-shadow(0 2px 3px #001b28aa);
+}
+.building-number-marker.rescue-service-marker g > text { font-size: 12px; letter-spacing: .4px; }
+.building-number-marker.rescue-service-marker.selected g > path { fill: #c52c20; stroke: #35f4ec; }
+.district-editor-actions .edit-contour { margin-right: auto; border-color: #149da6; color: #08727b; }
+
+@media (max-width: 720px), (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
+  .district-map-legend { right: 7px; bottom: 27px; width: 145px; max-height: 43%; padding: 6px; }
+  .district-legend-heading button { padding-inline: 4px; }
+  .district-legend-building-list label, .district-legend-row { grid-template-columns: 14px 27px minmax(0, 1fr); font-size: 7px; }
+  .district-legend-building { width: 27px; }
 }

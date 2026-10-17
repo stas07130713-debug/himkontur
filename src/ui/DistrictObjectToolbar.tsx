@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { DistrictMapObject, DistrictObjectKind } from './district-map-model';
+import type { DistrictMapObject } from './district-map-model';
 import { districtObjectSearchText, planningDocumentLabel } from './district-map-model';
 import { UiIcon } from './UiIcon';
 
@@ -17,6 +17,18 @@ type Props = Readonly<{
 
 function objectResultText(object: DistrictMapObject, query: string): Readonly<{ title: string; description: string }> {
   if (object.kind === 'hydrant') return { title: object.owner.trim() || 'Принадлежность не указана', description: '' };
+  if (object.kind === 'reservoir') return {
+    title: object.owner.trim() || 'Принадлежность не указана',
+    description: object.volumeM3 === null ? 'Пожарный водоём' : `Объём ${object.volumeM3.toLocaleString('ru-RU')} м³`,
+  };
+  if (object.objectType === 'territory') {
+    const names = object.territoryNames
+      .flatMap((unit) => [unit.fullName.trim(), unit.shortName.trim()])
+      .filter(Boolean);
+    const needle = query.trim().toLocaleLowerCase('ru-RU');
+    const matched = names.find((name) => name.toLocaleLowerCase('ru-RU').includes(needle));
+    return { title: matched ?? names[0] ?? 'Территория', description: names.filter((name) => name !== matched).slice(0, 2).join(' · ') };
+  }
   const workshop = object.workshopShort.trim() || object.workshopFull.trim() || 'Цех не указан';
   const needle = query.trim().toLocaleLowerCase('ru-RU');
   const candidates = [
@@ -35,7 +47,7 @@ function objectResultText(object: DistrictMapObject, query: string): Readonly<{ 
 export function DistrictObjectToolbar(props: Props) {
   const [buildingQuery, setBuildingQuery] = useState('');
   const [hydrantQuery, setHydrantQuery] = useState('');
-  const [focusedKind, setFocusedKind] = useState<DistrictObjectKind | null>(null);
+  const [focusedKind, setFocusedKind] = useState<'building' | 'nppv' | null>(null);
   const buildingInputRef = useRef<HTMLInputElement>(null);
   const hydrantInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -55,12 +67,12 @@ export function DistrictObjectToolbar(props: Props) {
     const needle = hydrantQuery.trim().toLocaleLowerCase('ru-RU');
     if (needle === '') return [];
     return props.objects
-      .filter((object) => object.kind === 'hydrant' && districtObjectSearchText(object).includes(needle))
+      .filter((object) => object.kind !== 'building' && districtObjectSearchText(object).includes(needle))
       .slice(0, 20);
   }, [hydrantQuery, props.objects]);
 
   const searchRow = (
-    kind: DistrictObjectKind,
+    kind: 'building' | 'nppv',
     query: string,
     setQuery: (value: string) => void,
     results: readonly DistrictMapObject[],
@@ -79,8 +91,8 @@ export function DistrictObjectToolbar(props: Props) {
             onFocus={() => setFocusedKind(kind)}
             onBlur={() => window.setTimeout(() => setFocusedKind((current) => current === kind ? null : current), 150)}
             onChange={(event) => { setFocusedKind(kind); setQuery(event.currentTarget.value); props.onSearchSelectionChange?.(null); }}
-            placeholder={isBuilding ? 'Найти здание' : 'Найти пожарный гидрант'}
-            aria-label={isBuilding ? 'Поиск здания на карте' : 'Поиск пожарного гидранта на карте'}
+            placeholder={isBuilding ? 'Найти здание' : 'Найти элемент НППВ'}
+            aria-label={isBuilding ? 'Поиск здания на карте' : 'Поиск элемента наружного противопожарного водоснабжения на карте'}
           />
           {query !== '' && <button aria-label="Очистить поиск" onMouseDown={(event) => event.preventDefault()} onClick={() => {
             setQuery('');
@@ -91,7 +103,7 @@ export function DistrictObjectToolbar(props: Props) {
         </div>
         <label className="district-layer-toggle">
           <input type="checkbox" checked={visible} onChange={(event) => onVisibleChange(event.currentTarget.checked)} />
-          {isBuilding ? 'Нумерация зданий' : 'Пожарные гидранты'}
+          {isBuilding ? 'Нумерация зданий' : 'НППВ'}
         </label>
         {showResults && (
           <div className="district-search-results">
@@ -113,7 +125,7 @@ export function DistrictObjectToolbar(props: Props) {
   return (
     <div className={`district-object-toolbar${props.compact === true ? ' compact' : ''}`}>
       {searchRow('building', buildingQuery, setBuildingQuery, buildingResults, props.showBuildings, props.onShowBuildingsChange)}
-      {searchRow('hydrant', hydrantQuery, setHydrantQuery, hydrantResults, props.showHydrants, props.onShowHydrantsChange)}
+      {searchRow('nppv', hydrantQuery, setHydrantQuery, hydrantResults, props.showHydrants, props.onShowHydrantsChange)}
     </div>
   );
 }

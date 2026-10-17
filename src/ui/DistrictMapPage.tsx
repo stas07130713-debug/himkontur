@@ -8,11 +8,14 @@ import {
 import type { GeoPoint } from '../core/types';
 import { round } from '../core/math';
 import { MAP_BOUNDS, MAP_INITIAL_CENTER } from './defaults';
-import { DistrictMapMarker, HydrantPlanSymbol } from './DistrictMapMarker';
+import { DistrictMapMarker, FireReservoirPlanSymbol, HydrantPlanSymbol } from './DistrictMapMarker';
 import { declutterDistrictMarkers } from './district-marker-layout';
+import { FireReservoirIndicatorPlate } from './FireReservoirIndicatorPlate';
 import { HydrantIndicatorPlate } from './HydrantIndicatorPlate';
 import type {
   DistrictBuilding,
+  DistrictBuildingMapRole,
+  DistrictFireReservoir,
   DistrictHydrant,
   DistrictMapObject,
   DistrictMapProject,
@@ -22,6 +25,8 @@ import type {
 } from './district-map-model';
 import {
   districtObjectTitle,
+  buildingPrefix,
+  FIRE_RESERVOIR_TYPE_LABELS,
   HYDRANT_STATUS_LABELS,
   HYDRANT_TYPE_LABELS,
 } from './district-map-model';
@@ -33,6 +38,19 @@ import { appAssetUrl } from './app-url';
 import { CompassRose } from './CompassRose';
 import { parseHydrantActFile, type HydrantActParseResult } from './hydrant-act-import';
 import { MapRulerOverlay } from './MapRulerOverlay';
+import { DistrictObjectContour } from './DistrictObjectContour';
+import { DistrictMapLegend } from './DistrictMapLegend';
+import {
+  BUILDING_LAYER_KEYS,
+  DISTRICT_LAYER_KEYS,
+  NPPV_LAYER_KEYS,
+  districtLayerKey,
+  districtObjectFocusPoint,
+  fittedBuildingMarkerScale,
+  hasDistrictMarker,
+  isBuildingWithContour,
+  type DistrictLayerKey,
+} from './district-map-visuals';
 
 type Props = Readonly<{
   project: DistrictMapProject;
@@ -47,6 +65,25 @@ type Props = Readonly<{
   onCloseManagement: () => void;
   onExitAdmin: () => void;
 }>;
+
+type ContourDragState =
+  | {
+    pointerId: number;
+    mode: 'vertex';
+    index: number;
+    clientX: number;
+    clientY: number;
+    moved: boolean;
+  }
+  | {
+    pointerId: number;
+    mode: 'edge';
+    startIndex: number;
+    endIndex: number;
+    startPointer: GeoPoint;
+    startPoints: readonly GeoPoint[];
+    moved: boolean;
+  };
 
 const KM_PER_LATITUDE_DEGREE = 111.32;
 const CENTER_LATITUDE = (MAP_BOUNDS.north + MAP_BOUNDS.south) / 2;
@@ -80,16 +117,64 @@ function niceScale(value: number): number {
   return (normalized >= 5 ? 5 : normalized >= 2 ? 2 : 1) * exponent;
 }
 
-function initialBuilding(point: GeoPoint): DistrictBuilding {
+function pointCountLabel(count: number): string {
+  const lastTwo = count % 100;
+  const last = count % 10;
+  const noun = lastTwo >= 11 && lastTwo <= 14 ? 'точек' : last === 1 ? 'точка' : last >= 2 && last <= 4 ? 'точки' : 'точек';
+  return `${count} ${noun}`;
+}
+
+const FIXED_WORKSHOPS: Readonly<Record<string, Readonly<{ full: string; short: string }>>> = {
+  '2': { full: 'Цех электролиза никеля', short: 'ЦЭН' },
+  '3': { full: 'Рафинировочный цех', short: 'РЦ' },
+  '4': { full: 'Химико-металлургический цех', short: 'ХМЦ' },
+  '5': { full: 'Цех энергообеспечения', short: 'ЦЭО' },
+  '6': { full: 'Цех материально-технического обеспечения', short: 'ЦМТО' },
+  '7': { full: 'Транспортный цех', short: 'ТЦ' },
+  '8': { full: 'Печенгастрой', short: 'ПС' },
+};
+
+const PREFIX_ONE_WORKSHOPS = [
+  ['Управление хозяйственной деятельности', 'УХД'],
+  ['Контрольно-аналитический центр', 'КАЦ'],
+  ['Департамент безопасности', 'ДБ'],
+  ['Научно-технический центр', 'НТЦ'],
+  ['Центр технического контроля', 'ЦТК'],
+] as const;
+
+function buildingWithNumber(object: DistrictBuilding, number: string): DistrictBuilding {
+  const prefix = buildingPrefix(number);
+  const previousPrefix = buildingPrefix(object.number);
+  const fixed = FIXED_WORKSHOPS[prefix];
+  if (fixed !== undefined) return { ...object, number, objectType: 'building', workshopFull: fixed.full, workshopShort: fixed.short };
+  if (prefix === '0') return { ...object, number, objectType: 'territory', workshopFull: '', workshopShort: '', departments: [], sites: [] };
+  if ((prefix === '1' || prefix === '9') && prefix !== previousPrefix) {
+    return { ...object, number, objectType: 'building', workshopFull: '', workshopShort: '' };
+  }
+  return { ...object, number, objectType: 'building' };
+}
+
+function initialBuilding(
+  point: GeoPoint,
+  objectType: 'building' | 'territory' = 'building',
+  contour: readonly GeoPoint[] = [],
+  mapRole: DistrictBuildingMapRole = 'ordinary',
+): DistrictBuilding {
+  const responseBoundary = mapRole === 'response-boundary';
+  const rescueService = mapRole === 'rescue-service';
   return {
     id: crypto.randomUUID(),
     kind: 'building',
+    objectType,
+    mapRole,
+    contour,
+    territoryNames: objectType === 'territory' ? [{ id: crypto.randomUUID(), fullName: responseBoundary ? 'Граница района выезда' : '', shortName: '' }] : [],
     point,
-    number: '',
+    number: responseBoundary ? '0.0' : objectType === 'territory' ? '0.' : '',
     inventoryNumber: '',
     planningDocuments: [],
-    workshopFull: '',
-    workshopShort: '',
+    workshopFull: rescueService ? 'Аварийно-спасательная служба' : '',
+    workshopShort: rescueService ? 'АСС' : '',
     departments: [{ id: crypto.randomUUID(), fullName: '', shortName: '' }],
     sites: [{ id: crypto.randomUUID(), fullName: '', shortName: '' }],
     note: '',
@@ -116,6 +201,10 @@ function changedObjectSections(previous: DistrictMapObject, next: DistrictMapObj
   const fields: (readonly [string, unknown, unknown])[] = previous.kind === 'building' && next.kind === 'building'
     ? [
       ['Номер здания', previous.number, next.number],
+      ['Тип объекта', previous.objectType, next.objectType],
+      ['Назначение контура на карте', previous.mapRole ?? 'ordinary', next.mapRole ?? 'ordinary'],
+      ['Контур объекта', previous.contour, next.contour],
+      ['Названия территории', previous.territoryNames, next.territoryNames],
       ['Инвентарный номер', previous.inventoryNumber ?? '', next.inventoryNumber ?? ''],
       ['Документы предварительного планирования', previous.planningDocuments, next.planningDocuments],
       ['Цех', [previous.workshopFull, previous.workshopShort], [next.workshopFull, next.workshopShort]],
@@ -137,6 +226,16 @@ function changedObjectSections(previous: DistrictMapObject, next: DistrictMapObj
         ['Расстояния на табличке', [previous.signDistanceLeftM, previous.signDistanceRightM, previous.signDistanceForwardM], [next.signDistanceLeftM, next.signDistanceRightM, next.signDistanceForwardM]],
         ['Примечание', noteWithoutSourceLines(previous.note), noteWithoutSourceLines(next.note)],
       ]
+      : previous.kind === 'reservoir' && next.kind === 'reservoir'
+        ? [
+          ['Номер пожарного водоёма', previous.number, next.number],
+          ['Принадлежность', previous.owner, next.owner],
+          ['Техническое состояние', previous.status, next.status],
+          ['Вид пожарного водоёма', previous.reservoirType, next.reservoirType],
+          ['Объём', previous.volumeM3, next.volumeM3],
+          ['Характер неисправности', previous.faultDescription, next.faultDescription],
+          ['Примечание', noteWithoutSourceLines(previous.note), noteWithoutSourceLines(next.note)],
+        ]
       : [];
   return fields.filter(([, before, after]) => comparable(before) !== comparable(after)).map(([label]) => label);
 }
@@ -173,6 +272,22 @@ function initialHydrant(point: GeoPoint): DistrictHydrant {
   };
 }
 
+function initialFireReservoir(point: GeoPoint): DistrictFireReservoir {
+  return {
+    id: crypto.randomUUID(),
+    kind: 'reservoir',
+    point,
+    number: '',
+    owner: '',
+    status: 'unknown',
+    volumeM3: null,
+    faultDescription: '',
+    reservoirType: 'artificial',
+    note: '',
+    updatedAtIso: new Date().toISOString(),
+  };
+}
+
 function normalizedHydrantNumber(value: string): string {
   return value.toLocaleLowerCase('ru-RU').replace(/пг/gu, '').replace(/[^0-9а-яa-z]+/gu, '');
 }
@@ -198,7 +313,7 @@ function pressureFromAct(value: string, fallback: number | null): number | null 
 }
 
 function NamedUnitsEditor({ label, units, onChange }: Readonly<{
-  label: 'Отделение' | 'Участок';
+  label: 'Отделение' | 'Участок' | 'Название территории';
   units: readonly DistrictNamedUnit[];
   onChange: (units: readonly DistrictNamedUnit[]) => void;
 }>) {
@@ -238,13 +353,21 @@ function PlanningDocumentsEditor({ documents, onChange }: Readonly<{
   );
 }
 
-function ObjectEditor({ object, objects, onSave, onClose }: Readonly<{
+function ObjectEditor({ object, objects, onSave, onEditContour, onClose }: Readonly<{
   object: DistrictMapObject;
   objects: readonly DistrictMapObject[];
   onSave: (object: DistrictMapObject) => void;
+  onEditContour?: (object: DistrictBuilding) => void;
   onClose: () => void;
 }>) {
-  const [value, setValue] = useState<DistrictMapObject>(object);
+  const [value, setValue] = useState<DistrictMapObject>(() => object.kind === 'building'
+    && buildingPrefix(object.number) === '1'
+    && object.workshopFull.trim().toLocaleLowerCase('ru-RU') === 'другое'
+    ? { ...object, workshopFull: '', workshopShort: '' }
+    : object);
+  const [customPrefixOne, setCustomPrefixOne] = useState(() => object.kind === 'building'
+    && buildingPrefix(object.number) === '1'
+    && !PREFIX_ONE_WORKSHOPS.some(([full]) => full === object.workshopFull));
   const [error, setError] = useState('');
   const patch = (changes: Partial<DistrictMapObject>) => setValue((current) => ({ ...current, ...changes }) as DistrictMapObject);
   const save = () => {
@@ -255,13 +378,23 @@ function ObjectEditor({ object, objects, onSave, onClose }: Readonly<{
       setError('Объект с таким номером уже существует.');
       return;
     }
-    if (value.kind === 'building' && value.workshopFull.trim() === '') {
+    if (value.kind === 'building' && value.mapRole !== undefined && value.mapRole !== 'ordinary'
+      && objects.some((item) => item.id !== value.id && item.kind === 'building' && item.mapRole === value.mapRole)) {
+      setError(value.mapRole === 'response-boundary' ? 'Граница района выезда уже сохранена.' : 'Объект аварийно-спасательной службы уже сохранён.');
+      return;
+    }
+    if (value.kind === 'building' && value.objectType === 'territory' && !value.territoryNames.some((unit) => unit.fullName.trim() !== '' || unit.shortName.trim() !== '')) {
+      setError('Укажите хотя бы одно название территории.');
+      return;
+    }
+    if (value.kind === 'building' && value.objectType === 'building' && value.workshopFull.trim() === '') {
       setError('Заполните полное название цеха.');
       return;
     }
-    if (value.kind === 'hydrant' && value.owner.trim() === '') { setError('Укажите принадлежность гидранта.'); return; }
+    if (value.kind !== 'building' && value.owner.trim() === '') { setError('Укажите принадлежность элемента НППВ.'); return; }
     let normalized: DistrictMapObject = value.kind === 'building' ? {
       ...value,
+      territoryNames: value.territoryNames.filter((unit) => unit.fullName.trim() !== '' || unit.shortName.trim() !== ''),
       departments: value.departments.filter((unit) => unit.fullName.trim() !== '' || unit.shortName.trim() !== ''),
       sites: value.sites.filter((unit) => unit.fullName.trim() !== '' || unit.shortName.trim() !== ''),
       planningDocuments: value.planningDocuments.filter((document) => document.number.trim() !== ''),
@@ -277,22 +410,46 @@ function ObjectEditor({ object, objects, onSave, onClose }: Readonly<{
         <button className="dialog-close" aria-label="Закрыть" onClick={onClose}><UiIcon name="close" /></button>
         <div className="district-editor-heading">
           {value.kind === 'building'
-            ? <span className="editor-building-symbol">№</span>
-            : <HydrantPlanSymbol object={value} className="editor-hydrant-symbol" />}
-          <div><small>Карточка объекта</small><h2 id="district-editor-title">{value.kind === 'building' ? 'Здание' : 'Пожарный гидрант'}</h2></div>
+            ? <span className={`editor-building-symbol prefix-${buildingPrefix(value.number)}`}>№</span>
+            : value.kind === 'hydrant'
+              ? <HydrantPlanSymbol object={value} className="editor-hydrant-symbol" />
+              : <FireReservoirPlanSymbol object={value} className="editor-reservoir-symbol" />}
+          <div><small>Карточка объекта</small><h2 id="district-editor-title">{value.kind === 'building'
+            ? value.mapRole === 'response-boundary'
+              ? 'Граница района выезда'
+              : value.mapRole === 'rescue-service'
+                ? 'Объект АСС'
+                : value.objectType === 'territory' ? 'Территория' : 'Здание'
+            : value.kind === 'hydrant' ? 'Пожарный гидрант' : 'Пожарный водоём'}</h2></div>
         </div>
+        {value.kind === 'building' && value.mapRole === 'response-boundary' && <p className="district-special-role-banner">Постоянная граница района выезда. После сохранения она будет показана на обеих картах.</p>}
+        {value.kind === 'building' && value.mapRole === 'rescue-service' && <p className="district-special-role-banner">Постоянно выделяемый объект аварийно-спасательной службы. После сохранения он будет показан на обеих картах.</p>}
         {value.kind === 'building' ? (
           <div className="district-editor-fields">
-            <label className="number-field">Номер здания<input autoFocus value={value.number} placeholder="Например, 3.15" onChange={(event) => patch({ number: event.currentTarget.value })} /></label>
+            <label className="number-field">{value.objectType === 'territory' ? 'Номер территории' : 'Номер здания'}<input autoFocus value={value.number} placeholder={value.objectType === 'territory' ? 'Например, 0.1' : 'Например, 3.15'} onChange={(event) => {
+              const number = event.currentTarget.value;
+              setValue((current) => {
+                if (current.kind !== 'building') return current;
+                const nextPrefix = buildingPrefix(number);
+                if (nextPrefix !== '1' || buildingPrefix(current.number) !== '1') setCustomPrefixOne(false);
+                return buildingWithNumber(current, number);
+              });
+            }} /></label>
+            {value.objectType === 'territory' ? (
+              <NamedUnitsEditor label="Название территории" units={value.territoryNames} onChange={(territoryNames) => patch({ territoryNames })} />
+            ) : <>
             <div className="building-reference-fields">
               <label>Инвентарный номер здания<input value={value.inventoryNumber ?? ''} placeholder="Необязательно" onChange={(event) => patch({ inventoryNumber: event.currentTarget.value })} /></label>
             </div>
             <PlanningDocumentsEditor documents={value.planningDocuments} onChange={(planningDocuments) => patch({ planningDocuments })} />
-            <div className="paired-field"><label>Цех — полное название<input value={value.workshopFull} onChange={(event) => patch({ workshopFull: event.currentTarget.value })} /></label><label>Сокращённо<input value={value.workshopShort} placeholder="—" onChange={(event) => patch({ workshopShort: event.currentTarget.value })} /></label></div>
+            {buildingPrefix(value.number) === '1' ? <div className="building-prefix-one-selector"><label>Подразделение<select value={PREFIX_ONE_WORKSHOPS.some(([full]) => full === value.workshopFull) ? value.workshopFull : customPrefixOne ? 'other' : ''} onChange={(event) => { const selected = PREFIX_ONE_WORKSHOPS.find(([full]) => full === event.currentTarget.value); if (selected === undefined) { setCustomPrefixOne(true); patch({ workshopFull: '', workshopShort: '' }); } else { setCustomPrefixOne(false); patch({ workshopFull: selected[0], workshopShort: selected[1] }); } }}><option value="" disabled>Выберите подразделение</option>{PREFIX_ONE_WORKSHOPS.map(([full, short]) => <option key={short} value={full}>{full} ({short})</option>)}<option value="other">Другое — указать вручную</option></select></label></div> : null}
+            {(buildingPrefix(value.number) === '9' || (buildingPrefix(value.number) === '1' && customPrefixOne)) && <div className="paired-field"><label>{buildingPrefix(value.number) === '9' ? 'Организация — полное название' : 'Подразделение — полное название'}<input value={value.workshopFull} placeholder="Введите своё название" onChange={(event) => patch({ workshopFull: event.currentTarget.value })} /></label><label>Сокращённо<input value={value.workshopShort} placeholder="Необязательно" onChange={(event) => patch({ workshopShort: event.currentTarget.value })} /></label></div>}
+            {FIXED_WORKSHOPS[buildingPrefix(value.number)] !== undefined && <div className="district-auto-workshop"><span>Цех определён по номеру:</span><strong>{value.workshopFull} ({value.workshopShort})</strong></div>}
             <NamedUnitsEditor label="Отделение" units={value.departments} onChange={(departments) => patch({ departments })} />
             <NamedUnitsEditor label="Участок" units={value.sites} onChange={(sites) => patch({ sites })} />
+            </>}
           </div>
-        ) : (
+        ) : value.kind === 'hydrant' ? (
           <div className="district-editor-fields hydrant-editor-layout">
             <HydrantIndicatorPlate object={value} editable onChange={(changes) => patch(changes)} />
             <div className="paired-field equal"><label>Номер гидранта<input autoFocus value={value.number} placeholder="ПГ-17" onChange={(event) => patch({ number: event.currentTarget.value })} /></label><label>Принадлежность<input value={value.owner} onChange={(event) => patch({ owner: event.currentTarget.value })} /></label></div>
@@ -300,11 +457,22 @@ function ObjectEditor({ object, objects, onSave, onClose }: Readonly<{
             <label>Давление, атм.<input type="number" min="0" step="0.1" value={value.pressureAtm ?? ''} placeholder="Заполняется вручную или из акта проверки" onChange={(event) => patch({ pressureAtm: event.currentTarget.value === '' ? null : event.currentTarget.valueAsNumber })} /></label>
             <label>Характер неисправности<input value={value.faultDescription} placeholder="Заполняется вручную или из акта проверки" onChange={(event) => patch({ faultDescription: event.currentTarget.value })} /></label>
           </div>
+        ) : (
+          <div className="district-editor-fields reservoir-editor-layout">
+            <FireReservoirIndicatorPlate object={value} editable onChange={(changes) => patch(changes)} />
+            <div className="paired-field equal"><label>Номер пожарного водоёма<input autoFocus value={value.number} placeholder="ПВ-1" onChange={(event) => patch({ number: event.currentTarget.value })} /></label><label>Принадлежность<input value={value.owner} onChange={(event) => patch({ owner: event.currentTarget.value })} /></label></div>
+            <div className="paired-field equal"><label>Состояние<select value={value.status} onChange={(event) => patch({ status: event.currentTarget.value as DistrictFireReservoir['status'] })}><option value="unknown">Не заполнено</option><option value="serviceable">Исправен</option><option value="faulty">Неисправен</option><option value="disabled">Временно отключён</option></select></label><label>Вид пожарного водоёма<select value={value.reservoirType} onChange={(event) => patch({ reservoirType: event.currentTarget.value as DistrictFireReservoir['reservoirType'] })}><option value="artificial">Искусственный пожарный водоём</option><option value="natural">Естественный пожарный водоём</option><option value="foam">Пенный пожарный водоём</option><option value="foam-solution">Пожарный водоём раствора пенообразователя</option></select></label></div>
+            <label>Объём, м³<input type="number" min="0" step="0.1" value={value.volumeM3 ?? ''} placeholder="Укажите объём водоёма" onChange={(event) => patch({ volumeM3: event.currentTarget.value === '' ? null : event.currentTarget.valueAsNumber })} /></label>
+            <label>Характер неисправности<input value={value.faultDescription} placeholder="Укажите при наличии" onChange={(event) => patch({ faultDescription: event.currentTarget.value })} /></label>
+          </div>
         )}
         <label className="district-editor-note">Примечание<textarea value={value.note} rows={3} onChange={(event) => patch({ note: event.currentTarget.value })} /></label>
         <p className="district-coordinate">Координаты: {value.point.latitude.toFixed(6)}° с.ш., {value.point.longitude.toFixed(6)}° в.д.</p>
         {error !== '' && <p className="district-editor-error">{error}</p>}
-        <div className="district-editor-actions"><button className="secondary" onClick={onClose}>Отмена</button><button className="primary" onClick={save}>Сохранить объект</button></div>
+        <div className="district-editor-actions">
+          {value.kind === 'building' && value.contour.length >= (value.mapRole === 'response-boundary' ? 2 : 3) && onEditContour !== undefined && <button className="secondary edit-contour" onClick={() => onEditContour(value)}>Изменить границы на карте</button>}
+          <button className="secondary" onClick={onClose}>Отмена</button><button className="primary" onClick={save}>Сохранить объект</button>
+        </div>
       </section>
     </div>
   );
@@ -318,12 +486,20 @@ function ObjectDetails({ object, adminMode, onEdit, onDelete }: Readonly<{
 }>) {
   if (object === null) return null;
   return (
-    <article className={`district-details-card ${object.kind}`}>
+    <article className={`district-details-card ${object.kind}${object.kind === 'building' ? ` prefix-${buildingPrefix(object.number)}` : ''}`}>
       <div className="district-details-title">
         {object.kind === 'building' ? <span>{object.number}</span> : null}
-        <div><small>{object.kind === 'building' ? 'Здание' : 'Пожарный гидрант'}</small><h2>{districtObjectTitle(object)}</h2></div>
+        <div><small>{object.kind === 'building'
+          ? object.mapRole === 'response-boundary'
+            ? 'Граница района выезда'
+            : object.mapRole === 'rescue-service'
+              ? 'Объект АСС'
+              : object.objectType === 'territory' ? 'Территория' : 'Здание'
+          : object.kind === 'hydrant' ? 'Пожарный гидрант' : 'Пожарный водоём'}</small><h2>{districtObjectTitle(object)}</h2></div>
       </div>
-      {object.kind === 'building' ? (
+      {object.kind === 'building' && object.objectType === 'territory' ? (
+        <dl>{object.territoryNames.map((unit, index) => <div key={unit.id}><dt>Название{object.territoryNames.length > 1 ? ` ${index + 1}` : ''}</dt><dd>{unit.fullName || '—'}{unit.shortName.trim() !== '' && <small>{unit.shortName}</small>}</dd></div>)}</dl>
+      ) : object.kind === 'building' ? (
         <dl>
           <div><dt>Цех</dt><dd>{object.workshopFull}<small>{object.workshopShort || '—'}</small></dd></div>
           {(object.inventoryNumber ?? '').trim() !== '' && <div><dt>Инвентарный номер здания</dt><dd>{object.inventoryNumber}</dd></div>}
@@ -331,7 +507,7 @@ function ObjectDetails({ object, adminMode, onEdit, onDelete }: Readonly<{
           {object.departments.map((unit, index) => <div key={unit.id}><dt>Отделение{object.departments.length > 1 ? ` ${index + 1}` : ''}</dt><dd>{unit.fullName || '—'}<small>{unit.shortName || 'Без сокращения'}</small></dd></div>)}
           {object.sites.map((unit, index) => <div key={unit.id}><dt>Участок{object.sites.length > 1 ? ` ${index + 1}` : ''}</dt><dd>{unit.fullName || '—'}<small>{unit.shortName || 'Без сокращения'}</small></dd></div>)}
         </dl>
-      ) : (
+      ) : object.kind === 'hydrant' ? (
         <>
           <HydrantIndicatorPlate object={object} />
           <dl>
@@ -340,6 +516,18 @@ function ObjectDetails({ object, adminMode, onEdit, onDelete }: Readonly<{
             <div><dt>Состояние</dt><dd><span className={`hydrant-status ${object.status}`}>{HYDRANT_STATUS_LABELS[object.status]}</span></dd></div>
             {object.hydrantType !== 'standard' && <div><dt>Вид ПГ</dt><dd>{HYDRANT_TYPE_LABELS[object.hydrantType]}</dd></div>}
             {object.pressureAtm !== null && <div><dt>Давление</dt><dd>{object.pressureAtm.toLocaleString('ru-RU')} атм.</dd></div>}
+            <div className="district-details-long-row"><dt>Характер неисправности</dt><dd>{object.faultDescription.trim() || 'Не выявлен'}</dd></div>
+          </dl>
+        </>
+      ) : (
+        <>
+          <FireReservoirIndicatorPlate object={object} />
+          <dl>
+            <div><dt>Номер</dt><dd>{object.number}</dd></div>
+            <div><dt>Принадлежность</dt><dd>{object.owner}</dd></div>
+            <div><dt>Состояние</dt><dd><span className={`hydrant-status ${object.status}`}>{HYDRANT_STATUS_LABELS[object.status]}</span></dd></div>
+            <div><dt>Вид ПВ</dt><dd>{FIRE_RESERVOIR_TYPE_LABELS[object.reservoirType]}</dd></div>
+            {object.volumeM3 !== null && <div><dt>Объём</dt><dd>{object.volumeM3.toLocaleString('ru-RU')} м³</dd></div>}
             <div className="district-details-long-row"><dt>Характер неисправности</dt><dd>{object.faultDescription.trim() || 'Не выявлен'}</dd></div>
           </dl>
         </>
@@ -355,13 +543,19 @@ export function DistrictMapPage(props: Props) {
   const [center, setCenter] = useState<GeoPoint>(MAP_INITIAL_CENTER);
   const [zoom, setZoom] = useState(1.65);
   const [viewSize, setViewSize] = useState({ width: 1000, height: 700 });
-  const [showBuildings, setShowBuildings] = useState(true);
-  const [showHydrants, setShowHydrants] = useState(true);
+  const [visibleLayers, setVisibleLayers] = useState<ReadonlySet<DistrictLayerKey>>(() => new Set(DISTRICT_LAYER_KEYS));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [searchHighlightedId, setSearchHighlightedId] = useState<string | null>(null);
   const [editorObject, setEditorObject] = useState<DistrictMapObject | null>(null);
   const [contextMenu, setContextMenu] = useState<{ point: GeoPoint; x: number; y: number } | null>(null);
+  const [contourDraft, setContourDraft] = useState<Readonly<{
+    objectType: 'building' | 'territory';
+    mapRole: DistrictBuildingMapRole;
+    points: readonly GeoPoint[];
+    source: 'automatic' | 'manual' | 'editing';
+    editingObjectId: string | null;
+  }> | null>(null);
   const [actImportStatus, setActImportStatus] = useState('');
   const [actImporting, setActImporting] = useState(false);
   const [pendingHydrantAct, setPendingHydrantAct] = useState<Readonly<{ fileName: string; result: HydrantActParseResult }> | null>(null);
@@ -381,6 +575,8 @@ export function DistrictMapPage(props: Props) {
   const pinchRef = useRef<{ distance: number } | null>(null);
   const dragRef = useRef<{ pointerId: number; objectId: string; clientX: number; clientY: number; active: boolean } | null>(null);
   const markerInteractionRef = useRef(false);
+  const buildingContourResolverRef = useRef<((point: GeoPoint) => readonly GeoPoint[] | null) | null>(null);
+  const contourDragRef = useRef<ContourDragState | null>(null);
   const objectsRef = useRef(props.objects);
   objectsRef.current = props.objects;
 
@@ -410,16 +606,35 @@ export function DistrictMapPage(props: Props) {
       unproject: (x: number, y: number) => geoFromWorld(centerWorld.x + (x - viewSize.width / 2) / worldPixels, centerWorld.y + (y - viewSize.height / 2) / worldPixels),
     };
   }, [center, viewSize.height, viewSize.width, zoom]);
-  const mapLibreZoom = Math.max(0, Math.min(22, Math.log2(projection.worldPixels / 512)));
+  const mapLibreZoom = Math.max(0, Math.min(24, Math.log2(projection.worldPixels / 512)));
   const markerDetailLevel = zoom >= 4.2 ? 'full' : 'compact';
   const markerScale = Math.max(0.2, Math.min(1, zoom / 4.8));
   const scaleDistanceKm = niceScale(viewSize.width / projection.scale / 5);
   const scalePixels = scaleDistanceKm * projection.scale;
   const selected = props.objects.find((object) => object.id === selectedId) ?? null;
-  const visibleObjects = props.objects.filter((object) => object.id === searchHighlightedId || (object.kind === 'building' ? showBuildings : showHydrants));
+  const showBuildings = BUILDING_LAYER_KEYS.every((key) => visibleLayers.has(key));
+  const showHydrants = NPPV_LAYER_KEYS.every((key) => visibleLayers.has(key));
+  const setLayerVisibility = (key: DistrictLayerKey, visible: boolean) => setVisibleLayers((current) => {
+    const next = new Set(current);
+    if (visible) next.add(key); else next.delete(key);
+    return next;
+  });
+  const setLayerGroupVisibility = (keys: readonly DistrictLayerKey[], visible: boolean) => setVisibleLayers((current) => {
+    const next = new Set(current);
+    for (const key of keys) {
+      if (visible) next.add(key); else next.delete(key);
+    }
+    return next;
+  });
+  const visibleObjects = props.objects.filter((object) => object.id === searchHighlightedId
+    || visibleLayers.has(districtLayerKey(object)));
   const markerPlacements = useMemo(() => {
-    const raw = visibleObjects.map((object) => ({ object, ...projection.project(object.point) }));
-    return declutterDistrictMarkers(raw, viewSize.width, viewSize.height);
+    const raw = visibleObjects
+      .filter(hasDistrictMarker)
+      .map((object) => ({ object, ...projection.project(object.point) }));
+    const anchored = raw.filter(({ object }) => isBuildingWithContour(object));
+    const floating = raw.filter(({ object }) => !isBuildingWithContour(object));
+    return [...anchored, ...declutterDistrictMarkers(floating, viewSize.width, viewSize.height)];
   }, [projection, viewSize.height, viewSize.width, visibleObjects]);
   const orderedMarkerPlacements = [...markerPlacements].sort((left, right) => {
     const priority = (id: string) => id === hoveredId ? 2 : id === selectedId || id === searchHighlightedId ? 1 : 0;
@@ -431,8 +646,48 @@ export function DistrictMapPage(props: Props) {
     if (rect === undefined) return null;
     return projection.unproject((clientX - rect.left) / rect.width * viewSize.width, (clientY - rect.top) / rect.height * viewSize.height);
   };
+  const finishContour = () => {
+    if (contourDraft === null || contourDraft.points.length < (contourDraft.mapRole === 'response-boundary' ? 2 : 3)) return;
+    if (contourDraft.editingObjectId !== null) {
+      const previous = props.objects.find((object): object is DistrictBuilding => object.id === contourDraft.editingObjectId && object.kind === 'building');
+      if (previous !== undefined) {
+        const updated = withAdminChangeNote({ ...previous, contour: [...contourDraft.points], updatedAtIso: new Date().toISOString() }, ['Контур объекта']);
+        props.onCommitObjects(props.objects.map((object) => object.id === previous.id ? updated : object));
+        setSelectedId(previous.id);
+      }
+      setContourDraft(null);
+      return;
+    }
+    const point = {
+      latitude: contourDraft.points.reduce((sum, item) => sum + item.latitude, 0) / contourDraft.points.length,
+      longitude: contourDraft.points.reduce((sum, item) => sum + item.longitude, 0) / contourDraft.points.length,
+    };
+    setEditorObject(initialBuilding(point, contourDraft.objectType, contourDraft.points, contourDraft.mapRole));
+    setContourDraft(null);
+  };
+  const startContour = (objectType: 'building' | 'territory', mapRole: DistrictBuildingMapRole = 'ordinary') => {
+    if (contextMenu === null) return;
+    const automatic = objectType === 'building' ? buildingContourResolverRef.current?.(contextMenu.point) ?? null : null;
+    setContourDraft({ objectType, mapRole, points: automatic ?? [contextMenu.point], source: automatic === null ? 'manual' : 'automatic', editingObjectId: null });
+    setContextMenu(null);
+    setSelectedId(null);
+  };
+  const startContourEdit = (object: DistrictBuilding) => {
+    if (object.contour.length < (object.mapRole === 'response-boundary' ? 2 : 3)) return;
+    setEditorObject(null);
+    setSelectedId(object.id);
+    setCenter(districtObjectFocusPoint(object));
+    setZoom((current) => Math.max(current, 5));
+    setContourDraft({
+      objectType: object.objectType,
+      mapRole: object.mapRole ?? 'ordinary',
+      points: [...object.contour],
+      source: 'editing',
+      editingObjectId: object.id,
+    });
+  };
   const focusObject = (object: DistrictMapObject) => {
-    setCenter(object.point);
+    setCenter(districtObjectFocusPoint(object));
     setZoom((current) => Math.max(current, 4.5));
     setSelectedId(object.id);
   };
@@ -442,7 +697,7 @@ export function DistrictMapPage(props: Props) {
     setSearchResetSignal((current) => current + 1);
   };
   const changeZoom = (factor: number, anchor?: GeoPoint) => setZoom((currentZoom) => {
-    const nextZoom = Math.max(0.45, Math.min(24, currentZoom * factor));
+    const nextZoom = Math.max(0.45, Math.min(64, currentZoom * factor));
     const appliedFactor = nextZoom / currentZoom;
     if (anchor !== undefined && Math.abs(appliedFactor - 1) > 0.0001) {
       setCenter((currentCenter) => {
@@ -467,7 +722,7 @@ export function DistrictMapPage(props: Props) {
       const x = (event.clientX - rect.left) / rect.width * viewSize.width;
       const y = (event.clientY - rect.top) / rect.height * viewSize.height;
       const anchor = worldCoordinate(projection.unproject(x, y));
-      const nextZoom = Math.max(0.45, Math.min(24, zoom * (event.deltaY < 0 ? 1.16 : 1 / 1.16)));
+      const nextZoom = Math.max(0.45, Math.min(64, zoom * (event.deltaY < 0 ? 1.16 : 1 / 1.16)));
       if (Math.abs(nextZoom - zoom) < 0.0001) return;
       const firstWorldPixels = projection.worldPixels * nextZoom / zoom;
       const firstCenter = geoFromWorld(anchor.x - (x - viewSize.width / 2) / firstWorldPixels, anchor.y - (y - viewSize.height / 2) / firstWorldPixels);
@@ -569,6 +824,20 @@ export function DistrictMapPage(props: Props) {
   };
 
   const onMapPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (contourDraft !== null && event.button === 2) {
+      event.preventDefault();
+      rulerRightPanRef.current = {
+        pointerId: event.pointerId,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        center,
+        timer: 0,
+        active: true,
+      };
+      setPanning(true);
+      svgRef.current?.setPointerCapture(event.pointerId);
+      return;
+    }
     if (rulerActive && event.button === 2) {
       event.preventDefault();
       const held = {
@@ -586,6 +855,21 @@ export function DistrictMapPage(props: Props) {
       }, 320);
       rulerRightPanRef.current = held;
       svgRef.current?.setPointerCapture(event.pointerId);
+      return;
+    }
+    if (contourDraft !== null && contourDraft.source === 'manual' && event.button === 0 && event.pointerType !== 'touch') {
+      event.preventDefault();
+      const point = locate(event.clientX, event.clientY);
+      const rect = stageRef.current?.getBoundingClientRect();
+      if (point === null || rect === undefined) return;
+      const first = projection.project(contourDraft.points[0] ?? point);
+      const localX = (event.clientX - rect.left) / rect.width * viewSize.width;
+      const localY = (event.clientY - rect.top) / rect.height * viewSize.height;
+      if (contourDraft.points.length >= 3 && Math.hypot(localX - first.x, localY - first.y) <= 18) {
+        finishContour();
+      } else {
+        setContourDraft((current) => current === null ? null : { ...current, points: [...current.points, point], source: 'manual' });
+      }
       return;
     }
     if (event.button !== 0 || dragRef.current !== null) return;
@@ -623,6 +907,27 @@ export function DistrictMapPage(props: Props) {
     setPanning(true);
   };
   const onPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
+    const contourDrag = contourDragRef.current;
+    if (contourDrag?.pointerId === event.pointerId) {
+      const point = locate(event.clientX, event.clientY);
+      if (point === null) return;
+      if (contourDrag.mode === 'vertex') {
+        if (!contourDrag.moved && Math.hypot(event.clientX - contourDrag.clientX, event.clientY - contourDrag.clientY) <= 3) return;
+        contourDrag.moved = true;
+        setContourDraft((current) => current === null ? null : { ...current, points: current.points.map((item, itemIndex) => itemIndex === contourDrag.index ? point : item) });
+      } else {
+        contourDrag.moved = true;
+        const latitudeDelta = point.latitude - contourDrag.startPointer.latitude;
+        const longitudeDelta = point.longitude - contourDrag.startPointer.longitude;
+        setContourDraft((current) => current === null ? null : {
+          ...current,
+          points: contourDrag.startPoints.map((item, itemIndex) => itemIndex === contourDrag.startIndex || itemIndex === contourDrag.endIndex
+            ? { latitude: item.latitude + latitudeDelta, longitude: item.longitude + longitudeDelta }
+            : item),
+        });
+      }
+      return;
+    }
     const rulerPan = rulerRightPanRef.current;
     if (rulerPan?.pointerId === event.pointerId) {
       if (!rulerPan.active) return;
@@ -659,7 +964,10 @@ export function DistrictMapPage(props: Props) {
       }
       const point = locate(event.clientX, event.clientY);
       if (point !== null) {
-        const next = objectsRef.current.map((item) => item.id === dragRef.current?.objectId ? { ...item, point, updatedAtIso: new Date().toISOString() } : item);
+        const next = objectsRef.current.map((item) => {
+          if (item.id !== dragRef.current?.objectId) return item;
+          return { ...item, point, updatedAtIso: new Date().toISOString() };
+        });
         objectsRef.current = next;
         props.onObjectsChange(next);
       }
@@ -676,6 +984,23 @@ export function DistrictMapPage(props: Props) {
     )));
   };
   const finishPointer = (event: ReactPointerEvent<SVGSVGElement>) => {
+    const contourDrag = contourDragRef.current;
+    if (contourDrag?.pointerId === event.pointerId) {
+      contourDragRef.current = null;
+      if (event.type !== 'pointercancel' && !contourDrag.moved) {
+        if (contourDrag.mode === 'edge') {
+          const point = locate(event.clientX, event.clientY);
+          if (point !== null) setContourDraft((current) => {
+            if (current === null) return null;
+            const points = [...current.points];
+            points.splice(contourDrag.startIndex + 1, 0, point);
+            return { ...current, points };
+          });
+        } else if (contourDrag.index === 0 && contourDraft?.source === 'manual' && contourDraft.mapRole !== 'response-boundary' && contourDraft.points.length >= 3) {
+          finishContour();
+        }
+      }
+    }
     if (rulerRightPanRef.current?.pointerId === event.pointerId) {
       const completed = rulerRightPanRef.current;
       window.clearTimeout(completed.timer);
@@ -703,7 +1028,7 @@ export function DistrictMapPage(props: Props) {
       dragRef.current = null;
       if (completedDrag.active) {
         const changed = objectsRef.current.map((item) => item.id === completedDrag.objectId
-          ? withAdminChangeNote(item, ['Координаты объекта'])
+          ? withAdminChangeNote(item, [item.kind === 'building' && item.contour.length >= 3 ? 'Расположение таблички' : 'Координаты объекта'])
           : item);
         objectsRef.current = changed;
         props.onCommitObjects(changed);
@@ -725,8 +1050,8 @@ export function DistrictMapPage(props: Props) {
             objects={props.objects}
             showBuildings={showBuildings}
             showHydrants={showHydrants}
-            onShowBuildingsChange={setShowBuildings}
-            onShowHydrantsChange={setShowHydrants}
+            onShowBuildingsChange={(visible) => setLayerGroupVisibility(BUILDING_LAYER_KEYS, visible)}
+            onShowHydrantsChange={(visible) => setLayerGroupVisibility(NPPV_LAYER_KEYS, visible)}
             onFocus={focusObject}
             onSearchSelectionChange={(object) => setSearchHighlightedId(object?.id ?? null)}
             resetSignal={searchResetSignal}
@@ -734,10 +1059,10 @@ export function DistrictMapPage(props: Props) {
           />
         </div>
         <div className={`district-map-surface ${props.basemap}`} ref={stageRef}>
-          <OfflineBasemap center={center} zoom={mapLibreZoom} basemap={props.basemap} />
+          <OfflineBasemap center={center} zoom={mapLibreZoom} basemap={props.basemap} onBuildingContourResolver={(resolver) => { buildingContourResolverRef.current = resolver; }} />
           <svg
             ref={svgRef}
-            className={`${panning ? 'panning' : ''}${rulerActive ? ' ruler-active' : ''}`.trim()}
+            className={`${panning ? 'panning' : ''}${rulerActive ? ' ruler-active' : ''}${contourDraft?.source === 'manual' ? ' contour-drawing' : ''}`.trim()}
             viewBox={`0 0 ${viewSize.width} ${viewSize.height}`}
             onPointerDown={onMapPointerDown}
             onPointerMove={onPointerMove}
@@ -750,6 +1075,7 @@ export function DistrictMapPage(props: Props) {
                 suppressRulerContextMenuRef.current = false;
                 return;
               }
+              if (contourDraft !== null) return;
               if (rulerActive) {
                 setRulerPoints([]);
                 return;
@@ -770,10 +1096,82 @@ export function DistrictMapPage(props: Props) {
             aria-label="Карта района выезда"
           >
             <rect width={viewSize.width} height={viewSize.height} className="map-base" />
+            {visibleObjects.filter((object): object is DistrictBuilding => object.kind === 'building').map((object) => <DistrictObjectContour key={`${object.id}-contour`} object={object} project={projection.project} selected={selectedId === object.id && searchHighlightedId !== object.id} highlighted={searchHighlightedId === object.id} interactionDisabled={rulerActive || contourDraft !== null} onSelect={() => setSelectedId(object.id)} onHoverChange={(hovered) => setHoveredId(hovered ? object.id : null)} />)}
+            {contourDraft !== null && <g className={`district-contour-draft ${contourDraft.source}${contourDraft.mapRole === 'response-boundary' ? ' response-boundary-draft' : ''}`}>
+              {contourDraft.mapRole === 'response-boundary'
+                ? <polyline points={contourDraft.points.map((point) => { const projected = projection.project(point); return `${projected.x},${projected.y}`; }).join(' ')} />
+                : <polygon points={contourDraft.points.map((point) => { const projected = projection.project(point); return `${projected.x},${projected.y}`; }).join(' ')} />}
+              {contourDraft.points.length >= 2 && contourDraft.points.map((point, index) => {
+                const nextIndex = contourDraft.mapRole === 'response-boundary' ? index + 1 : (index + 1) % contourDraft.points.length;
+                const nextPoint = contourDraft.points[nextIndex];
+                if (nextPoint === undefined || (contourDraft.source === 'manual' && contourDraft.points.length < 3 && index === contourDraft.points.length - 1)) return null;
+                const start = projection.project(point);
+                const end = projection.project(nextPoint);
+                const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+                const showAddPoint = Math.hypot(end.x - start.x, end.y - start.y) >= 28;
+                return <g key={`edge-${index}`}>
+                  <line
+                    className="district-contour-edge-hit"
+                    x1={start.x}
+                    y1={start.y}
+                    x2={end.x}
+                    y2={end.y}
+                    onPointerDown={(event) => {
+                      if (event.button !== 0) return;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      const startPointer = locate(event.clientX, event.clientY);
+                      if (startPointer === null) return;
+                      contourDragRef.current = { pointerId: event.pointerId, mode: 'edge', startIndex: index, endIndex: nextIndex, startPointer, startPoints: [...contourDraft.points], moved: false };
+                      svgRef.current?.setPointerCapture(event.pointerId);
+                    }}
+                  />
+                  {showAddPoint && <g
+                    className="district-contour-add-point"
+                    transform={`translate(${midpoint.x} ${midpoint.y})`}
+                    onPointerDown={(event) => {
+                      if (event.button !== 0) return;
+                      event.preventDefault();
+                      event.stopPropagation();
+                      const inserted = {
+                        latitude: (point.latitude + nextPoint.latitude) / 2,
+                        longitude: (point.longitude + nextPoint.longitude) / 2,
+                      };
+                      setContourDraft((current) => {
+                        if (current === null) return null;
+                        const points = [...current.points];
+                        points.splice(index + 1, 0, inserted);
+                        return { ...current, points };
+                      });
+                    }}
+                  >
+                    <circle r="7" />
+                    <path d="M -3.5 0 H 3.5 M 0 -3.5 V 3.5" />
+                  </g>}
+                </g>;
+              })}
+              {contourDraft.points.map((point, index) => {
+                const projected = projection.project(point);
+                return <circle
+                  key={`vertex-${index}`}
+                  className={`district-contour-vertex${index === 0 ? ' first' : ''}`}
+                  cx={projected.x}
+                  cy={projected.y}
+                  r={index === 0 ? 9 : 7}
+                  onPointerDown={(event) => {
+                    if (event.button !== 0) return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    contourDragRef.current = { pointerId: event.pointerId, mode: 'vertex', index, clientX: event.clientX, clientY: event.clientY, moved: false };
+                    svgRef.current?.setPointerCapture(event.pointerId);
+                  }}
+                />;
+              })}
+            </g>}
             {orderedMarkerPlacements.map(({ object, x, y }) => {
               const dragProps = props.adminMode ? {
                 onPointerDown: (event: ReactPointerEvent<SVGGElement>) => {
-                  if (rulerActive || event.button !== 0) return;
+                  if (rulerActive || contourDraft !== null || event.button !== 0) return;
                   event.preventDefault();
                   event.stopPropagation();
                   markerInteractionRef.current = true;
@@ -782,16 +1180,18 @@ export function DistrictMapPage(props: Props) {
                   setSelectedId(object.id);
                 },
               } : {};
-              return <DistrictMapMarker key={object.id} object={object} x={x} y={y} selected={selectedId === object.id} highlighted={searchHighlightedId === object.id} editing={props.adminMode} detailLevel={markerDetailLevel} scale={markerScale} interactionDisabled={rulerActive} onSelect={() => setSelectedId(object.id)} onHoverChange={(hovered) => setHoveredId(hovered ? object.id : null)} {...dragProps} />;
+              const contourSearch = searchHighlightedId === object.id && isBuildingWithContour(object);
+              return <DistrictMapMarker key={object.id} object={object} x={x} y={y} selected={selectedId === object.id && !contourSearch} highlighted={searchHighlightedId === object.id && !contourSearch} editing={props.adminMode} detailLevel={markerDetailLevel} scale={fittedBuildingMarkerScale(object, markerScale, projection.project)} interactionDisabled={rulerActive || contourDraft !== null} onSelect={() => setSelectedId(object.id)} onHoverChange={(hovered) => setHoveredId(hovered ? object.id : null)} {...dragProps} />;
             })}
             <MapRulerOverlay points={rulerPoints} project={projection.project} />
           </svg>
-          {contextMenu !== null && <div className="district-add-menu" style={{ left: contextMenu.x, top: contextMenu.y }}><strong>Добавить на карту</strong><button onClick={() => { setEditorObject(initialBuilding(contextMenu.point)); setContextMenu(null); }}>Номер здания</button><button onClick={() => { setEditorObject(initialHydrant(contextMenu.point)); setContextMenu(null); }}>Пожарный гидрант</button><button className="secondary" onClick={() => setContextMenu(null)}>Отмена</button></div>}
+          {contextMenu !== null && <div className="district-add-menu" style={{ left: contextMenu.x, top: contextMenu.y }}><strong>Добавить на карту</strong><button onClick={() => startContour('building')}>Здание с контуром</button><button onClick={() => startContour('territory')}>Территория с контуром</button><button onClick={() => { setEditorObject(initialHydrant(contextMenu.point)); setContextMenu(null); }}>Пожарный гидрант</button><button onClick={() => { setEditorObject(initialFireReservoir(contextMenu.point)); setContextMenu(null); }}>Пожарный водоём</button><button className="secondary" onClick={() => setContextMenu(null)}>Отмена</button></div>}
+          {contourDraft !== null && <div className="district-contour-panel"><strong>{contourDraft.mapRole === 'response-boundary' ? `Граница района выезда: ${pointCountLabel(contourDraft.points.length)}` : contourDraft.source === 'editing' ? 'Изменение границ объекта' : contourDraft.source === 'automatic' ? 'Контур найден автоматически' : `Ручная обводка: ${pointCountLabel(contourDraft.points.length)}`}</strong><span>{contourDraft.mapRole === 'response-boundary' ? 'Ставьте точки вдоль границы — красная линия остаётся незамкнутой и не закрашивает площадь. Удерживайте ПКМ и тяните для перемещения карты.' : contourDraft.source === 'editing' ? 'Перетаскивайте отдельные вершины или целые стороны. Значок «+» на стороне добавляет новую точку. Удерживайте ПКМ и тяните для перемещения карты.' : contourDraft.source === 'automatic' ? 'Перетаскивайте точки или линии. Нажмите «+» на линии, чтобы добавить новый угол. Удерживайте ПКМ и тяните для перемещения карты.' : 'Прицелом ставьте точки. Точки и линии можно перетаскивать; «+» добавляет новый угол. Для замыкания нажмите первую точку. Удерживайте ПКМ и тяните для перемещения карты.'}</span><div>{contourDraft.source === 'automatic' && <button type="button" className="secondary" onClick={() => setContourDraft((current) => current === null ? null : { ...current, points: [], source: 'manual' })}>Нарисовать вручную</button>}<button type="button" className="primary" disabled={contourDraft.points.length < (contourDraft.mapRole === 'response-boundary' ? 2 : 3)} onClick={finishContour}>{contourDraft.source === 'editing' ? 'Сохранить границы' : 'Принять контур'}</button><button type="button" className="secondary" onClick={() => setContourDraft(null)}>Отмена</button></div></div>}
           <CompassRose className="district-compass" />
           <div className="zoom district-zoom"><button aria-label="Отдалить" onClick={() => changeZoom(1 / 1.4)}>−</button><span>{round(zoom * 100, 0)}%</span><button aria-label="Приблизить" onClick={() => changeZoom(1.4)}>+</button></div>
           <button type="button" className={`map-ruler-control district-ruler-control${rulerActive ? ' active' : ''}`} aria-pressed={rulerActive} title="Линейка: ЛКМ — точки; удержание ПКМ — перемещение карты; короткая ПКМ — сброс" aria-label="Измерить расстояние" onClick={() => { setRulerActive((current) => !current); setRulerPoints([]); }}><img src={appAssetUrl('assets/ruler-glossy.png')} alt="" /></button>
           <div className="map-scale district-map-scale" style={{ width: `${(scalePixels / viewSize.width) * 100}%` }}><span>{scaleDistanceKm < 1 ? `${round(scaleDistanceKm * 1000, 0)} м` : `${scaleDistanceKm} км`}</span></div>
-          <div className="district-map-legend" aria-label="Условные обозначения"><strong>Условные обозначения</strong><span><i className="district-legend-building">3.15</i> Здание</span><span><i className="district-legend-hydrant" /> Пожарный гидрант</span></div>
+          <DistrictMapLegend visibleLayers={visibleLayers} onLayerChange={setLayerVisibility} onAllChange={(visible) => setVisibleLayers(visible ? new Set(DISTRICT_LAYER_KEYS) : new Set())} />
           <div className="district-map-attribution">{props.basemap === 'standard' ? '© OpenStreetMap contributors' : 'Спутник: Esri World Imagery · автономная копия'}</div>
         </div>
       </main>
@@ -804,7 +1204,7 @@ export function DistrictMapPage(props: Props) {
           <button type="button" className="dialog-close" aria-label="Закрыть" onClick={props.onCloseManagement}><UiIcon name="close" /></button>
           <div className="admin-login-icon"><UiIcon name="settings" /></div>
           <h2 id="district-management-title">Настройка карты</h2>
-          <p>Выберите действие. Режим добавления объектов позволяет ставить здания и гидранты правой кнопкой мыши, а также перемещать их по карте.</p>
+          <p>Выберите действие. Режим добавления объектов позволяет ставить здания и элементы НППВ правой кнопкой мыши, а также перемещать их по карте.</p>
           <div className="district-management-actions">
             <button className="primary" onClick={props.onCloseManagement}><UiIcon name="pin" /><span><strong>Перейти к настройке карты</strong><small>Добавление, редактирование и перемещение объектов</small></span></button>
             <button type="button" className="district-act-upload" disabled={actImporting} onClick={() => actInputRef.current?.click()}><UiIcon name="upload" /><span><strong>{actImporting ? 'Обрабатываю акт…' : 'Загрузить акт проверки наружного противопожарного водоснабжения'}</strong><small>Word (.docx): состояние и причина неисправности сопоставляются строго по номеру ПГ</small></span></button>
@@ -815,7 +1215,7 @@ export function DistrictMapPage(props: Props) {
           <button className="secondary exit-admin" onClick={() => { props.onCloseManagement(); props.onExitAdmin(); }}>Завершить режим настройки</button>
         </section>
       </div>}
-      {editorObject !== null && <ObjectEditor object={editorObject} objects={props.objects} onSave={upsertObject} onClose={() => setEditorObject(null)} />}
+      {editorObject !== null && <ObjectEditor object={editorObject} objects={props.objects} onSave={upsertObject} onEditContour={startContourEdit} onClose={() => setEditorObject(null)} />}
     </div>
   );
 }

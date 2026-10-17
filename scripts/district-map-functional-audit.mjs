@@ -50,15 +50,15 @@ try {
     const redoRestoredSatellite = basemapButtons.some((button) => button.classList.contains('active') && button.textContent.includes('Спутник'));
     document.querySelector('.district-tools-toggle')?.click();
     await wait(100);
-    const input = document.querySelector('.district-object-search-row.hydrant input');
-    setInput(input, 'ПГ-53');
+    const input = document.querySelector('.district-object-search-row.nppv input');
+    setInput(input, 'ПГ-17');
     await wait(120);
-    const firstResults = document.querySelectorAll('.district-object-search-row.hydrant .district-search-results button').length;
+    const firstResults = document.querySelectorAll('.district-object-search-row.nppv .district-search-results button').length;
     const toolbarRectWithResults = document.querySelector('.map-tool-stack > .district-object-toolbar')?.getBoundingClientRect();
-    const resultsRect = document.querySelector('.district-object-search-row.hydrant .district-search-results')?.getBoundingClientRect();
-    const searchRect = document.querySelector('.district-object-search-row.hydrant .district-search')?.getBoundingClientRect();
+    const resultsRect = document.querySelector('.district-object-search-row.nppv .district-search-results')?.getBoundingClientRect();
+    const searchRect = document.querySelector('.district-object-search-row.nppv .district-search')?.getBoundingClientRect();
     const searchInputRect = input?.getBoundingClientRect();
-    const clearButtonRect = document.querySelector('.district-object-search-row.hydrant .district-search > button')?.getBoundingClientRect();
+    const clearButtonRect = document.querySelector('.district-object-search-row.nppv .district-search > button')?.getBoundingClientRect();
     const mapToolbarRect = document.querySelector('.map-toolbar')?.getBoundingClientRect();
     const windRect = document.querySelector('.toolbar-wind-summary')?.getBoundingClientRect();
     const resultsContained = Boolean(toolbarRectWithResults && resultsRect
@@ -74,22 +74,22 @@ try {
     const windLockedToToolbarTop = Boolean(mapToolbarRect && windRect
       && Math.abs(windRect.top - mapToolbarRect.top) <= 1
       && windRect.height <= 40);
-    document.querySelector('.district-object-search-row.hydrant .district-search-results button')?.click();
+    document.querySelector('.district-object-search-row.nppv .district-search-results button')?.click();
     await wait(80);
-    document.querySelector('.district-object-search-row.hydrant .district-search > button')?.click();
+    document.querySelector('.district-object-search-row.nppv .district-search > button')?.click();
     await wait(40);
-    setInput(input, 'ПГ-14');
+    setInput(input, 'ПГ-17');
     await wait(120);
-    const secondResults = document.querySelectorAll('.district-object-search-row.hydrant .district-search-results button').length;
-    document.querySelector('.district-object-search-row.hydrant .district-search-results button')?.click();
+    const secondResults = document.querySelectorAll('.district-object-search-row.nppv .district-search-results button').length;
+    document.querySelector('.district-object-search-row.nppv .district-search-results button')?.click();
     await wait(50);
     const map = document.querySelector('.map-stage svg');
     map.querySelector('.map-base')?.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }));
     await wait(80);
     const searchClearedAfterMapClick = input.value === '';
-    setInput(input, 'ПГ-53');
+    setInput(input, 'ПГ-17');
     await wait(80);
-    document.querySelector('.district-object-search-row.hydrant .district-search-results button')?.click();
+    document.querySelector('.district-object-search-row.nppv .district-search-results button')?.click();
     await wait(50);
     const ruler = document.querySelector('.calculation-ruler-control');
     ruler?.click();
@@ -172,6 +172,13 @@ try {
     const districtRulerPointsAfterDrag = districtMap.querySelectorAll('.map-ruler-overlay circle').length;
     districtRuler?.click();
     await wait(40);
+    const boundaryLegend = document.querySelector('.district-legend-boundary') !== null;
+    const assLegend = document.querySelector('.district-legend-ass')?.textContent?.trim() === 'АСС';
+    const specialCreationRemoved = [...document.querySelectorAll('.district-add-menu button')]
+      .every((button) => !button.textContent.includes('граница района выезда') && !button.textContent.includes('объект АСС'));
+    const hideAllButton = [...document.querySelectorAll('.district-legend-heading button')]
+      .find((button) => button.textContent.includes('всё'));
+    const hideAllSingleLine = hideAllButton === undefined || getComputedStyle(hideAllButton).whiteSpace === 'nowrap';
     const unknownHydrantHalf = document.querySelector('.hydrant-marker.status-unknown .hydrant-symbol-half');
     const unknownHydrantColor = unknownHydrantHalf === null ? '' : getComputedStyle(unknownHydrantHalf).fill;
     return {
@@ -204,6 +211,10 @@ try {
       districtRulerPointsAfterTap,
       districtRulerPointsAfterPinch,
       districtRulerPointsAfterDrag,
+      boundaryLegend,
+      assLegend,
+      specialCreationRemoved,
+      hideAllSingleLine,
       districtZoomBeforePinch,
       districtZoomAfterPinch,
       oldHintRemoved: document.querySelector('.district-map-hint') === null,
@@ -213,13 +224,13 @@ try {
     };
   })()`);
   const failures = [];
-  if (result.firstResults < 1 || result.secondResults < 1) failures.push('повторный поиск ПГ');
+  if (result.firstResults < 1 || result.secondResults < 1) failures.push('повторный поиск элемента НППВ');
   if (!result.resultsContained || !result.compactSearchWidth) failures.push('компактный поиск внутри общей рамки');
   if (!result.clearButtonCentered) failures.push('крестик очистки не центрирован в строке');
   if (!result.windLockedToToolbarTop) failures.push('панель ветра смещается при раскрытии поиска');
   if (!result.searchClearedAfterMapClick) failures.push('сброс поиска щелчком по карте');
   if (result.rulerSegments !== 2) failures.push('линейка с несколькими точками');
-  if (result.rulerTotalText.includes('Σ')) failures.push('лишний знак суммы в итоговом расстоянии');
+  if ((result.rulerTotalText ?? '').includes('Σ')) failures.push('лишний знак суммы в итоговом расстоянии');
   if (result.unknownHydrantColor !== 'rgb(213, 45, 54)') failures.push('неизвестное состояние ПГ не выделено красным');
   if (result.rulerCursor !== 'crosshair' || !result.mapObjectsDisabledDuringRuler) failures.push('режим линейки поверх объектов');
   if (result.rulerSegmentsAfterShortRight !== 0) failures.push('короткая правая кнопка не сбрасывает линейку');
@@ -229,6 +240,8 @@ try {
   if (!result.rulerIconCentered) failures.push('центрирование значка линейки');
   if (result.districtRulerPointsAfterTap !== 1 || result.districtRulerPointsAfterPinch !== 1 || result.districtRulerPointsAfterDrag !== 1) failures.push('разделение касания, перемещения и жеста линейки');
   if (result.districtZoomBeforePinch === result.districtZoomAfterPinch) failures.push('масштабирование карты района выезда двумя пальцами');
+  if (!result.boundaryLegend || !result.assLegend || !result.hideAllSingleLine) failures.push('переключатели границы района и АСС в условных обозначениях');
+  if (!result.specialCreationRemoved) failures.push('разовые команды создания границы района и АСС не удалены');
   if (!result.switchedToSatellite || !result.undoRestoredMap || !result.redoRestoredSatellite) failures.push('кнопки назад и вперёд');
   console.log(JSON.stringify(result, null, 2));
   if (failures.length > 0) throw new Error(`Не пройдены проверки: ${failures.join(', ')}.`);

@@ -1,6 +1,6 @@
 import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react';
-import type { DistrictHydrant, DistrictMapObject } from './district-map-model';
-import { hydrantNetworkCode } from './district-map-model';
+import type { DistrictFireReservoir, DistrictHydrant, DistrictMapObject } from './district-map-model';
+import { buildingPrefix, hydrantNetworkCode } from './district-map-model';
 
 type Props = Readonly<{
   object: DistrictMapObject;
@@ -37,6 +37,17 @@ export function HydrantPlanSymbol({ object, className = '' }: Readonly<{ object:
   return <svg className={`hydrant-plan-symbol${className === '' ? '' : ` ${className}`}`} viewBox="-42 -19 84 38" aria-label={`Пожарный гидрант ${object.number}, ${hydrantNetworkCode(object)}`}><HydrantSymbolContents object={object} /></svg>;
 }
 
+function ReservoirSymbolContents(): ReactNode {
+  return <>
+    <rect className="reservoir-symbol-square" x="-14" y="-14" width="28" height="28" rx="2" />
+    <text className="reservoir-symbol-letters" x="0" y="5" textAnchor="middle">ПВ</text>
+  </>;
+}
+
+export function FireReservoirPlanSymbol({ object, className = '' }: Readonly<{ object: DistrictFireReservoir; className?: string }>) {
+  return <svg className={`reservoir-plan-symbol${className === '' ? '' : ` ${className}`}`} viewBox="-18 -18 36 36" aria-label={`Пожарный водоём ${object.number}`}><ReservoirSymbolContents /></svg>;
+}
+
 function namedLine(fullName: string, shortName: string): string {
   if (shortName.trim() === '') return fullName.trim();
   if (fullName.trim() === '') return shortName.trim();
@@ -68,8 +79,27 @@ export function DistrictMapMarker({ object, x, y, selected, highlighted = false,
     </g>
     );
   }
+  if (object.kind === 'reservoir') {
+    const hoverLines = [
+      object.owner.trim(),
+      object.volumeM3 === null ? '' : `Объём: ${object.volumeM3.toLocaleString('ru-RU')} м³`,
+    ].filter(Boolean);
+    return (
+      <g data-object-id={object.id} transform={`translate(${x} ${y})`} className={`district-map-marker reservoir-marker status-${object.status}${selected ? ' selected' : ''}${highlighted ? ' search-highlight' : ''}${editing ? ' editable' : ''}${interactionDisabled ? ' interaction-disabled' : ''}`} onClick={(event) => { if (interactionDisabled) return; event.stopPropagation(); onSelect(); }} onPointerDown={pointerDown} onPointerEnter={() => { if (!interactionDisabled) onHoverChange?.(true); }} onPointerLeave={() => onHoverChange?.(false)}>
+        <g transform={`scale(${scale})`}>
+          <rect className="marker-hit-area" x="-18" y="-18" width="36" height="36" rx="5" />
+          <circle className="marker-halo" r="20" />
+          <ReservoirSymbolContents />
+        </g>
+        <foreignObject className="district-marker-hover-card" x="25" y={-18 - hoverLines.length * 9} width="245" height={42 + hoverLines.length * 19}>
+          <div><strong>Пожарный водоём {object.number}</strong>{hoverLines.map((line, index) => <span key={`${object.id}-hover-${index}`}>{line}</span>)}</div>
+        </foreignObject>
+        <title>{`Пожарный водоём ${object.number}${object.volumeM3 === null ? '' : `; ${object.volumeM3} м³`}`}</title>
+      </g>
+    );
+  }
   const hoverLines = [
-    namedLine(object.workshopFull, object.workshopShort),
+    ...(object.objectType === 'territory' ? object.territoryNames.map((unit) => namedLine(unit.fullName, unit.shortName)) : [namedLine(object.workshopFull, object.workshopShort)]),
     ...object.departments.map((unit) => namedLine(unit.fullName, unit.shortName)),
     ...object.sites.map((unit) => namedLine(unit.fullName, unit.shortName)),
     (object.inventoryNumber ?? '').trim() === '' ? '' : `Инвентарный №: ${object.inventoryNumber}`,
@@ -77,11 +107,13 @@ export function DistrictMapMarker({ object, x, y, selected, highlighted = false,
       .filter((document) => document.number.trim() !== '')
       .map((document) => `${document.kind}: ${document.number}`),
   ].filter((line) => line !== '');
+  const rescueService = object.mapRole === 'rescue-service';
+  const markerLabel = rescueService ? 'АСС' : object.number;
   return (
-    <g data-object-id={object.id} transform={`translate(${x} ${y})`} className={`district-map-marker building-number-marker${selected ? ' selected' : ''}${highlighted ? ' search-highlight' : ''}${editing ? ' editable' : ''}${interactionDisabled ? ' interaction-disabled' : ''}`} onClick={(event) => { if (interactionDisabled) return; event.stopPropagation(); onSelect(); }} onPointerDown={pointerDown} onPointerEnter={() => { if (!interactionDisabled) onHoverChange?.(true); }} onPointerLeave={() => onHoverChange?.(false)}>
-      <g transform={`scale(${scale})`}><circle className="marker-halo" r="25" /><path d="M-21-13h42v26h-42z" /><text x="0" y="6" textAnchor="middle">{object.number}</text></g>
+    <g data-object-id={object.id} transform={`translate(${x} ${y})`} className={`district-map-marker building-number-marker prefix-${buildingPrefix(object.number)}${object.objectType === 'territory' ? ' territory' : ''}${rescueService ? ' rescue-service-marker' : ''}${selected ? ' selected' : ''}${highlighted ? ' search-highlight' : ''}${editing ? ' editable' : ''}${interactionDisabled ? ' interaction-disabled' : ''}`} onClick={(event) => { if (interactionDisabled) return; event.stopPropagation(); onSelect(); }} onPointerDown={pointerDown} onPointerEnter={() => { if (!interactionDisabled) onHoverChange?.(true); }} onPointerLeave={() => onHoverChange?.(false)}>
+      <g transform={`scale(${scale})`}><circle className="marker-halo" r="25" /><path d="M-21-13h42v26h-42z" /><text x="0" y="6" textAnchor="middle">{markerLabel}</text></g>
       <foreignObject className="district-marker-hover-card" x="25" y={-18 - hoverLines.length * 9} width="245" height={42 + hoverLines.length * 19}>
-        <div><strong>Здание {object.number}</strong>{hoverLines.map((line, index) => <span key={`${object.id}-hover-${index}`}>{line}</span>)}</div>
+        <div><strong>{rescueService ? 'Объект АСС' : object.objectType === 'territory' ? 'Территория' : 'Здание'} {object.number}</strong>{hoverLines.map((line, index) => <span key={`${object.id}-hover-${index}`}>{line}</span>)}</div>
       </foreignObject>
       <title>{object.number} · {hoverLines.join(' · ')}</title>
     </g>

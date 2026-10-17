@@ -100,8 +100,9 @@ const hydrants = placemarks.flatMap((placemark) => {
   }];
 });
 
-const buildings = existing.published.filter((object) => object.kind === 'building');
-const objects = [...buildings, ...hydrants];
+// Повторный импорт ПГ не должен удалять здания и другие элементы НППВ (например, пожарные водоёмы).
+const nonHydrants = existing.published.filter((object) => object.kind !== 'hydrant');
+const objects = [...nonHydrants, ...hydrants];
 const revision = 20261014;
 const project = {
   id: 'district-map-main',

@@ -8,7 +8,7 @@ import type { GeoPoint } from '../core/types';
 import type { Basemap } from './MapCanvas';
 
 let protocolRegistered = false;
-type OfflineArchiveKind = 'vector' | 'satellite' | 'satellite-overview' | 'satellite-detail-14' | 'satellite-detail-15' | 'satellite-detail-16';
+type OfflineArchiveKind = 'vector' | 'satellite' | 'satellite-overview' | 'satellite-detail-14' | 'satellite-detail-15' | 'satellite-detail-16' | 'satellite-detail-17';
 const offlineArchivePromises: Partial<Record<OfflineArchiveKind, Promise<PMTiles>>> = {};
 const offlineArchiveFiles: Record<OfflineArchiveKind, string> = {
   vector: 'monchegorsk-v5.pmtiles',
@@ -17,15 +17,14 @@ const offlineArchiveFiles: Record<OfflineArchiveKind, string> = {
   'satellite-detail-14': 'monchegorsk-satellite-detail-z14-v2.pmtiles',
   'satellite-detail-15': 'monchegorsk-satellite-detail-z15-v2.pmtiles',
   'satellite-detail-16': 'monchegorsk-satellite-detail-z16-v2.pmtiles',
+  'satellite-detail-17': 'monchegorsk-satellite-detail-z17-v1.pmtiles',
 };
 let satelliteSourceSequence = 0;
-// The application view reaches approximately z16.5 at its 2400% limit. Esri
-// has placeholder "imagery unavailable" tiles for parts of Monchegorsk above
-// z16. Capping the native request at the last verified complete tier lets
-// MapLibre overscale that imagery for the final fractional zoom instead of
-// replacing the map with a provider placeholder. The bundled offline source
-// follows the same z16 ceiling, so browser, Windows and Android stay aligned.
-const ONLINE_SATELLITE_NATIVE_MAX_ZOOM = 16;
+// The industrial area was sampled across its full working rectangle. Esri's
+// z17 tier contains real imagery there, while z18+ returns the provider's
+// identical 2521-byte "imagery unavailable" tile. Request the last verified
+// native tier and only overscale beyond it, so maximum zoom stays usable.
+const ONLINE_SATELLITE_NATIVE_MAX_ZOOM = 17;
 setWorkerUrl(new URL(mapWorkerUrl, document.baseURI).href);
 
 function isNativeMobileRuntime(): boolean {
@@ -125,6 +124,14 @@ function ensurePmtilesProtocol() {
     const tile = await archive.getZxy(zoom, Number(column), Number(row));
     return { data: tile?.data ?? new Uint8Array() };
   });
+  addProtocol('localsatelliteultra', async (request) => {
+    const coordinates = /\/(\d+)\/(\d+)\/(\d+)$/.exec(request.url);
+    if (coordinates === null) return { data: new Uint8Array() };
+    const [, zoom, column, row] = coordinates;
+    const archive = await getOfflineArchive('satellite-detail-17');
+    const tile = await archive.getZxy(Number(zoom), Number(column), Number(row));
+    return { data: tile?.data ?? new Uint8Array() };
+  });
   protocolRegistered = true;
 }
 
@@ -134,7 +141,7 @@ function satelliteTileTemplate(useOnlineDetail: boolean): string {
   // and Android builds use the same provider directly; the PWA worker caches
   // recent tiles where the host WebView supports service workers.
   if (navigator.userAgent.includes('Electron')) return '/map-tiles/esri/{z}/{y}/{x}';
-  return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+  return 'https://tiledbasemaps.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 }
 
 const LOCAL_LAYER_IDS = [
@@ -249,7 +256,7 @@ function applyBasemap(
       type: 'raster',
       source: broadSourceId,
       maxzoom: 10.01,
-      paint: { 'raster-fade-duration': 0, 'raster-resampling': 'nearest', 'raster-opacity': 0.001 },
+      paint: { 'raster-fade-duration': 0, 'raster-resampling': 'linear', 'raster-opacity': 0.001 },
     });
     // One continuous local source selects the native archive for z10-z16.
     // Keeping all detailed zooms in a single raster layer prevents the
@@ -268,7 +275,27 @@ function applyBasemap(
       type: 'raster',
       source: sharpSourceId,
       minzoom: 9.99,
-      paint: { 'raster-fade-duration': 0, 'raster-resampling': 'nearest', 'raster-contrast': 0.06, 'raster-opacity': 0.001 },
+      paint: { 'raster-fade-duration': 0, 'raster-resampling': 'linear', 'raster-contrast': 0.06, 'raster-opacity': 0.001 },
+    });
+    // The native z17 archive is intentionally limited to the industrial core.
+    // A bounded overlay lets the z16 source remain visible outside this area,
+    // so offline zoom never produces empty squares at the package edge.
+    const ultraSourceId = `satellite-ultra-${sequence}`;
+    map.addSource(ultraSourceId, {
+      type: 'raster',
+      tiles: ['localsatelliteultra://tiles/{z}/{x}/{y}'],
+      tileSize: 256,
+      minzoom: 17,
+      maxzoom: 17,
+      bounds: [32.77, 67.89, 32.98, 67.97],
+      attribution: 'Esri World Imagery (autonomous detailed copy)',
+    });
+    map.addLayer({
+      id: 'satellite-ultra-imagery',
+      type: 'raster',
+      source: ultraSourceId,
+      minzoom: 16.99,
+      paint: { 'raster-fade-duration': 0, 'raster-resampling': 'linear', 'raster-contrast': 0.06, 'raster-opacity': 0.001 },
     });
     let primarySourceId = sharpSourceId;
     if (useOnlineDetail) {
@@ -286,7 +313,7 @@ function applyBasemap(
         type: 'raster',
         source: onlineSourceId,
         minzoom: 0,
-        paint: { 'raster-fade-duration': 0, 'raster-resampling': 'nearest', 'raster-contrast': 0.04, 'raster-opacity': 0.001 },
+        paint: { 'raster-fade-duration': 0, 'raster-resampling': 'linear', 'raster-contrast': 0.04, 'raster-opacity': 0.001 },
       });
       primarySourceId = onlineSourceId;
     }
@@ -310,12 +337,16 @@ function applyBasemap(
   map.triggerRepaint();
 }
 
-export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: GeoPoint; zoom: number; basemap: Basemap }>) {
+type BuildingContourResolver = (point: GeoPoint) => readonly GeoPoint[] | null;
+
+export function OfflineBasemap({ center, zoom, basemap, onBuildingContourResolver }: Readonly<{ center: GeoPoint; zoom: number; basemap: Basemap; onBuildingContourResolver?: (resolver: BuildingContourResolver | null) => void }>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const initialViewRef = useRef({ center, zoom });
   const initialStyleRef = useRef(basemapStyle());
   const desiredBasemapRef = useRef(basemap);
+  const buildingResolverCallbackRef = useRef(onBuildingContourResolver);
+  buildingResolverCallbackRef.current = onBuildingContourResolver;
   const appliedBasemapRef = useRef<Basemap | null>(null);
   const mapReadyRef = useRef(false);
 
@@ -332,6 +363,7 @@ export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: Geo
       zoom: initialView.zoom,
       style: initialStyleRef.current,
       interactive: false,
+      maxZoom: 24,
       attributionControl: false,
       fadeDuration: 0,
       canvasContextAttributes: { preserveDrawingBuffer: true },
@@ -342,6 +374,27 @@ export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: Geo
       appliedBasemapRef.current = desiredBasemapRef.current;
       container.dataset.mapReady = 'true';
       container.dataset.mapStatus = 'loaded';
+      buildingResolverCallbackRef.current?.((point) => {
+        const screen = map.project([point.longitude, point.latitude]);
+        const features = map.queryRenderedFeatures([
+          [screen.x - 12, screen.y - 12],
+          [screen.x + 12, screen.y + 12],
+        ], { layers: ['buildings'] });
+        const geometry = features.find((feature) => feature.geometry.type === 'Polygon')?.geometry;
+        if (geometry?.type !== 'Polygon') return null;
+        const ring = geometry.coordinates[0] ?? [];
+        const points = ring.flatMap((coordinate) => {
+          const longitude = coordinate[0];
+          const latitude = coordinate[1];
+          return typeof longitude === 'number' && typeof latitude === 'number' ? [{ longitude, latitude }] : [];
+        });
+        if (points.length > 1) {
+          const first = points[0];
+          const last = points.at(-1);
+          if (first?.latitude === last?.latitude && first?.longitude === last?.longitude) points.pop();
+        }
+        return points.length >= 3 ? points : null;
+      });
     });
     map.on('styledata', () => { container.dataset.styleEvent = 'true'; });
     map.on('idle', () => {
@@ -436,6 +489,7 @@ export function OfflineBasemap({ center, zoom, basemap }: Readonly<{ center: Geo
       window.removeEventListener('offline', useOfflineSatellite);
       window.clearTimeout(retryTimer);
       window.clearInterval(auditTimer);
+      buildingResolverCallbackRef.current?.(null);
       map.remove();
       mapRef.current = null;
       mapReadyRef.current = false;

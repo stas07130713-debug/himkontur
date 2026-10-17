@@ -10,7 +10,7 @@ import {
 } from './district-map-model';
 
 const base = { point: { latitude: 67.9, longitude: 32.8 }, note: '', updatedAtIso: '2026-10-14T00:00:00.000Z' };
-const building: DistrictBuilding = { ...base, id: 'b', kind: 'building', number: '3.15', planningDocuments: [], workshopFull: 'Цех', workshopShort: 'Ц', departments: [], sites: [{ id: 's', fullName: 'Корпус', shortName: 'К' }] };
+const building: DistrictBuilding = { ...base, id: 'b', kind: 'building', objectType: 'building', contour: [], territoryNames: [], number: '3.15', planningDocuments: [], workshopFull: 'Цех', workshopShort: 'Ц', departments: [], sites: [{ id: 's', fullName: 'Корпус', shortName: 'К' }] };
 const hydrant: DistrictHydrant = { ...base, id: 'h', kind: 'hydrant', number: 'ПГ-17', owner: 'Цех', status: 'serviceable', faultDescription: '', network: 'ring', hydrantType: 'standard', pattern: 'moscow', diameterMm: 150, pressureAtm: null, heightMm: 1750, signDistanceLeftM: null, signDistanceRightM: 12, signDistanceForwardM: null, lastInspectionDate: '' };
 
 describe('привязка объектов карты района выезда', () => {

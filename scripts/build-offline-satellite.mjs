@@ -27,6 +27,10 @@ const DETAIL_TIERS = [
   { zoom: 14, bounds: [32.45, 67.78, 33.25, 68.07] },
   { zoom: 15, bounds: [32.58, 67.83, 33.17, 68.03] },
   { zoom: 16, bounds: [32.70, 67.87, 33.03, 67.99] },
+  // Native building-level imagery for the KGMK industrial core. Keeping this
+  // tier focused makes it practical to bundle in the PWA, Windows and Android
+  // packages while eliminating z16 overscaling where contours are edited.
+  { zoom: 17, bounds: [32.77, 67.89, 32.98, 67.97] },
 ];
 const OVERVIEW_DETAIL = { minZoom: 10, maxZoom: 13, bounds: [32.45, 67.78, 33.25, 68.07] };
 
@@ -102,7 +106,7 @@ async function main() {
   const tierZoom = tierArgument === undefined ? null : Number.parseInt(tierArgument.slice('--tier='.length), 10);
   const selectedTier = tierZoom === null ? null : DETAIL_TIERS.find((tier) => tier.zoom === tierZoom) ?? null;
   if (tierArgument !== undefined && selectedTier === null)
-    throw new Error('Неизвестный уровень детализации. Допустимы --tier=14, --tier=15 или --tier=16.');
+    throw new Error('Неизвестный уровень детализации. Допустимы --tier=14, --tier=15, --tier=16 или --tier=17.');
   const arcgisToken = process.env.ARCGIS_TOKEN?.trim() ?? '';
   const tiles = enumerateTiles(includeDetail, selectedTier, overviewDetail);
   const minimumZoom = overviewDetail ? OVERVIEW_DETAIL.minZoom : (selectedTier?.zoom ?? MIN_ZOOM);

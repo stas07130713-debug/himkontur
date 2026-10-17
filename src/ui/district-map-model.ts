@@ -1,10 +1,12 @@
 import type { GeoPoint } from '../core/types';
 
-export type DistrictObjectKind = 'building' | 'hydrant';
+export type DistrictObjectKind = 'building' | 'hydrant' | 'reservoir';
 export type HydrantStatus = 'unknown' | 'serviceable' | 'faulty' | 'disabled';
 export type HydrantNetwork = 'ring' | 'dead-end' | 'ring-with-dead-ends';
 export type HydrantType = 'standard' | 'foam' | 'dry-riser';
 export type HydrantPattern = 'moscow' | 'leningrad' | 'german' | 'other';
+export type FireReservoirType = 'artificial' | 'natural' | 'foam' | 'foam-solution';
+export type DistrictBuildingMapRole = 'ordinary' | 'response-boundary' | 'rescue-service';
 
 type DistrictObjectBase = Readonly<{
   id: string;
@@ -29,6 +31,10 @@ export type DistrictPlanningDocument = Readonly<{
 
 export type DistrictBuilding = DistrictObjectBase & Readonly<{
   kind: 'building';
+  objectType: 'building' | 'territory';
+  mapRole?: DistrictBuildingMapRole;
+  contour: readonly GeoPoint[];
+  territoryNames: readonly DistrictNamedUnit[];
   number: string;
   inventoryNumber?: string;
   planningDocuments: readonly DistrictPlanningDocument[];
@@ -56,7 +62,21 @@ export type DistrictHydrant = DistrictObjectBase & Readonly<{
   lastInspectionDate: string;
 }>;
 
-export type DistrictMapObject = DistrictBuilding | DistrictHydrant;
+export type DistrictFireReservoir = DistrictObjectBase & Readonly<{
+  kind: 'reservoir';
+  number: string;
+  owner: string;
+  status: HydrantStatus;
+  volumeM3: number | null;
+  faultDescription: string;
+  reservoirType: FireReservoirType;
+}>;
+
+export type DistrictMapObject = DistrictBuilding | DistrictHydrant | DistrictFireReservoir;
+
+export function buildingPrefix(number: string): string {
+  return /^\s*([0-9])(?:\.|$)/u.exec(number)?.[1] ?? '1';
+}
 
 export type DistrictMapProject = Readonly<{
   id: string;
@@ -92,6 +112,9 @@ const PREVIEW_OBJECTS: readonly DistrictMapObject[] = [
   {
     id: 'preview-building-315',
     kind: 'building',
+    objectType: 'building',
+    contour: [],
+    territoryNames: [],
     point: { latitude: 67.9318, longitude: 32.849 },
     number: '3.15',
     inventoryNumber: '',
@@ -106,6 +129,9 @@ const PREVIEW_OBJECTS: readonly DistrictMapObject[] = [
   {
     id: 'preview-building-316',
     kind: 'building',
+    objectType: 'building',
+    contour: [],
+    territoryNames: [],
     point: { latitude: 67.919, longitude: 32.8835 },
     number: '3.16',
     inventoryNumber: '',
@@ -159,7 +185,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 function validDistrictObject(value: unknown): value is DistrictMapObject {
   if (!isObject(value) || !isObject(value.point)) return false;
-  if (value.kind !== 'building' && value.kind !== 'hydrant') return false;
+  if (value.kind !== 'building' && value.kind !== 'hydrant' && value.kind !== 'reservoir') return false;
   return typeof value.id === 'string'
     && typeof value.number === 'string'
     && typeof value.point.latitude === 'number'
@@ -184,6 +210,16 @@ export function withoutCoordinateSourceNote(value: string): string {
 
 function finiteNumberOrNull(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function geoPoints(value: unknown): GeoPoint[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(isObject).flatMap((point) => (
+    typeof point.latitude === 'number' && Number.isFinite(point.latitude)
+      && typeof point.longitude === 'number' && Number.isFinite(point.longitude)
+      ? [{ latitude: point.latitude, longitude: point.longitude }]
+      : []
+  ));
 }
 
 function namedUnits(value: unknown, legacyFull: unknown, legacyShort: unknown, prefix: string): DistrictNamedUnit[] {
@@ -232,9 +268,19 @@ function normalizeDistrictObject(value: unknown): DistrictMapObject | null {
   };
   if (value.kind === 'building') {
     const legacy = value as unknown as Record<string, unknown>;
+    const objectType = value.objectType === 'territory' || buildingPrefix(text(value.number)) === '0' ? 'territory' : 'building';
+    const normalizedTerritoryNames = namedUnits(value.territoryNames, legacy.territoryFull, legacy.territoryShort, `${value.id}-territory`);
+    const migratedTerritoryNames = objectType === 'territory' && normalizedTerritoryNames.length === 0
+      && (text(value.workshopFull).trim() !== '' || text(value.workshopShort).trim() !== '')
+      ? [{ id: `${value.id}-territory-1`, fullName: text(value.workshopFull), shortName: text(value.workshopShort) }]
+      : normalizedTerritoryNames;
     return {
       ...base,
       kind: 'building',
+      objectType,
+      mapRole: value.mapRole === 'response-boundary' || value.mapRole === 'rescue-service' ? value.mapRole : 'ordinary',
+      contour: geoPoints(value.contour),
+      territoryNames: migratedTerritoryNames,
       number: text(value.number),
       inventoryNumber: text(value.inventoryNumber),
       planningDocuments: planningDocuments(value.planningDocuments, legacy, `${value.id}-document`),
@@ -244,8 +290,25 @@ function normalizeDistrictObject(value: unknown): DistrictMapObject | null {
       sites: namedUnits(value.sites, legacy.buildingFull, legacy.buildingShort, `${value.id}-site`),
     };
   }
-  const network: HydrantNetwork = value.network === 'dead-end' || value.network === 'ring-with-dead-ends' ? value.network : 'ring';
   const status: HydrantStatus = value.status === 'faulty' || value.status === 'disabled' || value.status === 'serviceable' ? value.status : 'unknown';
+  if (value.kind === 'reservoir') {
+    const reservoirType: FireReservoirType = value.reservoirType === 'natural'
+      || value.reservoirType === 'foam'
+      || value.reservoirType === 'foam-solution'
+      ? value.reservoirType
+      : 'artificial';
+    return {
+      ...base,
+      kind: 'reservoir',
+      number: text(value.number),
+      owner: text(value.owner),
+      status,
+      volumeM3: finiteNumberOrNull(value.volumeM3),
+      faultDescription: text(value.faultDescription),
+      reservoirType,
+    };
+  }
+  const network: HydrantNetwork = value.network === 'dead-end' || value.network === 'ring-with-dead-ends' ? value.network : 'ring';
   const hydrantType: HydrantType = value.hydrantType === 'foam' || value.hydrantType === 'dry-riser'
     ? value.hydrantType
     : 'standard';
@@ -486,6 +549,14 @@ export function saveDistrictMapProject(project: DistrictMapProject): void {
 
 export function districtObjectTitle(object: DistrictMapObject): string {
   if (object.kind === 'hydrant') return `Пожарный гидрант ${object.number}`;
+  if (object.kind === 'reservoir') return `Пожарный водоём ${object.number}`;
+  if (object.mapRole === 'response-boundary') return 'Граница района выезда';
+  if (object.mapRole === 'rescue-service') return `Аварийно-спасательная служба · ${object.number}`;
+  if (object.objectType === 'territory') {
+    const name = object.territoryNames.find((item) => item.shortName.trim() !== '' || item.fullName.trim() !== '');
+    const suffix = name === undefined ? '' : (name.shortName.trim() || name.fullName.trim());
+    return suffix === '' ? object.number : `${object.number} · ${suffix}`;
+  }
   const site = object.sites.find((item) => item.shortName.trim() !== '' || item.fullName.trim() !== '');
   const suffix = site === undefined
     ? (object.workshopShort.trim() || object.workshopFull.trim())
@@ -495,6 +566,10 @@ export function districtObjectTitle(object: DistrictMapObject): string {
 
 export function districtObjectSearchDescription(object: DistrictMapObject): string {
   if (object.kind === 'hydrant') return [object.owner, object.faultDescription].filter(Boolean).join(' · ') || 'Пожарный гидрант';
+  if (object.kind === 'reservoir') return [object.owner, object.faultDescription].filter(Boolean).join(' · ') || 'Пожарный водоём';
+  if (object.mapRole === 'response-boundary') return 'Постоянная граница района выезда';
+  if (object.mapRole === 'rescue-service') return ['Аварийно-спасательная служба', object.workshopFull, object.workshopShort].filter(Boolean).join(' · ');
+  if (object.objectType === 'territory') return object.territoryNames.flatMap((unit) => [unit.fullName, unit.shortName]).map((item) => item.trim()).filter(Boolean).join(' · ');
   const parts = [
     object.workshopFull,
     ...object.departments.flatMap((unit) => [unit.fullName, unit.shortName]),
@@ -511,8 +586,19 @@ export function planningDocumentLabel(document: DistrictPlanningDocument): strin
 
 export function districtObjectSearchText(object: DistrictMapObject): string {
   if (object.kind === 'hydrant') return [object.number, object.owner, object.faultDescription, object.note].join(' ').toLocaleLowerCase('ru-RU');
+  if (object.kind === 'reservoir') return [
+    object.number,
+    object.owner,
+    FIRE_RESERVOIR_TYPE_LABELS[object.reservoirType],
+    object.volumeM3 === null ? '' : String(object.volumeM3),
+    object.faultDescription,
+    object.note,
+  ].join(' ').toLocaleLowerCase('ru-RU');
   return [
     object.number,
+    object.mapRole === 'response-boundary' ? 'граница района выезда периметр' : '',
+    object.mapRole === 'rescue-service' ? 'аварийно-спасательная служба АСС' : '',
+    ...object.territoryNames.flatMap((unit) => [unit.fullName, unit.shortName]),
     object.inventoryNumber ?? '',
     ...object.planningDocuments.flatMap((document) => [document.kind, document.number, planningDocumentLabel(document)]),
     object.workshopFull,
@@ -546,6 +632,13 @@ export const HYDRANT_TYPE_LABELS: Readonly<Record<HydrantType, string>> = {
   standard: 'Обычный пожарный гидрант',
   foam: 'Пенный пожарный гидрант',
   'dry-riser': 'Пожарный гидрант в виде сухотруба',
+};
+
+export const FIRE_RESERVOIR_TYPE_LABELS: Readonly<Record<FireReservoirType, string>> = {
+  artificial: 'Искусственный пожарный водоём',
+  natural: 'Естественный пожарный водоём',
+  foam: 'Пенный пожарный водоём',
+  'foam-solution': 'Пожарный водоём раствора пенообразователя',
 };
 
 export const HYDRANT_PATTERN_LABELS: Readonly<Record<HydrantPattern, string>> = {

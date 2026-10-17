@@ -17,13 +17,15 @@ import type { ControlTemplate } from "./ControlPalette";
 import type { SourceConfiguration, SourceKind } from "./source-library";
 import { appAssetUrl } from "./app-url";
 import { OfflineBasemap } from "./OfflineBasemap";
-import type { DistrictMapObject } from "./district-map-model";
+import type { DistrictBuilding, DistrictMapObject } from "./district-map-model";
 import { DistrictMapMarker } from "./DistrictMapMarker";
 import { declutterDistrictMarkers } from "./district-marker-layout";
 import { DistrictObjectToolbar } from "./DistrictObjectToolbar";
 import { CompassRose } from "./CompassRose";
 import { UiIcon } from "./UiIcon";
 import { MapRulerOverlay } from "./MapRulerOverlay";
+import { DistrictObjectContour } from "./DistrictObjectContour";
+import { districtObjectFocusPoint, fittedBuildingMarkerScale, hasDistrictMarker, isBuildingWithContour } from "./district-map-visuals";
 
 export type ControlPoint = Readonly<{
   id: string;
@@ -227,6 +229,8 @@ export function MapCanvas(props: Props) {
   const [showSecondary, setShowSecondary] = useState(true);
   const [showDistrictBuildings, setShowDistrictBuildings] = useState(false);
   const [showDistrictHydrants, setShowDistrictHydrants] = useState(false);
+  const [showDistrictBoundary, setShowDistrictBoundary] = useState(true);
+  const [showRescueService, setShowRescueService] = useState(true);
   const [districtToolsOpen, setDistrictToolsOpen] = useState(false);
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null);
   const [hoveredDistrictId, setHoveredDistrictId] = useState<string | null>(null);
@@ -303,7 +307,7 @@ export function MapCanvas(props: Props) {
   const changeZoom = useCallback(
     (factor: number, anchor?: GeoPoint) => {
       setZoom((currentZoom) => {
-        const nextZoom = Math.max(online ? 0.2 : 0.5, Math.min(24, currentZoom * factor));
+        const nextZoom = Math.max(online ? 0.2 : 0.5, Math.min(64, currentZoom * factor));
         const appliedFactor = nextZoom / currentZoom;
         if (anchor !== undefined)
           setMapCenter((current) => {
@@ -369,7 +373,7 @@ export function MapCanvas(props: Props) {
     );
   }, [online, props.result?.finalDepthKm]);
   const mapLibreZoom = useMemo(
-    () => Math.max(0, Math.min(22, Math.log2(projection.worldPixels / 512))),
+    () => Math.max(0, Math.min(24, Math.log2(projection.worldPixels / 512))),
     [projection.worldPixels],
   );
   const rotationCoverScale = 1;
@@ -772,21 +776,31 @@ export function MapCanvas(props: Props) {
       : appAssetUrl(props.sourceImageDataUrl);
   const hasControls = props.controls.length > 0;
   const districtObjects = props.districtObjects ?? [];
-  const visibleDistrictObjects = districtObjects.filter((object) =>
-    object.id === searchDistrictId || (object.kind === "building" ? showDistrictBuildings : showDistrictHydrants),
-  );
+  const visibleDistrictObjects = districtObjects.filter((object) => {
+    if (object.id === searchDistrictId) return true;
+    if (object.kind !== 'building') return showDistrictHydrants;
+    if (object.mapRole === 'response-boundary') return showDistrictBoundary;
+    if (object.mapRole === 'rescue-service') return showRescueService;
+    return showDistrictBuildings;
+  });
   const districtMarkerDetailLevel = zoom >= 4.2 ? "full" : "compact";
   const districtMarkerScale = Math.max(0.2, Math.min(1, zoom / 4.8));
-  const districtMarkerPlacements = [...declutterDistrictMarkers(
-    visibleDistrictObjects.map((object) => ({ object, ...projection.project(object.point) })),
-    viewWidth,
-    viewHeight,
-  )].sort((left, right) => {
+  const districtRawPlacements = visibleDistrictObjects
+    .filter(hasDistrictMarker)
+    .map((object) => ({ object, ...projection.project(object.point) }));
+  const districtMarkerPlacements = [
+    ...districtRawPlacements.filter(({ object }) => isBuildingWithContour(object)),
+    ...declutterDistrictMarkers(
+      districtRawPlacements.filter(({ object }) => !isBuildingWithContour(object)),
+      viewWidth,
+      viewHeight,
+    ),
+  ].sort((left, right) => {
     const priority = (id: string) => id === hoveredDistrictId ? 2 : id === selectedDistrictId || id === searchDistrictId ? 1 : 0;
     return priority(left.object.id) - priority(right.object.id);
   });
   const focusDistrictObject = (object: DistrictMapObject) => {
-    setMapCenter(clampMapCenter(object.point, viewWidth, viewHeight, 5));
+    setMapCenter(clampMapCenter(districtObjectFocusPoint(object), viewWidth, viewHeight, 5));
     setZoom((current) => Math.max(current, 5));
     setSelectedDistrictId(object.id);
   };
@@ -827,19 +841,25 @@ export function MapCanvas(props: Props) {
                 Вторичное облако АХОВ
               </label>
             </div>
-            <button type="button" className={`district-tools-toggle${districtToolsOpen ? ' active' : ''}`} aria-expanded={districtToolsOpen} title="Поиск и отображение объектов района выезда" aria-label="Показать поиск зданий и пожарных гидрантов" onClick={() => setDistrictToolsOpen((current) => !current)}><UiIcon name="chevronDown" /></button>
+            <button type="button" className={`district-tools-toggle${districtToolsOpen ? ' active' : ''}`} aria-expanded={districtToolsOpen} title="Поиск и отображение объектов района выезда" aria-label="Показать поиск зданий и элементов НППВ" onClick={() => setDistrictToolsOpen((current) => !current)}><UiIcon name="chevronDown" /></button>
           </div>
-          {districtToolsOpen && <DistrictObjectToolbar
-            objects={districtObjects}
-            showBuildings={showDistrictBuildings}
-            showHydrants={showDistrictHydrants}
-            onShowBuildingsChange={setShowDistrictBuildings}
-            onShowHydrantsChange={setShowDistrictHydrants}
-            onFocus={focusDistrictObject}
-            onSearchSelectionChange={(object) => setSearchDistrictId(object?.id ?? null)}
-            resetSignal={searchResetSignal}
-            compact
-          />}
+          {districtToolsOpen && <>
+            <DistrictObjectToolbar
+              objects={districtObjects}
+              showBuildings={showDistrictBuildings}
+              showHydrants={showDistrictHydrants}
+              onShowBuildingsChange={setShowDistrictBuildings}
+              onShowHydrantsChange={setShowDistrictHydrants}
+              onFocus={focusDistrictObject}
+              onSearchSelectionChange={(object) => setSearchDistrictId(object?.id ?? null)}
+              resetSignal={searchResetSignal}
+              compact
+            />
+            <div className="calculation-special-layer-toggles" aria-label="Условные обозначения специальных объектов">
+              <label><input type="checkbox" checked={showDistrictBoundary} onChange={(event) => setShowDistrictBoundary(event.currentTarget.checked)} /><i className="district-legend-boundary" aria-hidden="true" /><span>Граница района</span></label>
+              <label><input type="checkbox" checked={showRescueService} onChange={(event) => setShowRescueService(event.currentTarget.checked)} /><i className="district-legend-ass">АСС</i><span>АСС</span></label>
+            </div>
+          </>}
         </div>
         {props.sourcePlaced && (
           <div className="toolbar-wind-summary">
@@ -964,6 +984,7 @@ export function MapCanvas(props: Props) {
                 height={viewHeight}
                 className="map-base"
               />
+              {visibleDistrictObjects.filter((object): object is DistrictBuilding => object.kind === 'building' && (object.mapRole === undefined || object.mapRole === 'ordinary')).map((object) => <DistrictObjectContour key={`${object.id}-contour`} object={object} project={projection.project} selected={selectedDistrictId === object.id && searchDistrictId !== object.id} highlighted={searchDistrictId === object.id} interactionDisabled={rulerActive} onSelect={() => setSelectedDistrictId(object.id)} onHoverChange={(hovered) => setHoveredDistrictId(hovered ? object.id : null)} />)}
               {props.result !== null && (
                 <>
                   <path
@@ -1239,22 +1260,24 @@ export function MapCanvas(props: Props) {
                 );
               })}
               {districtMarkerPlacements.map(({ object, x, y }) => {
+                const contourSearch = searchDistrictId === object.id && isBuildingWithContour(object);
                 return (
                   <DistrictMapMarker
                     key={object.id}
                     object={object}
                     x={x}
                     y={y}
-                    selected={selectedDistrictId === object.id}
-                    highlighted={searchDistrictId === object.id}
+                    selected={selectedDistrictId === object.id && !contourSearch}
+                    highlighted={searchDistrictId === object.id && !contourSearch}
                     interactionDisabled={rulerActive}
                     detailLevel={districtMarkerDetailLevel}
-                    scale={districtMarkerScale}
+                    scale={fittedBuildingMarkerScale(object, districtMarkerScale, projection.project)}
                     onSelect={() => setSelectedDistrictId(object.id)}
                     onHoverChange={(hovered) => setHoveredDistrictId(hovered ? object.id : null)}
                   />
                 );
               })}
+              {visibleDistrictObjects.filter((object): object is DistrictBuilding => object.kind === 'building' && object.mapRole !== undefined && object.mapRole !== 'ordinary').map((object) => <DistrictObjectContour key={`${object.id}-special-contour`} object={object} project={projection.project} selected={selectedDistrictId === object.id && searchDistrictId !== object.id} highlighted={searchDistrictId === object.id} interactionDisabled={rulerActive} onSelect={() => setSelectedDistrictId(object.id)} onHoverChange={(hovered) => setHoveredDistrictId(hovered ? object.id : null)} />)}
               <MapRulerOverlay points={rulerPoints} project={projection.project} />
             </svg>
           </div>

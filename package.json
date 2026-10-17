@@ -1,7 +1,7 @@
 {
   "name": "ahov-decision-support",
   "private": true,
-  "version": "0.3.19",
+  "version": "0.3.20",
   "description": "Автономная система поддержки решений при химической аварии",
   "author": "Проект АХОВ",
   "repository": "https://github.com/stas07130713-debug/himkontur.git",
@@ -27,6 +27,7 @@
     "map:satellite-build:14": "node scripts/build-offline-satellite.mjs artifacts/monchegorsk-satellite-detail-z14-v2.mbtiles 16 --tier=14",
     "map:satellite-build:15": "node scripts/build-offline-satellite.mjs artifacts/monchegorsk-satellite-detail-z15-v2.mbtiles 16 --tier=15",
     "map:satellite-build:16": "node scripts/build-offline-satellite.mjs artifacts/monchegorsk-satellite-detail-z16-v2.mbtiles 16 --tier=16",
+    "map:satellite-build:17": "node scripts/build-offline-satellite.mjs artifacts/monchegorsk-satellite-detail-z17-v1.mbtiles 16 --tier=17",
     "map:satellite-build:overview": "node scripts/build-offline-satellite.mjs artifacts/monchegorsk-satellite-overview-z10-13-v3.mbtiles 16 --overview-detail",
     "lint": "eslint . --max-warnings 0",
     "check": "npm run lint && npm run test && npm run build",
