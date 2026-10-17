@@ -1,7 +1,7 @@
 {
   "id": "district-map-main",
   "name": "Карта района выезда",
-  "revision": 1792259964668,
+  "revision": 1792262136103,
   "draft": [
     {
       "id": "kml-hydrant-095f40d67c2912bd9832",
@@ -5898,7 +5898,7 @@
       "id": "ed91eb04-4d35-4952-a022-e520ceda7234",
       "kind": "building",
       "objectType": "building",
-      "mapRole": "ordinary",
+      "mapRole": "rescue-service",
       "contour": [
         {
           "longitude": 32.846362996896346,
@@ -11905,7 +11905,7 @@
       "id": "ed91eb04-4d35-4952-a022-e520ceda7234",
       "kind": "building",
       "objectType": "building",
-      "mapRole": "ordinary",
+      "mapRole": "rescue-service",
       "contour": [
         {
           "longitude": 32.846362996896346,
@@ -12016,6 +12016,6 @@
       "updatedAtIso": "2026-10-17T17:24:03.633Z"
     }
   ],
-  "draftSavedAtIso": "2026-10-17T17:59:24.667Z",
-  "publishedAtIso": "2026-10-17T17:59:24.667Z"
+  "draftSavedAtIso": "2026-10-17T18:35:36.103Z",
+  "publishedAtIso": "2026-10-17T18:35:36.103Z"
 }
