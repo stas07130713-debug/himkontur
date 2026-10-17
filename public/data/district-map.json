@@ -1,7 +1,7 @@
 {
   "id": "district-map-main",
   "name": "Карта района выезда",
-  "revision": 20261047,
+  "revision": 20261048,
   "draft": [
     {
       "id": "preview-building-315",
@@ -3748,6 +3748,22 @@
       "workshopShort": "",
       "departments": [],
       "sites": []
+    },
+    {
+      "id": "9b86e29b-98d6-402a-97d8-61f4727200f0",
+      "kind": "reservoir",
+      "point": {
+        "longitude": 32.85019005813194,
+        "latitude": 67.91765901622513
+      },
+      "number": "ПВ-2323",
+      "owner": "12",
+      "status": "serviceable",
+      "volumeM3": 44.8,
+      "faultDescription": "",
+      "reservoirType": "artificial",
+      "note": "",
+      "updatedAtIso": "2026-10-17T05:25:18.450Z"
     }
   ],
   "published": [
@@ -7496,8 +7512,24 @@
       "workshopShort": "",
       "departments": [],
       "sites": []
+    },
+    {
+      "id": "9b86e29b-98d6-402a-97d8-61f4727200f0",
+      "kind": "reservoir",
+      "point": {
+        "longitude": 32.85019005813194,
+        "latitude": 67.91765901622513
+      },
+      "number": "ПВ-2323",
+      "owner": "12",
+      "status": "serviceable",
+      "volumeM3": 44.8,
+      "faultDescription": "",
+      "reservoirType": "artificial",
+      "note": "",
+      "updatedAtIso": "2026-10-17T05:25:18.450Z"
     }
   ],
-  "draftSavedAtIso": "2026-10-16T20:06:34.362Z",
-  "publishedAtIso": "2026-10-16T20:06:34.362Z"
+  "draftSavedAtIso": "2026-10-17T05:25:19.217Z",
+  "publishedAtIso": "2026-10-17T05:25:19.217Z"
 }
