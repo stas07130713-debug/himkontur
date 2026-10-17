@@ -37,7 +37,14 @@ export default defineConfig({
         icons: [{ src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }]
       },
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,svg,png,json,tsv,traineddata,wasm,pmtiles}'],
+        // The 63 MB z17 archive is still bundled in Windows/Android and is
+        // available to the browser online, but must not block activation of a
+        // new web release. Lower offline tiers remain precached by the PWA.
+        globIgnores: ['**/monchegorsk-satellite-detail-z17-v1.pmtiles'],
         // The autonomous Monchegorsk map is deliberately bundled as one
         // PMTiles archive. It must be precached for the installed PWA and the
         // Android WebView, otherwise the UI loads offline but the map does not.

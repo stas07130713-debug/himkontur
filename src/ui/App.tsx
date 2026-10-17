@@ -159,7 +159,7 @@ export function App() {
       ? value.districtProject
       : {
           ...value.districtProject,
-          revision: Math.max(value.districtProject.revision, districtProject.revision) + 1,
+          revision: Math.max(value.districtProject.revision, districtProject.revision, Date.now()),
           draftSavedAtIso: new Date().toISOString(),
           publishedAtIso: new Date().toISOString(),
         };
@@ -442,7 +442,10 @@ export function App() {
     districtChangeRememberedRef.current = false;
     const current = districtProjectRef.current;
     const now = new Date().toISOString();
-    const published = { ...current, revision: current.revision + 1, draft: objects, published: objects, draftSavedAtIso: now, publishedAtIso: now };
+    // Date-based revisions remain newer than every legacy local counter. This
+    // prevents an old browser cache with a numerically inflated revision from
+    // rejecting a genuinely newer shared map.
+    const published = { ...current, revision: Math.max(current.revision + 1, Date.now()), draft: objects, published: objects, draftSavedAtIso: now, publishedAtIso: now };
     districtProjectRef.current = published;
     pendingDistrictProjectRef.current = published;
     setDistrictProject(published);

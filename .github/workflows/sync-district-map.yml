@@ -34,7 +34,13 @@ jobs:
           if (data.id !== 'district-map-main') throw new Error('Unexpected district-map id.');
           if (!Array.isArray(data.draft) || !Array.isArray(data.published)) throw new Error('Invalid district-map arrays.');
           if (!Number.isSafeInteger(data.revision) || data.revision < 1) throw new Error('Invalid district-map revision.');
-          fs.writeFileSync('public/data/district-map.json', `${JSON.stringify(data, null, 2)}\n`);
+          const currentPath = 'public/data/district-map.json';
+          const current = JSON.parse(fs.readFileSync(currentPath, 'utf8'));
+          if (Number.isSafeInteger(current.revision) && data.revision < current.revision) {
+            console.log(`Cloud revision ${data.revision} is older than repository revision ${current.revision}; keeping the newer recovery copy.`);
+            process.exit(0);
+          }
+          fs.writeFileSync(currentPath, `${JSON.stringify(data, null, 2)}\n`);
           NODE
 
       - name: Commit a new database revision

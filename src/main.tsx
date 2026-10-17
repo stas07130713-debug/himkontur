@@ -14,7 +14,28 @@ const isPackagedDesktop = window.navigator.userAgent.includes('Electron');
 if (import.meta.env.DEV && 'serviceWorker' in navigator) {
   void navigator.serviceWorker.getRegistrations().then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())));
 } else if (!Capacitor.isNativePlatform() && !isPackagedDesktop) {
-  registerSW({ immediate: true });
+  const hadActiveServiceWorker = navigator.serviceWorker.controller !== null;
+  let reloadStarted = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    // A previously installed browser/PWA must immediately switch from the
+    // cached shell to the newly activated release. Fresh installations do not
+    // need the extra reload.
+    if (!hadActiveServiceWorker || reloadStarted) return;
+    reloadStarted = true;
+    window.location.reload();
+  });
+  const applyUpdate = registerSW({
+    immediate: true,
+    onNeedRefresh: () => { window.setTimeout(() => { void applyUpdate(true); }, 0); },
+    onRegisteredSW: (_serviceWorkerUrl, registration) => {
+      const checkForRelease = () => { void registration?.update(); };
+      checkForRelease();
+      window.setInterval(checkForRelease, 5 * 60 * 1000);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') checkForRelease();
+      });
+    },
+  });
 }
 
 const root = document.getElementById('root');
