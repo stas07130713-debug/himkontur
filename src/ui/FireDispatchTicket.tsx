@@ -413,11 +413,11 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
         const point = project(source.point);
         return <g key={`marker-${source.id}`} className={`fire-dispatch-water-marker ${source.kind}`} transform={`translate(${point.x} ${point.y})`}>
           {source.kind === 'hydrant' ? <g className={`fire-dispatch-hydrant-symbol status-${source.status}`}>
-            <line className="hydrant-network-line" x1="-42" y1="0" x2="42" y2="0" />
-            <rect className="hydrant-label-back" x="-48" y="-18" width="34" height="15" rx="3" />
-            <rect className="hydrant-label-back" x="14" y="-18" width="34" height="15" rx="3" />
-            <text className="hydrant-map-label" x="-31" y="-7" textAnchor="middle">{sourceLabel(source)}</text>
-            <text className="hydrant-map-label" x="31" y="-7" textAnchor="middle">{hydrantNetworkCode(source)}</text>
+            <line className="hydrant-network-line" x1="-57" y1="0" x2="57" y2="0" />
+            <rect className="hydrant-label-back" x="-63" y="-19" width="49" height="16" rx="3" />
+            <rect className="hydrant-label-back" x="14" y="-19" width="49" height="16" rx="3" />
+            <text className="hydrant-map-label" x="-38.5" y="-7" textAnchor="middle">{sourceLabel(source)}</text>
+            <text className="hydrant-map-label" x="38.5" y="-7" textAnchor="middle">{hydrantNetworkCode(source)}</text>
             <circle className="hydrant-symbol-base" r="12" />
             <path className="hydrant-symbol-half" d="M0-12A12 12 0 0 1 0 12Z" />
             <circle className="hydrant-symbol-outline" r="12" />

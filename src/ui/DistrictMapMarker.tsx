@@ -20,12 +20,12 @@ type Props = Readonly<{
 function HydrantSymbolContents({ object, detailLevel = 'full' }: Readonly<{ object: DistrictHydrant; detailLevel?: 'compact' | 'full' }>): ReactNode {
   const network = hydrantNetworkCode(object);
   return <>
-    <line className="hydrant-network-line" x1={detailLevel === 'full' ? -35 : -12} y1="0" x2={detailLevel === 'full' ? 35 : 12} y2="0" />
+    <line className="hydrant-network-line" x1={detailLevel === 'full' ? -43 : -12} y1="0" x2={detailLevel === 'full' ? 43 : 12} y2="0" />
     {detailLevel === 'full' && <>
-      <rect className="hydrant-label-back" x="-39" y="-15" width="28" height="13" rx="3" />
-      <rect className="hydrant-label-back" x="11" y="-15" width="28" height="13" rx="3" />
-      <text className="hydrant-map-label" x="-25" y="-6" textAnchor="middle">{object.number}</text>
-      <text className="hydrant-map-label" x="25" y="-6" textAnchor="middle">{network}</text>
+      <rect className="hydrant-label-back" x="-47" y="-16" width="36" height="14" rx="3" />
+      <rect className="hydrant-label-back" x="11" y="-16" width="36" height="14" rx="3" />
+      <text className="hydrant-map-label" x="-29" y="-6" textAnchor="middle">{object.number}</text>
+      <text className="hydrant-map-label" x="29" y="-6" textAnchor="middle">{network}</text>
     </>}
     <circle className="hydrant-symbol-base" r="10" />
     <path className="hydrant-symbol-half" d="M0-10A10 10 0 0 1 0 10Z" />

@@ -1354,6 +1354,7 @@ export function MapCanvas(props: Props) {
           </div>
           <MapLegend
             compact
+            basemap={props.basemap}
             hasSource={props.sourcePlaced}
             showOverlap={false}
             showPrimary={props.result !== null && showPrimary}

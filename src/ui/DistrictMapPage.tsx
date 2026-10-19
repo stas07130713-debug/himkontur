@@ -1224,7 +1224,7 @@ export function DistrictMapPage(props: Props) {
           <div className="zoom district-zoom"><button aria-label="Отдалить" onClick={() => changeZoom(1 / 1.4)}>−</button><span>{round(zoom * 100, 0)}%</span><button aria-label="Приблизить" onClick={() => changeZoom(1.4)}>+</button></div>
           <button type="button" className={`map-ruler-control district-ruler-control${rulerActive ? ' active' : ''}`} aria-pressed={rulerActive} title="Линейка: ЛКМ — точки; удержание ПКМ — перемещение карты; короткая ПКМ — сброс" aria-label="Измерить расстояние" onClick={() => { setRulerActive((current) => !current); setRulerPoints([]); }}><img src={appAssetUrl('assets/ruler-glossy.png')} alt="" /></button>
           <div className="map-scale district-map-scale" style={{ width: `${(scalePixels / viewSize.width) * 100}%` }}><span>{scaleDistanceKm < 1 ? `${round(scaleDistanceKm * 1000, 0)} м` : `${scaleDistanceKm} км`}</span></div>
-          <DistrictMapLegend visibleLayers={visibleLayers} onLayerChange={setLayerVisibility} onAllChange={(visible) => setVisibleLayers(visible ? new Set(DISTRICT_LAYER_KEYS) : new Set())} />
+          <DistrictMapLegend basemap={props.basemap} visibleLayers={visibleLayers} onLayerChange={setLayerVisibility} onAllChange={(visible) => setVisibleLayers(visible ? new Set(DISTRICT_LAYER_KEYS) : new Set())} />
           <div className="district-map-attribution">{props.basemap === 'standard' ? '© OpenStreetMap contributors' : 'Спутник: Esri World Imagery · автономная копия'}</div>
         </div>
       </main>
