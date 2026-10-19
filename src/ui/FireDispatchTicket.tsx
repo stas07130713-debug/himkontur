@@ -350,9 +350,14 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
   }).join(' ');
   const buildingPoint = project(building.point);
   const markerScale = fittedBuildingMarkerScale(building, .9, project);
-  const markerObstacles = sources.map(({ source }) => boxAt(project(source.point), 112, 52));
+  // The hydrant badge is wider than the symbol itself. Keep a generous safety
+  // area around every visible source so a distance label can never sit on top
+  // of the «ПГ-… / К-…» plates.
+  const markerObstacles = sources.map(({ source }) => boxAt(project(source.point), 132, 68));
   const waterLabelObstacles: LabelBox[] = [];
-  const waterLinks = sources.map(({ source, target }) => {
+  // All sources inside the displayed fragment remain visible, but the route
+  // distance is intentionally shown only for the three nearest ones.
+  const waterLinks = ranked.slice(0, 3).map(({ source, target }) => {
     const from = project(source.point);
     const targetPoint = project(target.point);
     const dx = targetPoint.x - from.x;
@@ -365,8 +370,8 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
       : rawNormal;
     const text = formatRulerDistance(target.distanceM);
     const candidates: ScreenPoint[] = [];
-    for (const fraction of [.42, .58, .72, .3]) {
-      for (const offset of [17, 29, -17, -29]) {
+    for (const fraction of [.5, .62, .74, .38]) {
+      for (const offset of [24, 36, 48, -24, -36, -48]) {
         candidates.push({ x: from.x + (to.x - from.x) * fraction + normal.x * offset, y: from.y + (to.y - from.y) * fraction + normal.y * offset });
       }
     }
@@ -381,7 +386,7 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
     return { source, from, to, label, text, angle: readableLineAngle(from, to) };
   });
   const fixedObstacles = [
-    ...sources.map(({ source }) => boxAt(project(source.point), 112, 52)),
+    ...markerObstacles,
     ...waterLinks.map((link) => boxAt(link.label, Math.max(40, link.text.length * 9), 20)),
     boxAt(buildingPoint, 64, 40),
     { left: MAP_WIDTH - 105, top: 0, right: MAP_WIDTH, bottom: 105 },
