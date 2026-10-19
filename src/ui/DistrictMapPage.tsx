@@ -516,11 +516,12 @@ function ObjectDetails({ object, adminMode, onEdit, onDelete, onOpenDispatch }: 
         <dl>{object.territoryNames.map((unit, index) => <div key={unit.id}><dt>Название{object.territoryNames.length > 1 ? ` ${index + 1}` : ''}</dt><dd>{unit.fullName || '—'}{unit.shortName.trim() !== '' && <small>{unit.shortName}</small>}</dd></div>)}</dl>
       ) : object.kind === 'building' ? (
         <dl>
-          <div><dt>{object.mapRole === 'rescue-service' ? 'Формирование' : 'Цех'}</dt><dd>{object.workshopFull.trim() || (object.mapRole === 'rescue-service' ? 'Аварийно-спасательная служба' : '—')}<small>{object.workshopShort.trim() || (object.mapRole === 'rescue-service' ? 'АСС' : '—')}</small></dd></div>
-          {object.departments.map((unit, index) => <div key={unit.id}><dt>Отделение{object.departments.length > 1 ? ` ${index + 1}` : ''}</dt><dd>{unit.fullName || '—'}<small>{unit.shortName || 'Без сокращения'}</small></dd></div>)}
-          {object.sites.map((unit, index) => <div key={unit.id}><dt>Участок{object.sites.length > 1 ? ` ${index + 1}` : ''}</dt><dd>{unit.fullName || '—'}<small>{unit.shortName || 'Без сокращения'}</small></dd></div>)}
+          <div className="district-details-unit"><dt>{object.mapRole === 'rescue-service' ? 'Формирование' : 'Цех'}</dt><dd>{object.workshopFull.trim() || (object.mapRole === 'rescue-service' ? 'Аварийно-спасательная служба' : '—')}<small>{object.workshopShort.trim() || (object.mapRole === 'rescue-service' ? 'АСС' : '—')}</small></dd></div>
+          {object.departments.map((unit, index) => <div className="district-details-unit" key={unit.id}><dt>Отделение{object.departments.length > 1 ? ` ${index + 1}` : ''}</dt><dd>{unit.fullName || '—'}<small>{unit.shortName || 'Без сокращения'}</small></dd></div>)}
+          {object.sites.map((unit, index) => <div className="district-details-unit" key={unit.id}><dt>Участок{object.sites.length > 1 ? ` ${index + 1}` : ''}</dt><dd>{unit.fullName || '—'}<small>{unit.shortName || 'Без сокращения'}</small></dd></div>)}
           {(object.inventoryNumber ?? '').trim() !== '' && <div><dt>Инвентарный номер здания</dt><dd>{object.inventoryNumber}</dd></div>}
-          {object.planningDocuments.length > 0 && <div className="district-details-section-heading"><dt>Документы предварительного планирования</dt></div>}
+          <div className="district-details-section-heading"><dt>Документы предварительного планирования</dt></div>
+          {object.planningDocuments.length === 0 && <div className="district-details-document empty"><dt>Документы</dt><dd>На объект не разработаны</dd></div>}
           {object.planningDocuments.map((document) => <div className="district-details-document" key={document.id}><dt>{document.kind}</dt><dd>№ {document.number.replace(/^№\s*/u, '')}</dd></div>)}
         </dl>
       ) : object.kind === 'hydrant' ? (
@@ -561,6 +562,7 @@ export function DistrictMapPage(props: Props) {
   const [zoom, setZoom] = useState(1.65);
   const [viewSize, setViewSize] = useState({ width: 1000, height: 700 });
   const [visibleLayers, setVisibleLayers] = useState<ReadonlySet<DistrictLayerKey>>(() => new Set(DISTRICT_LAYER_KEYS));
+  const [legendCollapsed, setLegendCollapsed] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [searchHighlightedId, setSearchHighlightedId] = useState<string | null>(null);
@@ -630,6 +632,10 @@ export function DistrictMapPage(props: Props) {
   const scaleDistanceKm = niceScale(viewSize.width / projection.scale / 5);
   const scalePixels = scaleDistanceKm * projection.scale;
   const selected = props.objects.find((object) => object.id === selectedId) ?? null;
+  const selectObject = (id: string) => {
+    setSelectedId(id);
+    setLegendCollapsed(true);
+  };
   const showBuildings = BUILDING_LAYER_KEYS.every((key) => visibleLayers.has(key));
   const showHydrants = NPPV_LAYER_KEYS.every((key) => visibleLayers.has(key));
   const setLayerVisibility = (key: DistrictLayerKey, visible: boolean) => setVisibleLayers((current) => {
@@ -671,7 +677,7 @@ export function DistrictMapPage(props: Props) {
       if (previous !== undefined) {
         const updated = withAdminChangeNote({ ...previous, contour: [...contourDraft.points], updatedAtIso: new Date().toISOString() }, ['Контур объекта']);
         props.onCommitObjects(props.objects.map((object) => object.id === previous.id ? updated : object));
-        setSelectedId(previous.id);
+        selectObject(previous.id);
       }
       setContourDraft(null);
       return;
@@ -693,7 +699,7 @@ export function DistrictMapPage(props: Props) {
   const startContourEdit = (object: DistrictBuilding) => {
     if (object.contour.length < (object.mapRole === 'response-boundary' ? 2 : 3)) return;
     setEditorObject(null);
-    setSelectedId(object.id);
+    selectObject(object.id);
     setCenter(districtObjectFocusPoint(object));
     setZoom((current) => Math.max(current, 5));
     setContourDraft({
@@ -718,11 +724,12 @@ export function DistrictMapPage(props: Props) {
     } else {
       setZoom(9);
     }
-    setSelectedId(object.id);
+    selectObject(object.id);
   };
   const clearMapSelection = () => {
     setSelectedId(null);
     setSearchHighlightedId(null);
+    setLegendCollapsed(false);
     setSearchResetSignal((current) => current + 1);
   };
   const changeZoom = (factor: number, anchor?: GeoPoint) => setZoom((currentZoom) => {
@@ -766,13 +773,14 @@ export function DistrictMapPage(props: Props) {
   const upsertObject = (object: DistrictMapObject) => {
     const next = props.objects.some((item) => item.id === object.id) ? props.objects.map((item) => item.id === object.id ? object : item) : [...props.objects, object];
     props.onCommitObjects(next);
-    setSelectedId(object.id);
+    selectObject(object.id);
     setEditorObject(null);
   };
   const deleteSelected = () => {
     if (selected === null || !window.confirm(`Удалить «${districtObjectTitle(selected)}» из проекта?`)) return;
     props.onCommitObjects(props.objects.filter((item) => item.id !== selected.id));
     setSelectedId(null);
+    setLegendCollapsed(false);
   };
   const importHydrantAct = async (file: File) => {
     setActImporting(true);
@@ -1126,7 +1134,7 @@ export function DistrictMapPage(props: Props) {
           >
             <rect width={viewSize.width} height={viewSize.height} className="map-base" />
             {visibleObjects.filter((object): object is DistrictBuilding => object.kind === 'building').map((object) => <DistrictObjectContour key={`${object.id}-contour`} object={object} project={projection.project} selected={selectedId === object.id && searchHighlightedId !== object.id} highlighted={searchHighlightedId === object.id} interactionDisabled={rulerActive || contourDraft !== null} onSelect={() => {
-              setSelectedId(object.id);
+              selectObject(object.id);
             }} onHoverChange={(hovered) => setHoveredId(hovered ? object.id : null)} />)}
             {contourDraft !== null && <g className={`district-contour-draft ${contourDraft.source}${contourDraft.mapRole === 'response-boundary' ? ' response-boundary-draft' : ''}`}>
               {contourDraft.mapRole === 'response-boundary'
@@ -1210,11 +1218,11 @@ export function DistrictMapPage(props: Props) {
                   markerInteractionRef.current = true;
                   dragRef.current = { pointerId: event.pointerId, objectId: object.id, clientX: event.clientX, clientY: event.clientY, active: false };
                   svgRef.current?.setPointerCapture(event.pointerId);
-                  setSelectedId(object.id);
+                  selectObject(object.id);
                 },
               } : {};
               const contourSearch = searchHighlightedId === object.id && isBuildingWithContour(object);
-              return <DistrictMapMarker key={object.id} object={object} x={x} y={y} selected={selectedId === object.id && !contourSearch} highlighted={searchHighlightedId === object.id && !contourSearch} editing={props.adminMode} detailLevel={markerDetailLevel} scale={fittedBuildingMarkerScale(object, markerScale, projection.project)} interactionDisabled={rulerActive || contourDraft !== null} onSelect={() => setSelectedId(object.id)} onHoverChange={(hovered) => setHoveredId(hovered ? object.id : null)} {...dragProps} />;
+              return <DistrictMapMarker key={object.id} object={object} x={x} y={y} selected={selectedId === object.id && !contourSearch} highlighted={searchHighlightedId === object.id && !contourSearch} editing={props.adminMode} detailLevel={markerDetailLevel} scale={fittedBuildingMarkerScale(object, markerScale, projection.project)} interactionDisabled={rulerActive || contourDraft !== null} onSelect={() => selectObject(object.id)} onHoverChange={(hovered) => setHoveredId(hovered ? object.id : null)} {...dragProps} />;
             })}
             <MapRulerOverlay points={rulerPoints} project={projection.project} />
           </svg>
@@ -1224,7 +1232,7 @@ export function DistrictMapPage(props: Props) {
           <div className="zoom district-zoom"><button aria-label="Отдалить" onClick={() => changeZoom(1 / 1.4)}>−</button><span>{round(zoom * 100, 0)}%</span><button aria-label="Приблизить" onClick={() => changeZoom(1.4)}>+</button></div>
           <button type="button" className={`map-ruler-control district-ruler-control${rulerActive ? ' active' : ''}`} aria-pressed={rulerActive} title="Линейка: ЛКМ — точки; удержание ПКМ — перемещение карты; короткая ПКМ — сброс" aria-label="Измерить расстояние" onClick={() => { setRulerActive((current) => !current); setRulerPoints([]); }}><img src={appAssetUrl('assets/ruler-glossy.png')} alt="" /></button>
           <div className="map-scale district-map-scale" style={{ width: `${(scalePixels / viewSize.width) * 100}%` }}><span>{scaleDistanceKm < 1 ? `${round(scaleDistanceKm * 1000, 0)} м` : `${scaleDistanceKm} км`}</span></div>
-          <DistrictMapLegend basemap={props.basemap} visibleLayers={visibleLayers} onLayerChange={setLayerVisibility} onAllChange={(visible) => setVisibleLayers(visible ? new Set(DISTRICT_LAYER_KEYS) : new Set())} />
+          <DistrictMapLegend basemap={props.basemap} visibleLayers={visibleLayers} collapsed={legendCollapsed} onCollapsedChange={setLegendCollapsed} onLayerChange={setLayerVisibility} onAllChange={(visible) => setVisibleLayers(visible ? new Set(DISTRICT_LAYER_KEYS) : new Set())} />
           <div className="district-map-attribution">{props.basemap === 'standard' ? '© OpenStreetMap contributors' : 'Спутник: Esri World Imagery · автономная копия'}</div>
         </div>
       </main>

@@ -2273,6 +2273,25 @@ button.wide { width: 100%; margin-top: 10px; }
 }
 .district-details-card dl > .district-details-section-heading dt { color: #315d66; font-size: 12px; }
 .district-details-card dl > .district-details-document { background: #f5faf9; }
+.district-details-card dl > .district-details-unit {
+  grid-template-columns: 102px minmax(0, 1fr);
+  border-left: 4px solid color-mix(in srgb, var(--object-color, #168e99) 78%, #fff);
+}
+.district-details-card dl > .district-details-unit dt {
+  align-self: center;
+  color: #315f69;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .01em;
+}
+.district-details-card dl > .district-details-section-heading { white-space: nowrap; }
+.district-details-card dl > .district-details-section-heading dt { color: #204f59; font-size: 13px; font-weight: 900; }
+.district-details-card dl > .district-details-document { grid-template-columns: 62px minmax(0, 1fr); }
+.district-details-card dl > .district-details-document dt { color: #226672; font-size: 12.5px; font-weight: 900; }
+.district-details-card dl > .district-details-document dd { font-size: 14px; }
+.district-details-card dl > .district-details-document.empty { grid-template-columns: minmax(0, 1fr); gap: 3px; }
+.district-details-card dl > .district-details-document.empty dt { display: none; }
+.district-details-card dl > .district-details-document.empty dd { color: #765f35; font-size: 12px; }
 .district-details-title > span.rescue-service,
 .district-editor-heading > .editor-building-symbol.rescue-service { background: linear-gradient(145deg, #ef4d39, #c52622); font-size: 16px; }
 .hydrant-status { padding: 3px 7px; border-radius: 10px; background: #dff5e8; color: #147143; font-size: 9px; }
@@ -2362,6 +2381,9 @@ button.wide { width: 100%; margin-top: 10px; }
 [data-theme="dark"] .district-details-card dd { color: #ecf8f9; }
 [data-theme="dark"] .district-details-card dd small { color: #a6c3c8; }
 [data-theme="dark"] .district-details-card dl > .district-details-section-heading dt { color: #d9f6f7; }
+[data-theme="dark"] .district-details-card dl > .district-details-unit dt,
+[data-theme="dark"] .district-details-card dl > .district-details-document dt { color: #bce8ec; }
+[data-theme="dark"] .district-details-card dl > .district-details-document.empty dd { color: #f0d59a; }
 [data-theme="dark"] .district-summary { border-top-color: #264b57; }
 [data-theme="dark"] .district-object-editor, [data-theme="dark"] .admin-login-dialog { border-color: #3b6b77; background: #082633; color: #e7f3f5; }
 [data-theme="dark"] .district-editor-heading h2, [data-theme="dark"] .admin-login-dialog h2 { color: #eefafb; }
@@ -3495,32 +3517,32 @@ button.wide { width: 100%; margin-top: 10px; }
   padding: 8mm 8mm 7mm;
   display: flex;
   flex-direction: column;
-  gap: 1.8mm;
+  gap: 1.45mm;
   box-sizing: border-box;
   background: #fff;
   color: #111;
   box-shadow: 0 12px 36px #00172099;
   font-family: Inter, "Segoe UI", Arial, sans-serif;
 }
-.fire-dispatch-ticket-sheet header { display: grid; gap: 1.2mm; text-align: center; }
+.fire-dispatch-ticket-sheet header { display: grid; gap: .9mm; text-align: center; }
 .fire-dispatch-ticket-sheet h1 { margin: 0; font-size: 16pt; line-height: 1; letter-spacing: .08em; }
-.fire-dispatch-ticket-sheet h2 { max-width: none; margin: 0 auto 1.8mm; font-size: 9.4pt; line-height: 1.1; white-space: nowrap; }
-.fire-dispatch-ticket-sheet label { min-width: 0; display: grid; gap: .7mm; color: #111; font-size: 8.8pt; font-weight: 700; text-align: left; }
+.fire-dispatch-ticket-sheet h2 { max-width: none; margin: 0 auto 1.3mm; font-size: 9.8pt; line-height: 1.1; white-space: nowrap; }
+.fire-dispatch-ticket-sheet label { min-width: 0; display: grid; gap: .55mm; color: #111; font-size: 9.2pt; font-weight: 750; text-align: left; }
 .fire-dispatch-ticket-sheet input,
 .fire-dispatch-ticket-sheet select,
 .fire-dispatch-ticket-sheet textarea {
   width: 100%;
-  min-height: 6.4mm;
-  padding: .8mm 1.8mm;
+  min-height: 6.1mm;
+  padding: .65mm 1.8mm;
   box-sizing: border-box;
   border: 1px solid #555;
   border-radius: 1.5mm;
   outline: none;
   background: #fff;
   color: #111;
-  font: 9.2pt/1.2 Inter, "Segoe UI", Arial, sans-serif;
+  font: 9.6pt/1.18 Inter, "Segoe UI", Arial, sans-serif;
 }
-.fire-dispatch-ticket-sheet textarea { min-height: 8.5mm; resize: vertical; }
+.fire-dispatch-ticket-sheet textarea { min-height: 7.8mm; resize: vertical; }
 .fire-dispatch-ticket-sheet label[data-complete="true"] input,
 .fire-dispatch-ticket-sheet label[data-complete="true"] select,
 .fire-dispatch-ticket-sheet label[data-complete="true"] textarea,
@@ -3531,8 +3553,8 @@ button.wide { width: 100%; margin-top: 10px; }
 }
 .fire-dispatch-capture-value {
   width: 100%;
-  min-height: 6.4mm;
-  padding: .8mm 1.8mm;
+  min-height: 6.1mm;
+  padding: .65mm 1.8mm;
   display: flex;
   align-items: center;
   box-sizing: border-box;
@@ -3541,10 +3563,10 @@ button.wide { width: 100%; margin-top: 10px; }
   border-radius: 1.5mm;
   background: #fff;
   color: #111;
-  font: 9.2pt/1.2 Inter, "Segoe UI", Arial, sans-serif;
+  font: 9.6pt/1.18 Inter, "Segoe UI", Arial, sans-serif;
   white-space: nowrap;
 }
-.fire-dispatch-capture-value.multiline { min-height: 8.5mm; align-items: flex-start; white-space: normal; }
+.fire-dispatch-capture-value.multiline { min-height: 7.8mm; align-items: flex-start; white-space: normal; }
 .fire-dispatch-ticket-sheet input:focus,
 .fire-dispatch-ticket-sheet select:focus,
 .fire-dispatch-ticket-sheet textarea:focus { border-color: #087f91; box-shadow: 0 0 0 1px #087f91; }
@@ -3598,13 +3620,13 @@ button.wide { width: 100%; margin-top: 10px; }
 }
 .fire-dispatch-emergency-options > button:hover,
 .fire-dispatch-emergency-options > button[aria-selected="true"] { background: #dff3f4; color: #006b76; }
-.fire-dispatch-form { display: grid; gap: 1.2mm; }
+.fire-dispatch-form { display: grid; gap: .9mm; }
 .fire-dispatch-form label > span { line-height: 1.2; }
 .fire-dispatch-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3mm; }
 .fire-dispatch-row.applicant { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
 .fire-dispatch-row.division-row { margin-top: 1.5mm; grid-template-columns: minmax(0, 1.35fr) minmax(0, .8fr); }
 .fire-dispatch-row.dispatcher { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
-.fire-dispatch-map-heading { margin: .8mm 0 .4mm; color: #111; font-size: 10.8pt; font-weight: 850; line-height: 1.1; text-align: center; }
+.fire-dispatch-map-heading { margin: .6mm 0 .3mm; color: #111; font-size: 11.2pt; font-weight: 850; line-height: 1.1; text-align: center; }
 .fire-dispatch-map { position: relative; width: 100%; min-height: 0; flex: none; aspect-ratio: 1000 / 680; overflow: hidden; border: 1.2px solid #222; background: #e9eee7; isolation: isolate; }
 .fire-dispatch-map > .offline-vector-map { z-index: 1; }
 .fire-dispatch-map > svg { position: absolute; z-index: 3; inset: 0; width: 100%; height: 100%; pointer-events: none; }
@@ -3653,6 +3675,26 @@ button.wide { width: 100%; margin-top: 10px; }
 .fire-dispatch-planning-documents span { padding: .8mm 1.4mm; border: 1px solid #7ca8ab; border-radius: 1.2mm; background: #fff; white-space: nowrap; }
 .fire-dispatch-planning-documents span.empty { color: #6b3434; border-color: #d5adad; background: #fff6f6; }
 .fire-dispatch-verification-note { margin: .4mm 0 0; color: #111; font-size: 8.5pt; font-weight: 850; line-height: 1.25; }
+.fire-dispatch-return-authorization {
+  margin-top: .4mm;
+  padding: 1.5mm 1.8mm 1.2mm;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: baseline;
+  gap: .8mm 2mm;
+  border: 1px solid #8fa7aa;
+  border-radius: 1.4mm;
+  color: #111;
+  font-size: 8.8pt;
+  line-height: 1.15;
+}
+.fire-dispatch-return-authorization > strong { font-size: 9.2pt; white-space: nowrap; }
+.fire-dispatch-return-authorization > span { font-weight: 750; }
+.fire-dispatch-hand-fields { grid-column: 1 / -1; display: grid; grid-template-columns: 1.45fr 1.15fr .85fr .8fr; gap: 2mm; }
+.fire-dispatch-hand-fields > span { display: grid; gap: .35mm; color: #444; font-size: 7.2pt; text-align: center; }
+.fire-dispatch-hand-fields i,
+.fire-dispatch-hand-date i { min-width: 0; height: 3.2mm; display: inline-block; border-bottom: 1px solid #222; }
+.fire-dispatch-hand-date { grid-column: 1 / -1; margin-left: auto; display: grid; grid-template-columns: max-content 8mm max-content 33mm max-content 8mm max-content; align-items: end; gap: .7mm; font-size: 8.5pt; font-weight: 750; }
 .fire-dispatch-ticket-sheet footer { margin-top: auto; display: flex; justify-content: flex-end; gap: 5mm; color: #333; font-size: 7pt; line-height: 1.2; }
 [data-theme="dark"] .fire-dispatch-ticket-dialog { border-color: #45abb4; background: #062c38; }
 #fire-dispatch-print-image { display: none; }

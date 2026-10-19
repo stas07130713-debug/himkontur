@@ -89,6 +89,7 @@ export type DistrictMapProject = Readonly<{
 }>;
 
 const STORAGE_KEY = 'himkontur-district-map-project-v1';
+const PENDING_SYNC_STORAGE_KEY = 'himkontur-district-map-pending-sync-v1';
 const MAP_SYNC_CONFIG_URL = './data/map-sync.json';
 const GIST_CONFIG_URL = './data/gist-sync.json';
 const GITHUB_DATA_API = 'https://api.github.com/repos/stas07130713-debug/himkontur/contents/public/data/district-map.json?ref=main';
@@ -344,6 +345,15 @@ export function loadDistrictMapProject(): DistrictMapProject {
   }
 }
 
+export function loadPendingDistrictMapProject(): DistrictMapProject | null {
+  try {
+    const raw = window.localStorage.getItem(PENDING_SYNC_STORAGE_KEY);
+    return raw === null ? null : normalizeDistrictMapProject(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
 function normalizeDistrictMapProject(parsed: unknown): DistrictMapProject | null {
   if (!isObject(parsed) || !Array.isArray(parsed.draft) || !Array.isArray(parsed.published)) return null;
   const draft = parsed.draft.map(normalizeDistrictObject);
@@ -545,6 +555,14 @@ export function isPublishedProjectNewer(candidate: DistrictMapProject, current: 
 
 export function saveDistrictMapProject(project: DistrictMapProject): void {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
+}
+
+export function savePendingDistrictMapProject(project: DistrictMapProject): void {
+  window.localStorage.setItem(PENDING_SYNC_STORAGE_KEY, JSON.stringify(project));
+}
+
+export function clearPendingDistrictMapProject(): void {
+  window.localStorage.removeItem(PENDING_SYNC_STORAGE_KEY);
 }
 
 export function districtObjectTitle(object: DistrictMapObject): string {

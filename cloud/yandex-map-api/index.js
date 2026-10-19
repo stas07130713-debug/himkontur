@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { AccessTokenCredentialsProvider } from '@ydbjs/auth/access-token';
 import { MetadataCredentialsProvider } from '@ydbjs/auth/metadata';
 import { Driver } from '@ydbjs/core';
 import { query } from '@ydbjs/query';
@@ -121,14 +122,20 @@ async function publish(sql, project, updatedBy) {
   });
 }
 
-export async function handler(event) {
+export async function handler(event, context) {
   const method = requestMethod(event);
   if (method === 'OPTIONS') return response(204, {});
   if (!['GET', 'POST', 'PUT'].includes(method)) return response(405, { error: 'Метод не поддерживается.' });
   if (!process.env.YDB_CONNECTION_STRING) return response(500, { error: 'Не задано подключение к базе.' });
 
+  const contextAccessToken = String(context?.token?.access_token ?? '');
   const driver = new Driver(process.env.YDB_CONNECTION_STRING, {
-    credentialsProvider: new MetadataCredentialsProvider(),
+    // Cloud Functions already supplies the service-account IAM token in the
+    // invocation context. Using it directly avoids a second dependency on the
+    // metadata endpoint during partial platform incidents.
+    credentialsProvider: contextAccessToken === ''
+      ? new MetadataCredentialsProvider()
+      : new AccessTokenCredentialsProvider({ token: contextAccessToken }),
     'ydb.sdk.enable_discovery': false,
   });
 

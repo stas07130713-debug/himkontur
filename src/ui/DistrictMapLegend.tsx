@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { Basemap } from './MapCanvas';
 import { DISTRICT_LAYER_KEYS, type DistrictLayerKey } from './district-map-visuals';
 
@@ -15,18 +14,19 @@ const BUILDING_LEGEND: readonly Readonly<{ key: DistrictLayerKey; number: string
   { key: 'building-9', number: '9', label: 'Аренда' },
 ];
 
-export function DistrictMapLegend({ basemap, visibleLayers, onLayerChange, onAllChange }: Readonly<{
+export function DistrictMapLegend({ basemap, visibleLayers, collapsed, onCollapsedChange, onLayerChange, onAllChange }: Readonly<{
   basemap: Basemap;
   visibleLayers: ReadonlySet<DistrictLayerKey>;
+  collapsed: boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
   onLayerChange: (key: DistrictLayerKey, visible: boolean) => void;
   onAllChange: (visible: boolean) => void;
 }>) {
-  const [collapsed, setCollapsed] = useState(false);
   const allVisible = DISTRICT_LAYER_KEYS.every((key) => visibleLayers.has(key));
   return (
     <div className={`district-map-legend basemap-${basemap}${collapsed ? ' collapsed' : ''}`} aria-label="Условные обозначения">
       <div className="district-legend-heading">
-        <button className="district-legend-collapse" type="button" aria-expanded={!collapsed} onClick={() => setCollapsed((current) => !current)}>
+        <button className="district-legend-collapse" type="button" aria-expanded={!collapsed} onClick={() => onCollapsedChange(!collapsed)}>
           <strong>Условные обозначения</strong><i aria-hidden="true" />
         </button>
         {!collapsed && <button className="district-legend-all" type="button" onClick={() => onAllChange(!allVisible)}>{allVisible ? 'Скрыть всё' : 'Показать всё'}</button>}

@@ -34,11 +34,14 @@ import { MobileAccessDialog } from "./MobileAccessDialog";
 import { UpdateCenter } from "./UpdateCenter";
 import { DistrictMapPage } from "./DistrictMapPage";
 import {
+  clearPendingDistrictMapProject,
   fetchPublishedDistrictMapProject,
   isPublishedProjectNewer,
   loadDistrictMapProject,
+  loadPendingDistrictMapProject,
   publishDistrictMapProject,
   saveDistrictMapProject,
+  savePendingDistrictMapProject,
   type DistrictMapObject,
   type DistrictMapProject,
 } from "./district-map-model";
@@ -82,7 +85,8 @@ export function App() {
   const [reportBusy, setReportBusy] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [districtProject, setDistrictProject] = useState(loadDistrictMapProject);
-  const [districtSyncState, setDistrictSyncState] = useState<DistrictSyncState>("ready");
+  const initialPendingDistrictProjectRef = useRef<DistrictMapProject | null>(loadPendingDistrictMapProject());
+  const [districtSyncState, setDistrictSyncState] = useState<DistrictSyncState>(() => initialPendingDistrictProjectRef.current === null ? "ready" : "pending");
   const [districtAdmin, setDistrictAdmin] = useState(false);
   const [districtManagementOpen, setDistrictManagementOpen] = useState(false);
   const [adminLoginOpen, setAdminLoginOpen] = useState(false);
@@ -97,7 +101,7 @@ export function App() {
   const [, setHistoryRevision] = useState(0);
   const districtChangeRememberedRef = useRef(false);
   const districtProjectRef = useRef(districtProject);
-  const pendingDistrictProjectRef = useRef<DistrictMapProject | null>(null);
+  const pendingDistrictProjectRef = useRef<DistrictMapProject | null>(initialPendingDistrictProjectRef.current);
   const districtPublishingRef = useRef(false);
   const adminPasswordRef = useRef("");
   useEffect(() => { districtProjectRef.current = districtProject; }, [districtProject]);
@@ -114,6 +118,10 @@ export function App() {
     const refresh = async () => {
       const remote = await fetchPublishedDistrictMapProject();
       if (cancelled || remote === null) return;
+      if (pendingDistrictProjectRef.current !== null) {
+        setDistrictSyncState("pending");
+        return;
+      }
       setDistrictSyncState("ready");
       setDistrictProject((current) => {
         if (!isPublishedProjectNewer(remote, current)) return current;
@@ -418,7 +426,10 @@ export function App() {
         const pending = pendingDistrictProjectRef.current;
         setDistrictSyncState("publishing");
         const synchronized = await publishDistrictMapProject(pending, adminPasswordRef.current);
-        if (pendingDistrictProjectRef.current === pending) pendingDistrictProjectRef.current = null;
+        if (pendingDistrictProjectRef.current === pending) {
+          pendingDistrictProjectRef.current = null;
+          clearPendingDistrictMapProject();
+        }
         if (pendingDistrictProjectRef.current === null) {
           const next = { ...synchronized, draft: synchronized.published };
           districtProjectRef.current = next;
@@ -448,6 +459,7 @@ export function App() {
     const published = { ...current, revision: Math.max(current.revision + 1, Date.now()), draft: objects, published: objects, draftSavedAtIso: now, publishedAtIso: now };
     districtProjectRef.current = published;
     pendingDistrictProjectRef.current = published;
+    savePendingDistrictMapProject(published);
     setDistrictProject(published);
     saveDistrictMapProject(published);
     setDistrictSyncState("pending");
@@ -943,6 +955,7 @@ export function App() {
               setDistrictManagementOpen(true);
               setAdminLoginOpen(false);
               setTab("district");
+              if (pendingDistrictProjectRef.current !== null) void publishPendingDistrictProject();
             }}
           >
             <button type="button" className="dialog-close" aria-label="Закрыть" onClick={() => setAdminLoginOpen(false)}><UiIcon name="close" /></button>

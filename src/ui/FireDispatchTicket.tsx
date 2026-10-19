@@ -370,8 +370,8 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
       : rawNormal;
     const text = formatRulerDistance(target.distanceM);
     const candidates: ScreenPoint[] = [];
-    for (const fraction of [.5, .62, .74, .38]) {
-      for (const offset of [24, 36, 48, -24, -36, -48]) {
+    for (const fraction of [.5, .62, .38, .72, .28]) {
+      for (const offset of [13, -13, 18, -18]) {
         candidates.push({ x: from.x + (to.x - from.x) * fraction + normal.x * offset, y: from.y + (to.y - from.y) * fraction + normal.y * offset });
       }
     }
@@ -520,6 +520,17 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
             : planningDocuments.map((document, index) => <span key={`${document.kind}-${document.number}-${index}`}>{planningDocumentText(document)}</span>)}</div>
         </section>
         <p className="fire-dispatch-verification-note">* Перед выдачей путёвки диспетчер обязан самостоятельно проверить правильность заполнения данных и соответствие схемы выбранному объекту.</p>
+        <section className="fire-dispatch-return-authorization" aria-label="Разрешение на возвращение к месту дислокации">
+          <strong>Возвращение на место дислокации РАЗРЕШАЮ</strong>
+          <span>Ответственный руководитель по ликвидации аварии:</span>
+          <div className="fire-dispatch-hand-fields">
+            <span><i />Фамилия И.О.</span>
+            <span><i />Должность</span>
+            <span><i />Подпись</span>
+            <span><i />Время</span>
+          </div>
+          <div className="fire-dispatch-hand-date">Дата «<i />» <i /> 20<i /> г.</div>
+        </section>
         <footer><span>Сформировано системой «ХИМКОНТУР»</span></footer>
       </article>
     </section>
