@@ -2153,7 +2153,7 @@ button.wide { width: 100%; margin-top: 10px; }
 .building-number-marker.prefix-9 { --object-color: #e17d2d; }
 .building-number-marker > path { fill: var(--object-color); stroke: #fff; stroke-width: 2.3; filter: drop-shadow(0 2px 3px #001b28aa); }
 .building-number-marker > text { fill: #fff; stroke: #001d28; stroke-width: 2.5px; paint-order: stroke; font-size: 14px; font-weight: 900; pointer-events: none; }
-.building-number-marker.selected > path { fill: #078997; stroke: #38f2eb; stroke-width: 3; }
+.building-number-marker.selected > path { stroke: #38f2eb; stroke-width: 3; }
 .hydrant-network-line { stroke: #0868b1; stroke-width: 3; stroke-linecap: square; pointer-events: none; filter: drop-shadow(0 1px 1px #fff); }
 .hydrant-label-back { fill: #f9ffffe8; stroke: #0868b1; stroke-width: 1; pointer-events: none; }
 .hydrant-map-label { fill: #075590; font-size: 9px; font-weight: 900; pointer-events: none; }
@@ -2221,10 +2221,13 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-map-surface svg.contour-drawing { cursor: crosshair; }
 .district-map-surface > svg.contour-drawing.panning { cursor: grabbing; }
 .district-contour-edge-hit { fill: none; stroke: transparent; stroke-width: 18; pointer-events: stroke; cursor: move; }
-.district-contour-vertex { fill: #fff; stroke: #008f9b; stroke-width: 3; vector-effect: non-scaling-stroke; cursor: move; }
-.district-contour-vertex.first { fill: #ffdb38; }
-.district-contour-draft.response-boundary-draft .district-contour-vertex { fill: #fff; stroke: #e3262e; }
-.district-contour-draft.response-boundary-draft .district-contour-vertex.first { fill: #ffcf32; }
+.district-contour-vertex { cursor: move; }
+.district-contour-vertex > circle:first-child { fill: #ffffff22; stroke: #008f9b; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+.district-contour-vertex > path { fill: none; stroke: #006f7a; stroke-width: 1.6; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: none; }
+.district-contour-vertex-center { fill: #006f7a; stroke: #fff; stroke-width: .8; vector-effect: non-scaling-stroke; pointer-events: none; }
+.district-contour-draft.response-boundary-draft .district-contour-vertex > circle:first-child { fill: #ffffff22; stroke: #e3262e; }
+.district-contour-draft.response-boundary-draft .district-contour-vertex > path { stroke: #b51018; }
+.district-contour-draft.response-boundary-draft .district-contour-vertex-center { fill: #b51018; }
 .district-contour-add-point { cursor: crosshair; }
 .district-contour-add-point circle { fill: #087f8d; stroke: #fff; stroke-width: 2; vector-effect: non-scaling-stroke; }
 .district-contour-add-point path { fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: none; }
@@ -2258,6 +2261,19 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-details-card dl > .district-details-long-row dt,
 .district-details-card dl > .district-details-long-row dd { width: 100%; max-width: 100%; }
 .district-details-card dd small { margin-top: 2px; display: block; color: #57808a; font-size: 9px; font-weight: 650; }
+.district-details-card dl > .district-details-section-heading {
+  margin-top: 4px;
+  padding: 8px 3px 4px;
+  display: block;
+  border: 0;
+  border-bottom: 2px solid color-mix(in srgb, var(--object-color, #168e99) 62%, #d4e7e8);
+  border-radius: 0;
+  background: transparent;
+}
+.district-details-card dl > .district-details-section-heading dt { color: #315d66; font-size: 10px; }
+.district-details-card dl > .district-details-document { background: #f5faf9; }
+.district-details-title > span.rescue-service,
+.district-editor-heading > .editor-building-symbol.rescue-service { background: linear-gradient(145deg, #ef4d39, #c52622); font-size: 16px; }
 .hydrant-status { padding: 3px 7px; border-radius: 10px; background: #dff5e8; color: #147143; font-size: 9px; }
 .hydrant-status.faulty, .hydrant-status.unknown { background: #fbe0e0; color: #a5222b; }
 .hydrant-status.disabled { background: #fff0cf; color: #8a5a08; }
@@ -2307,6 +2323,16 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-hydrant-plate-block > p { grid-area: note; align-self: start; margin: 3px 0 0; color: #766362; font-size: 9px; line-height: 1.35; }
 .district-details-card .district-hydrant-plate-block { grid-template-columns: 112px minmax(0, 1fr); padding: 8px; }
 .district-details-card .district-hydrant-plate { max-width: 105px; }
+.district-reservoir-card-symbol {
+  width: 76px;
+  height: 76px;
+  margin: 0 0 12px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: #e9f4fb;
+}
+.district-reservoir-card-symbol .reservoir-plan-symbol { width: 62px; height: 62px; }
 .district-editor-note { margin-top: 9px; }
 .district-coordinate { margin: 8px 0 0; color: #738b90; font-family: Consolas, monospace; font-size: 9px; }
 .district-editor-error, .admin-login-error { margin: 8px 0 0; padding: 7px 9px; border-left: 3px solid #d93038; background: #fff0f0; color: #9d252b; font-size: 10px; font-weight: 750; }
@@ -2406,7 +2432,7 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-map-surface > .district-zoom { top: 164px; right: 27px; width: 65px; }
 .building-number-marker g > path { fill: var(--object-color); stroke: #fff; stroke-width: 2.3; filter: drop-shadow(0 2px 3px #001b28aa); }
 .building-number-marker g > text { fill: #fff; stroke: #001d28; stroke-width: 2.5px; paint-order: stroke; font-size: 14px; font-weight: 900; pointer-events: none; }
-.building-number-marker.selected g > path { fill: #078997; stroke: #38f2eb; stroke-width: 3; }
+.building-number-marker.selected g > path { stroke: #38f2eb; stroke-width: 3; }
 .district-details-card.hydrant .district-details-title { grid-template-columns: minmax(0, 1fr); }
 .district-hydrant-plate { width: 125px; max-width: 100%; aspect-ratio: 1; margin: 0 auto 12px; padding: 5px; border-radius: 7px; background: #f2eee8; box-shadow: 0 3px 10px #3914142c; }
 .hydrant-editor-layout > .district-hydrant-plate { width: 145px; margin-left: 0; }
@@ -3132,7 +3158,7 @@ button.wide { width: 100%; margin-top: 10px; }
   fill: #ff4b3542;
   stroke: #ff4b35;
   stroke-width: 5;
-  filter: drop-shadow(0 0 5px #fff) drop-shadow(0 0 7px #ffb000);
+  filter: none;
 }
 .district-object-contour.search-highlight {
   transform-box: fill-box;
@@ -3173,6 +3199,7 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-details-card.building.prefix-7 { --object-color: #707981; }
 .district-details-card.building.prefix-8 { --object-color: #78b947; }
 .district-details-card.building.prefix-9 { --object-color: #e17d2d; }
+.district-details-card.building.rescue-service { --object-color: #ed2824; }
 .district-details-card.building .district-details-title > span {
   background: linear-gradient(145deg, color-mix(in srgb, var(--object-color) 88%, #fff), var(--object-color));
 }
@@ -3187,6 +3214,7 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-editor-heading > .editor-building-symbol.prefix-7 { --object-color: #707981; }
 .district-editor-heading > .editor-building-symbol.prefix-8 { --object-color: #78b947; }
 .district-editor-heading > .editor-building-symbol.prefix-9 { --object-color: #e17d2d; }
+.district-editor-heading > .editor-building-symbol.rescue-service { --object-color: #ed2824; }
 .building-prefix-one-selector { display: grid; grid-template-columns: minmax(0, 1fr); }
 .district-special-role-banner {
   margin: 4px 0 10px;
@@ -3202,11 +3230,12 @@ button.wide { width: 100%; margin-top: 10px; }
 /* Интерактивные условные обозначения слоёв карты. */
 .district-map-legend {
   z-index: 12;
-  width: 190px;
+  width: 280px;
   max-height: calc(100% - 86px);
   padding: 8px;
   gap: 4px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   border: 1px solid #62a9af;
   border-radius: 8px;
   background: #052f3fe8;
@@ -3214,6 +3243,7 @@ button.wide { width: 100%; margin-top: 10px; }
   text-shadow: none;
   pointer-events: auto;
 }
+.district-map-legend.collapsed { width: auto; max-width: 190px; overflow: hidden; padding: 6px 8px; }
 .district-legend-heading { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 .district-legend-heading strong { min-width: 0; color: #fff; font-size: 10px; }
 .district-legend-heading button {
@@ -3230,6 +3260,37 @@ button.wide { width: 100%; margin-top: 10px; }
   font-weight: 800;
   white-space: nowrap;
 }
+.district-legend-collapse {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  padding: 2px 1px !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0 !important;
+  background: transparent !important;
+  text-align: left;
+}
+.district-legend-collapse > i {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-right: 2px solid #9ff4f0;
+  border-bottom: 2px solid #9ff4f0;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform .15s ease;
+}
+.district-map-legend:not(.collapsed) .district-legend-collapse > i { transform: translateY(2px) rotate(225deg); }
+.district-legend-all { flex: 0 0 auto !important; }
+.district-legend-content { display: grid; gap: 4px; }
+.district-legend-content,
+.district-legend-building-list,
+.district-legend-special-list,
+.district-legend-row,
+.district-legend-building-list label { max-width: 100%; box-sizing: border-box; }
+.district-legend-row > span,
+.district-legend-building-list label > span { min-width: 0; overflow-wrap: anywhere; }
 .district-legend-building-list { display: grid; gap: 2px; }
 .district-legend-building-list label,
 .district-legend-row {
@@ -3335,16 +3396,253 @@ button.wide { width: 100%; margin-top: 10px; }
 .building-number-marker.rescue-service-marker g > path {
   fill: #e23d2d;
   stroke: #fff3a0;
-  stroke-width: 3;
-  filter: drop-shadow(0 0 5px #ffb300) drop-shadow(0 2px 3px #001b28aa);
+  stroke-width: 2.3;
+  filter: drop-shadow(0 2px 3px #001b28aa);
 }
-.building-number-marker.rescue-service-marker g > text { font-size: 12px; letter-spacing: .4px; }
-.building-number-marker.rescue-service-marker.selected g > path { fill: #c52c20; stroke: #35f4ec; }
+.building-number-marker.rescue-service-marker g > text { font-size: 11px; letter-spacing: .1px; }
+.building-number-marker.rescue-service-marker.selected g > path { stroke: #35f4ec; }
 .district-editor-actions .edit-contour { margin-right: auto; border-color: #149da6; color: #08727b; }
 
 @media (max-width: 720px), (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
-  .district-map-legend { right: 7px; bottom: 27px; width: 145px; max-height: 43%; padding: 6px; }
+  .district-map-legend { right: 7px; bottom: 27px; width: min(220px, calc(100% - 14px)); max-height: 55%; padding: 6px; }
   .district-legend-heading button { padding-inline: 4px; }
   .district-legend-building-list label, .district-legend-row { grid-template-columns: 14px 27px minmax(0, 1fr); font-size: 7px; }
   .district-legend-building { width: 27px; }
+}
+
+/* Путёвка для выезда на пожар / аварию. */
+.district-emergency-button {
+  width: 100%;
+  min-height: 49px;
+  margin-top: 12px;
+  border: 1px solid #8f0d12;
+  border-radius: 9px;
+  background: linear-gradient(180deg, #ef3f43, #bb1119);
+  color: #fff;
+  box-shadow: 0 5px 14px #8d101d42, inset 0 1px #ff9c9f;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+.district-emergency-button:hover { background: linear-gradient(180deg, #fa4e52, #c7161e); }
+.district-emergency-button:active { translate: 0 1px; }
+.fire-dispatch-backdrop { z-index: 120; align-items: start; overflow-y: auto; padding: 14px; }
+.fire-dispatch-ticket-dialog {
+  width: min(1060px, 98vw);
+  margin: auto;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  border: 1px solid #2d818a;
+  border-radius: 14px;
+  background: #073746;
+  box-shadow: 0 25px 80px #00141dcc;
+}
+.fire-dispatch-screen-actions { position: sticky; z-index: 8; top: 0; display: flex; justify-content: flex-end; gap: 6px; }
+.fire-dispatch-screen-actions button { min-height: 34px; padding: 6px 12px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid #35ccd0; border-radius: 5px; background: #0a5363; color: #eaffff; box-shadow: 0 3px 10px #001c2770; font: 850 12px/1.1 Inter, "Segoe UI", Arial, sans-serif; }
+.fire-dispatch-screen-actions button.primary { border-color: #24d5d2; background: linear-gradient(180deg, #0eaab0, #087985); color: #fff; }
+.fire-dispatch-screen-actions button:hover { filter: brightness(1.12); }
+.fire-dispatch-screen-actions button:disabled { opacity: .62; cursor: wait; }
+.fire-dispatch-screen-actions button svg { width: 16px; height: 16px; }
+.fire-dispatch-save-status { min-width: 0; margin-right: auto; align-self: center; overflow: hidden; color: #d8f7f6; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.fire-dispatch-ticket-sheet {
+  width: min(200mm, 100%);
+  min-height: 285mm;
+  margin: 0 auto;
+  padding: 8mm 8mm 7mm;
+  display: flex;
+  flex-direction: column;
+  gap: 1.8mm;
+  box-sizing: border-box;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 12px 36px #00172099;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+.fire-dispatch-ticket-sheet header { display: grid; gap: 1.2mm; text-align: center; }
+.fire-dispatch-ticket-sheet h1 { margin: 0; font-size: 16pt; line-height: 1; letter-spacing: .08em; }
+.fire-dispatch-ticket-sheet h2 { max-width: none; margin: 0 auto 1.8mm; font-size: 8.8pt; line-height: 1.1; white-space: nowrap; }
+.fire-dispatch-ticket-sheet label { min-width: 0; display: grid; gap: .7mm; color: #111; font-size: 8pt; font-weight: 700; text-align: left; }
+.fire-dispatch-ticket-sheet input,
+.fire-dispatch-ticket-sheet select,
+.fire-dispatch-ticket-sheet textarea {
+  width: 100%;
+  min-height: 6.4mm;
+  padding: .8mm 1.8mm;
+  box-sizing: border-box;
+  border: 1px solid #555;
+  border-radius: 1.5mm;
+  outline: none;
+  background: #fff;
+  color: #111;
+  font: 8.5pt/1.2 Inter, "Segoe UI", Arial, sans-serif;
+}
+.fire-dispatch-ticket-sheet textarea { min-height: 8.5mm; resize: vertical; }
+.fire-dispatch-ticket-sheet label[data-complete="true"] input,
+.fire-dispatch-ticket-sheet label[data-complete="true"] select,
+.fire-dispatch-ticket-sheet label[data-complete="true"] textarea,
+.fire-dispatch-ticket-sheet label[data-complete="true"] .fire-dispatch-emergency-control input {
+  border-color: #6dad8b;
+  background: #f2fbf5;
+  box-shadow: 0 0 0 1px #b9dfca;
+}
+.fire-dispatch-capture-value {
+  width: 100%;
+  min-height: 6.4mm;
+  padding: .8mm 1.8mm;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid #555;
+  border-radius: 1.5mm;
+  background: #fff;
+  color: #111;
+  font: 8.5pt/1.2 Inter, "Segoe UI", Arial, sans-serif;
+  white-space: nowrap;
+}
+.fire-dispatch-capture-value.multiline { min-height: 8.5mm; align-items: flex-start; white-space: normal; }
+.fire-dispatch-ticket-sheet input:focus,
+.fire-dispatch-ticket-sheet select:focus,
+.fire-dispatch-ticket-sheet textarea:focus { border-color: #087f91; box-shadow: 0 0 0 1px #087f91; }
+.fire-dispatch-emergency-combobox { position: relative; width: 100%; min-width: 0; font-weight: 500; }
+.fire-dispatch-emergency-control { position: relative; width: 100%; }
+.fire-dispatch-emergency-control input { padding-right: 10mm; }
+.fire-dispatch-emergency-control > button {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  width: 9mm;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-left: 1px solid #c4cfd1;
+  border-radius: 0 1.5mm 1.5mm 0;
+  background: #f2f7f7;
+  color: #173b45;
+  cursor: pointer;
+}
+.fire-dispatch-emergency-control > button > span { width: 7px; height: 7px; display: block; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform .15s ease; }
+.fire-dispatch-emergency-combobox.open .fire-dispatch-emergency-control > button { color: #087f91; }
+.fire-dispatch-emergency-combobox.open .fire-dispatch-emergency-control > button > span { transform: translateY(2px) rotate(225deg); }
+.fire-dispatch-emergency-options {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 1mm);
+  left: 0;
+  width: 100%;
+  max-height: 48mm;
+  padding: 1mm;
+  overflow-y: auto;
+  box-sizing: border-box;
+  border: 1px solid #087f91;
+  border-radius: 1.5mm;
+  background: #fff;
+  box-shadow: 0 3mm 7mm #001c2738;
+}
+.fire-dispatch-emergency-options > button {
+  width: 100%;
+  min-height: 7mm;
+  padding: 1.5mm 2mm;
+  border: 0;
+  border-radius: 1mm;
+  background: transparent;
+  color: #111;
+  font: 8.5pt/1.2 Inter, "Segoe UI", Arial, sans-serif;
+  text-align: left;
+}
+.fire-dispatch-emergency-options > button:hover,
+.fire-dispatch-emergency-options > button[aria-selected="true"] { background: #dff3f4; color: #006b76; }
+.fire-dispatch-form { display: grid; gap: 1.2mm; }
+.fire-dispatch-form label > span { line-height: 1.2; }
+.fire-dispatch-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3mm; }
+.fire-dispatch-row.applicant { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
+.fire-dispatch-row.division-row { margin-top: 1.5mm; grid-template-columns: minmax(0, 1.35fr) minmax(0, .8fr); }
+.fire-dispatch-row.dispatcher { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
+.fire-dispatch-map-heading { margin: .8mm 0 .4mm; color: #111; font-size: 10pt; font-weight: 850; line-height: 1.1; text-align: center; }
+.fire-dispatch-map { position: relative; width: 100%; min-height: 0; flex: none; aspect-ratio: 1000 / 680; overflow: hidden; border: 1.2px solid #222; background: #e9eee7; isolation: isolate; }
+.fire-dispatch-map > .offline-vector-map { z-index: 1; }
+.fire-dispatch-map > svg { position: absolute; z-index: 3; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.fire-dispatch-building-contour { --object-color: #2d6fd0; fill: var(--object-color); fill-opacity: .38; stroke: var(--object-color); stroke-width: 6; stroke-linejoin: round; filter: drop-shadow(0 0 5px var(--object-color)); }
+.fire-dispatch-building-contour.prefix-0 { --object-color: #191d20; }
+.fire-dispatch-building-contour.prefix-1 { --object-color: #2d6fd0; }
+.fire-dispatch-building-contour.prefix-2 { --object-color: #1e633f; }
+.fire-dispatch-building-contour.prefix-3 { --object-color: #d36f9d; }
+.fire-dispatch-building-contour.prefix-4 { --object-color: #d9ad22; }
+.fire-dispatch-building-contour.prefix-5 { --object-color: #e56d69; }
+.fire-dispatch-building-contour.prefix-6 { --object-color: #79293d; }
+.fire-dispatch-building-contour.prefix-7 { --object-color: #707981; }
+.fire-dispatch-building-contour.prefix-8 { --object-color: #78b947; }
+.fire-dispatch-building-contour.prefix-9 { --object-color: #e17d2d; }
+.fire-dispatch-building-label { pointer-events: none; }
+.fire-dispatch-building-label text { fill: #fff; font-size: 17px; font-weight: 950; }
+.fire-dispatch-edge-label,
+.fire-dispatch-water-link text,
+.fire-dispatch-reservoir-label { paint-order: stroke; stroke: #fff; stroke-width: 5px; stroke-linejoin: round; font-family: Arial, Helvetica, sans-serif; font-weight: 900; }
+.fire-dispatch-edge-label { fill: #161616; font-size: 12.5px; stroke-width: 4px; }
+.fire-dispatch-water-link line { stroke: #087dcc; stroke-width: 3; stroke-linecap: round; }
+.fire-dispatch-water-arrow { fill: #087dcc; }
+.fire-dispatch-water-link text { fill: #005da4; font-size: 13px; }
+.fire-dispatch-hydrant-symbol { filter: drop-shadow(0 2px 3px #002c55aa); }
+.fire-dispatch-hydrant-symbol .hydrant-map-label { font-size: 11.5px; }
+.fire-dispatch-hydrant-symbol.status-faulty .hydrant-network-line,
+.fire-dispatch-hydrant-symbol.status-unknown .hydrant-network-line,
+.fire-dispatch-hydrant-symbol.status-faulty .hydrant-symbol-outline,
+.fire-dispatch-hydrant-symbol.status-unknown .hydrant-symbol-outline { stroke: #d52d36; }
+.fire-dispatch-hydrant-symbol.status-faulty .hydrant-symbol-half,
+.fire-dispatch-hydrant-symbol.status-unknown .hydrant-symbol-half { fill: #d52d36; }
+.fire-dispatch-hydrant-symbol.status-faulty .hydrant-label-back,
+.fire-dispatch-hydrant-symbol.status-unknown .hydrant-label-back { fill: #fff0f0; stroke: #d52d36; }
+.fire-dispatch-hydrant-symbol.status-faulty .hydrant-map-label,
+.fire-dispatch-hydrant-symbol.status-unknown .hydrant-map-label { fill: #a31420; }
+.fire-dispatch-hydrant-symbol.status-disabled .hydrant-network-line,
+.fire-dispatch-hydrant-symbol.status-disabled .hydrant-symbol-outline { stroke: #b36c00; }
+.fire-dispatch-hydrant-symbol.status-disabled .hydrant-symbol-half { fill: #b36c00; }
+.fire-dispatch-reservoir-symbol > rect { fill: #087dcc; stroke: #fff; stroke-width: 3; filter: drop-shadow(0 2px 3px #002c55aa); }
+.fire-dispatch-reservoir-symbol > text:first-of-type { fill: #fff; font-size: 12px; font-weight: 950; }
+.fire-dispatch-reservoir-label { fill: #005da4; font-size: 16px; }
+.fire-dispatch-map > .fire-dispatch-standard-compass { z-index: 6; top: 8px; right: 8px; width: 82px; height: 82px; }
+.fire-dispatch-planning-documents { margin: .4mm 0 0; padding: 1.5mm 1.8mm; display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: center; gap: 2mm; border: 1px solid #b6c8c9; border-radius: 1.4mm; background: #f3f8f8; color: #111; font-size: 7.8pt; font-weight: 750; line-height: 1.2; }
+.fire-dispatch-planning-documents > strong { font-size: 8pt; }
+.fire-dispatch-planning-documents > div { min-width: 0; display: flex; flex-wrap: wrap; gap: 1mm; }
+.fire-dispatch-planning-documents span { padding: .8mm 1.4mm; border: 1px solid #7ca8ab; border-radius: 1.2mm; background: #fff; white-space: nowrap; }
+.fire-dispatch-planning-documents span.empty { color: #6b3434; border-color: #d5adad; background: #fff6f6; }
+.fire-dispatch-verification-note { margin: .4mm 0 0; color: #111; font-size: 7.8pt; font-weight: 850; line-height: 1.25; }
+.fire-dispatch-ticket-sheet footer { margin-top: auto; display: flex; justify-content: flex-end; gap: 5mm; color: #333; font-size: 6.5pt; line-height: 1.2; }
+[data-theme="dark"] .fire-dispatch-ticket-dialog { border-color: #45abb4; background: #062c38; }
+#fire-dispatch-print-image { display: none; }
+
+@media (max-width: 720px) {
+  .fire-dispatch-backdrop { padding: 0; }
+  .fire-dispatch-ticket-dialog { width: 100%; min-height: 100dvh; padding: 8px; border: 0; border-radius: 0; }
+  .fire-dispatch-screen-actions { flex-wrap: wrap; }
+  .fire-dispatch-save-status { order: 2; flex-basis: 100%; }
+  .fire-dispatch-ticket-sheet { min-height: 0; padding: 6mm; gap: 3mm; }
+  .fire-dispatch-ticket-sheet h1 { font-size: 15pt; }
+  .fire-dispatch-ticket-sheet h2 { font-size: 8.5pt; white-space: normal; }
+  .fire-dispatch-row, .fire-dispatch-row.applicant, .fire-dispatch-row.division-row, .fire-dispatch-row.dispatcher { grid-template-columns: 1fr; gap: 2.5mm; }
+  .fire-dispatch-map { min-height: 0; }
+  .fire-dispatch-ticket-sheet footer { display: grid; }
+}
+
+@media print {
+  @page { size: A4 portrait; margin: 0; }
+  html:has(body.fire-dispatch-printing),
+  body.fire-dispatch-printing { width: 210mm !important; height: 297mm !important; min-height: 297mm !important; margin: 0 !important; overflow: hidden !important; background: #fff !important; }
+  body.fire-dispatch-printing > *:not(#fire-dispatch-print-image) { display: none !important; }
+  body.fire-dispatch-printing > #fire-dispatch-print-image {
+    width: 190mm !important;
+    height: 284mm !important;
+    margin: 6mm auto !important;
+    display: block !important;
+    object-fit: contain !important;
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
+    break-inside: avoid !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
 }

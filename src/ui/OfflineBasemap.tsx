@@ -339,7 +339,16 @@ function applyBasemap(
 
 type BuildingContourResolver = (point: GeoPoint) => readonly GeoPoint[] | null;
 
-export function OfflineBasemap({ center, zoom, basemap, onBuildingContourResolver }: Readonly<{ center: GeoPoint; zoom: number; basemap: Basemap; onBuildingContourResolver?: (resolver: BuildingContourResolver | null) => void }>) {
+type NormalizedMapProjector = (point: GeoPoint) => Readonly<{ x: number; y: number }>;
+
+export function OfflineBasemap({ center, zoom, basemap, onBuildingContourResolver, onProjectorReady, fitPoints }: Readonly<{
+  center: GeoPoint;
+  zoom: number;
+  basemap: Basemap;
+  onBuildingContourResolver?: (resolver: BuildingContourResolver | null) => void;
+  onProjectorReady?: (projector: NormalizedMapProjector | null) => void;
+  fitPoints?: readonly GeoPoint[];
+}>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const initialViewRef = useRef({ center, zoom });
@@ -347,6 +356,10 @@ export function OfflineBasemap({ center, zoom, basemap, onBuildingContourResolve
   const desiredBasemapRef = useRef(basemap);
   const buildingResolverCallbackRef = useRef(onBuildingContourResolver);
   buildingResolverCallbackRef.current = onBuildingContourResolver;
+  const projectorReadyCallbackRef = useRef(onProjectorReady);
+  projectorReadyCallbackRef.current = onProjectorReady;
+  const fitPointsRef = useRef(fitPoints);
+  fitPointsRef.current = fitPoints;
   const appliedBasemapRef = useRef<Basemap | null>(null);
   const mapReadyRef = useRef(false);
 
@@ -368,12 +381,32 @@ export function OfflineBasemap({ center, zoom, basemap, onBuildingContourResolve
       fadeDuration: 0,
       canvasContextAttributes: { preserveDrawingBuffer: true },
     });
+    const publishProjector = () => projectorReadyCallbackRef.current?.((point) => {
+      const projected = map.project([point.longitude, point.latitude]);
+      return {
+        x: projected.x / Math.max(1, container.clientWidth),
+        y: projected.y / Math.max(1, container.clientHeight),
+      };
+    });
+    const fitCurrentPoints = () => {
+      const points = fitPointsRef.current;
+      if (points === undefined || points.length < 2) return false;
+      const west = Math.min(...points.map((point) => point.longitude));
+      const east = Math.max(...points.map((point) => point.longitude));
+      const south = Math.min(...points.map((point) => point.latitude));
+      const north = Math.max(...points.map((point) => point.latitude));
+      const padding = Math.max(34, Math.min(container.clientWidth, container.clientHeight) * .14);
+      map.fitBounds([[west, south], [east, north]], { padding, duration: 0, maxZoom: 20.5 });
+      return true;
+    };
     map.on('load', () => {
       mapReadyRef.current = true;
       applyBasemap(map, desiredBasemapRef.current, container);
       appliedBasemapRef.current = desiredBasemapRef.current;
       container.dataset.mapReady = 'true';
       container.dataset.mapStatus = 'loaded';
+      fitCurrentPoints();
+      publishProjector();
       buildingResolverCallbackRef.current?.((point) => {
         const screen = map.project([point.longitude, point.latitude]);
         const features = map.queryRenderedFeatures([
@@ -406,7 +439,9 @@ export function OfflineBasemap({ center, zoom, basemap, onBuildingContourResolve
         map.getSource(container.dataset.satelliteSourceId) !== undefined &&
         map.isSourceLoaded(container.dataset.satelliteSourceId)
       ) revealCompleteSatellite(map, container);
+      publishProjector();
     });
+    map.on('moveend', publishProjector);
     map.on('sourcedata', (event) => {
       if (event.isSourceLoaded) container.dataset.sourceReady = 'true';
       if (event.sourceId === container.dataset.satelliteSourceId && desiredBasemapRef.current === 'satellite') {
@@ -481,7 +516,11 @@ export function OfflineBasemap({ center, zoom, basemap, onBuildingContourResolve
     };
     window.addEventListener('online', retrySatellite);
     window.addEventListener('offline', useOfflineSatellite);
-    const observer = new ResizeObserver(() => map.resize());
+    const observer = new ResizeObserver(() => {
+      map.resize();
+      fitCurrentPoints();
+      publishProjector();
+    });
     observer.observe(container);
     return () => {
       observer.disconnect();
@@ -490,6 +529,7 @@ export function OfflineBasemap({ center, zoom, basemap, onBuildingContourResolve
       window.clearTimeout(retryTimer);
       window.clearInterval(auditTimer);
       buildingResolverCallbackRef.current?.(null);
+      projectorReadyCallbackRef.current?.(null);
       map.remove();
       mapRef.current = null;
       mapReadyRef.current = false;
@@ -506,6 +546,7 @@ export function OfflineBasemap({ center, zoom, basemap, onBuildingContourResolve
   }, [basemap]);
 
   useEffect(() => {
+    if (fitPointsRef.current !== undefined && fitPointsRef.current.length >= 2) return;
     mapRef.current?.jumpTo({ center: [center.longitude, center.latitude], zoom });
   }, [center.latitude, center.longitude, zoom]);
 

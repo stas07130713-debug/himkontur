@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { DISTRICT_LAYER_KEYS, type DistrictLayerKey } from './district-map-visuals';
 
 const BUILDING_LEGEND: readonly Readonly<{ key: DistrictLayerKey; number: string; label: string }>[] = [
@@ -18,13 +19,17 @@ export function DistrictMapLegend({ visibleLayers, onLayerChange, onAllChange }:
   onLayerChange: (key: DistrictLayerKey, visible: boolean) => void;
   onAllChange: (visible: boolean) => void;
 }>) {
+  const [collapsed, setCollapsed] = useState(false);
   const allVisible = DISTRICT_LAYER_KEYS.every((key) => visibleLayers.has(key));
   return (
-    <div className="district-map-legend" aria-label="Условные обозначения">
+    <div className={`district-map-legend${collapsed ? ' collapsed' : ''}`} aria-label="Условные обозначения">
       <div className="district-legend-heading">
-        <strong>Условные обозначения</strong>
-        <button type="button" onClick={() => onAllChange(!allVisible)}>{allVisible ? 'Скрыть всё' : 'Показать всё'}</button>
+        <button className="district-legend-collapse" type="button" aria-expanded={!collapsed} onClick={() => setCollapsed((current) => !current)}>
+          <strong>Условные обозначения</strong><i aria-hidden="true" />
+        </button>
+        {!collapsed && <button className="district-legend-all" type="button" onClick={() => onAllChange(!allVisible)}>{allVisible ? 'Скрыть всё' : 'Показать всё'}</button>}
       </div>
+      {!collapsed && <div className="district-legend-content">
       <div className="district-legend-building-list">
         {BUILDING_LEGEND.map((item) => <label key={item.key}>
           <input type="checkbox" checked={visibleLayers.has(item.key)} onChange={(event) => onLayerChange(item.key, event.currentTarget.checked)} />
@@ -54,6 +59,7 @@ export function DistrictMapLegend({ visibleLayers, onLayerChange, onAllChange }:
           <span>Аварийно-спасательная служба</span>
         </label>
       </div>
+      </div>}
     </div>
   );
 }

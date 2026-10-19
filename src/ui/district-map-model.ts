@@ -551,7 +551,7 @@ export function districtObjectTitle(object: DistrictMapObject): string {
   if (object.kind === 'hydrant') return `Пожарный гидрант ${object.number}`;
   if (object.kind === 'reservoir') return `Пожарный водоём ${object.number}`;
   if (object.mapRole === 'response-boundary') return 'Граница района выезда';
-  if (object.mapRole === 'rescue-service') return `Аварийно-спасательная служба · ${object.number}`;
+  if (object.mapRole === 'rescue-service') return 'Аварийно-спасательная служба';
   if (object.objectType === 'territory') {
     const name = object.territoryNames.find((item) => item.shortName.trim() !== '' || item.fullName.trim() !== '');
     const suffix = name === undefined ? '' : (name.shortName.trim() || name.fullName.trim());

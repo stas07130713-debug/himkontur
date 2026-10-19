@@ -52,6 +52,7 @@ describe('district map visual helpers', () => {
     const territory: DistrictBuilding = { ...building, objectType: 'territory', number: '0.1' };
     expect(hasDistrictMarker(territory)).toBe(false);
     expect(hasDistrictMarker({ ...building, objectType: 'building', number: '0.2' })).toBe(false);
+    expect(hasDistrictMarker({ ...territory, mapRole: 'rescue-service' })).toBe(true);
     expect(hasDistrictMarker(building)).toBe(true);
   });
 

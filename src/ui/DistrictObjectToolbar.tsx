@@ -21,6 +21,11 @@ function objectResultText(object: DistrictMapObject, query: string): Readonly<{ 
     title: object.owner.trim() || 'Принадлежность не указана',
     description: object.volumeM3 === null ? 'Пожарный водоём' : `Объём ${object.volumeM3.toLocaleString('ru-RU')} м³`,
   };
+  if (object.mapRole === 'rescue-service') {
+    const fullName = object.workshopFull.trim() !== '' ? object.workshopFull.trim() : object.territoryNames[0]?.fullName.trim() ?? 'Аварийно-спасательная служба';
+    const shortName = object.workshopShort.trim() !== '' ? object.workshopShort.trim() : object.territoryNames[0]?.shortName.trim() ?? 'АСС';
+    return { title: shortName, description: fullName };
+  }
   if (object.objectType === 'territory') {
     const names = object.territoryNames
       .flatMap((unit) => [unit.fullName.trim(), unit.shortName.trim()])
@@ -110,8 +115,8 @@ export function DistrictObjectToolbar(props: Props) {
             {results.length === 0 ? <p>Совпадений не найдено</p> : results.map((object) => {
               const resultText = objectResultText(object, query);
               return (
-                <button key={object.id} onMouseDown={(event) => event.preventDefault()} onClick={() => { props.onFocus(object); props.onSearchSelectionChange?.(object); setQuery(object.number); setFocusedKind(null); }}>
-                  <b>{object.number}</b>
+                <button key={object.id} onMouseDown={(event) => event.preventDefault()} onClick={() => { props.onFocus(object); props.onSearchSelectionChange?.(object); setQuery(object.kind === 'building' && object.mapRole === 'rescue-service' ? 'АСС' : object.number); setFocusedKind(null); }}>
+                  <b>{object.kind === 'building' && object.mapRole === 'rescue-service' ? 'АСС' : object.number}</b>
                   <span><strong>{resultText.title}</strong>{resultText.description !== '' && <small>{resultText.description}</small>}</span>
                 </button>
               );

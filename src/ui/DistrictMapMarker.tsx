@@ -61,7 +61,10 @@ export function DistrictMapMarker({ object, x, y, selected, highlighted = false,
       onPointerDown(event);
       return;
     }
-    onSelect();
+    // Selection is intentionally delayed until click. Opening the side card on
+    // pointerdown changes the map width before pointerup and can retarget the
+    // same gesture to the map background, making the card flash and disappear.
+    event.stopPropagation();
   };
   if (object.kind === 'hydrant') {
     const hoverLines = [object.owner.trim(), `Сеть: ${hydrantNetworkCode(object)}`].filter(Boolean);
@@ -108,14 +111,23 @@ export function DistrictMapMarker({ object, x, y, selected, highlighted = false,
       .map((document) => `${document.kind}: ${document.number}`),
   ].filter((line) => line !== '');
   const rescueService = object.mapRole === 'rescue-service';
+  const currentRescueFullName = object.workshopFull.trim();
+  const currentRescueShortName = object.workshopShort.trim();
+  const legacyRescueFullName = object.territoryNames[0]?.fullName.trim() ?? '';
+  const legacyRescueShortName = object.territoryNames[0]?.shortName.trim() ?? '';
+  const rescueFullName = currentRescueFullName !== '' ? currentRescueFullName : legacyRescueFullName !== '' ? legacyRescueFullName : 'Аварийно-спасательная служба';
+  const rescueShortName = currentRescueShortName !== '' ? currentRescueShortName : legacyRescueShortName !== '' ? legacyRescueShortName : 'АСС';
+  const visibleHoverLines = rescueService
+    ? [namedLine(rescueFullName, rescueShortName), ...hoverLines.filter((line) => !line.includes(rescueFullName))]
+    : hoverLines;
   const markerLabel = rescueService ? 'АСС' : object.number;
   return (
     <g data-object-id={object.id} transform={`translate(${x} ${y})`} className={`district-map-marker building-number-marker prefix-${buildingPrefix(object.number)}${object.objectType === 'territory' ? ' territory' : ''}${rescueService ? ' rescue-service-marker' : ''}${selected ? ' selected' : ''}${highlighted ? ' search-highlight' : ''}${editing ? ' editable' : ''}${interactionDisabled ? ' interaction-disabled' : ''}`} onClick={(event) => { if (interactionDisabled) return; event.stopPropagation(); onSelect(); }} onPointerDown={pointerDown} onPointerEnter={() => { if (!interactionDisabled) onHoverChange?.(true); }} onPointerLeave={() => onHoverChange?.(false)}>
       <g transform={`scale(${scale})`}><circle className="marker-halo" r="25" /><path d="M-21-13h42v26h-42z" /><text x="0" y="6" textAnchor="middle">{markerLabel}</text></g>
-      <foreignObject className="district-marker-hover-card" x="25" y={-18 - hoverLines.length * 9} width="245" height={42 + hoverLines.length * 19}>
-        <div><strong>{rescueService ? 'Объект АСС' : object.objectType === 'territory' ? 'Территория' : 'Здание'} {object.number}</strong>{hoverLines.map((line, index) => <span key={`${object.id}-hover-${index}`}>{line}</span>)}</div>
+      <foreignObject className="district-marker-hover-card" x="25" y={-18 - visibleHoverLines.length * 9} width="245" height={42 + visibleHoverLines.length * 19}>
+        <div><strong>{rescueService ? 'Аварийно-спасательная служба' : `${object.objectType === 'territory' ? 'Территория' : 'Здание'} ${object.number}`}</strong>{visibleHoverLines.map((line, index) => <span key={`${object.id}-hover-${index}`}>{line}</span>)}</div>
       </foreignObject>
-      <title>{object.number} · {hoverLines.join(' · ')}</title>
+      <title>{rescueService ? `Аварийно-спасательная служба · ${visibleHoverLines.join(' · ')}` : `${object.number} · ${hoverLines.join(' · ')}`}</title>
     </g>
   );
 }

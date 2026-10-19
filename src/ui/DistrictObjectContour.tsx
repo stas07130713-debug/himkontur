@@ -22,6 +22,13 @@ function distanceLabel(meters: number): string {
   return `${(meters / 1_000).toLocaleString('ru-RU', { maximumFractionDigits: 2 })} км`;
 }
 
+function readableLineAngle(start: ScreenPoint, end: ScreenPoint): number {
+  let angle = Math.atan2(end.y - start.y, end.x - start.x) * 180 / Math.PI;
+  if (angle > 90) angle -= 180;
+  if (angle < -90) angle += 180;
+  return angle;
+}
+
 /** Construction points on one straight wall are ignored for measurement. */
 function logicalCorners(points: readonly GeoPoint[]): readonly GeoPoint[] {
   if (points.length <= 3) return points;
@@ -86,6 +93,7 @@ export function DistrictObjectContour({ object, project, selected = false, highl
           points={contourPoints}
           className={`district-object-contour prefix-${buildingPrefix(object.number)}${object.objectType === 'territory' || buildingPrefix(object.number) === '0' ? ' territory' : ''}${roleClass}${hovered ? ' hovered' : ''}${selected ? ' selected' : ''}${highlighted ? ' search-highlight' : ''}`}
           onClick={(event) => { if (!interactionDisabled) { event.stopPropagation(); onSelect?.(); } }}
+          onPointerDown={(event) => { if (!interactionDisabled && event.button === 0) event.stopPropagation(); }}
         />}
     {walls.map((edge, index) => <line
       key={`measure-${index}`}
@@ -97,12 +105,14 @@ export function DistrictObjectContour({ object, project, selected = false, highl
       onPointerEnter={() => { if (!interactionDisabled) setHoveredWall(index); }}
       onPointerLeave={() => setHoveredWall((current) => current === index ? null : current)}
       onClick={(event) => { if (!interactionDisabled) { event.stopPropagation(); onSelect?.(); } }}
+      onPointerDown={(event) => { if (!interactionDisabled && event.button === 0) event.stopPropagation(); }}
     />)}
     {wall !== null && <text
       className="district-contour-length-label"
-      x={(wall.projectedStart.x + wall.projectedEnd.x) / 2}
-      y={(wall.projectedStart.y + wall.projectedEnd.y) / 2 - 5}
+      x="0"
+      y="-7"
       textAnchor="middle"
+      transform={`translate(${(wall.projectedStart.x + wall.projectedEnd.x) / 2} ${(wall.projectedStart.y + wall.projectedEnd.y) / 2}) rotate(${readableLineAngle(wall.projectedStart, wall.projectedEnd)})`}
     >{distanceLabel(edgeDistanceMeters(wall.start, wall.end))}</text>}
   </g>;
 }

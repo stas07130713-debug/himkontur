@@ -10,7 +10,7 @@ import { round } from '../core/math';
 import { MAP_BOUNDS, MAP_INITIAL_CENTER } from './defaults';
 import { DistrictMapMarker, FireReservoirPlanSymbol, HydrantPlanSymbol } from './DistrictMapMarker';
 import { declutterDistrictMarkers } from './district-marker-layout';
-import { FireReservoirIndicatorPlate } from './FireReservoirIndicatorPlate';
+import { FireDispatchTicket } from './FireDispatchTicket';
 import { HydrantIndicatorPlate } from './HydrantIndicatorPlate';
 import type {
   DistrictBuilding,
@@ -360,11 +360,26 @@ function ObjectEditor({ object, objects, onSave, onEditContour, onClose }: Reado
   onEditContour?: (object: DistrictBuilding) => void;
   onClose: () => void;
 }>) {
-  const [value, setValue] = useState<DistrictMapObject>(() => object.kind === 'building'
-    && buildingPrefix(object.number) === '1'
-    && object.workshopFull.trim().toLocaleLowerCase('ru-RU') === 'другое'
-    ? { ...object, workshopFull: '', workshopShort: '' }
-    : object);
+  const [value, setValue] = useState<DistrictMapObject>(() => {
+    if (object.kind === 'building' && object.mapRole === 'rescue-service') {
+      const legacyName = object.territoryNames.find((unit) => unit.fullName.trim() !== '' || unit.shortName.trim() !== '');
+      const currentFullName = object.workshopFull.trim();
+      const currentShortName = object.workshopShort.trim();
+      const legacyFullName = legacyName?.fullName.trim() ?? '';
+      const legacyShortName = legacyName?.shortName.trim() ?? '';
+      return {
+        ...object,
+        objectType: 'building',
+        workshopFull: currentFullName !== '' ? currentFullName : legacyFullName !== '' ? legacyFullName : 'Аварийно-спасательная служба',
+        workshopShort: currentShortName !== '' ? currentShortName : legacyShortName !== '' ? legacyShortName : 'АСС',
+      };
+    }
+    return object.kind === 'building'
+      && buildingPrefix(object.number) === '1'
+      && object.workshopFull.trim().toLocaleLowerCase('ru-RU') === 'другое'
+      ? { ...object, workshopFull: '', workshopShort: '' }
+      : object;
+  });
   const [customPrefixOne, setCustomPrefixOne] = useState(() => object.kind === 'building'
     && buildingPrefix(object.number) === '1'
     && !PREFIX_ONE_WORKSHOPS.some(([full]) => full === object.workshopFull));
@@ -410,7 +425,7 @@ function ObjectEditor({ object, objects, onSave, onEditContour, onClose }: Reado
         <button className="dialog-close" aria-label="Закрыть" onClick={onClose}><UiIcon name="close" /></button>
         <div className="district-editor-heading">
           {value.kind === 'building'
-            ? <span className={`editor-building-symbol prefix-${buildingPrefix(value.number)}`}>№</span>
+            ? <span className={`editor-building-symbol prefix-${buildingPrefix(value.number)}${value.mapRole === 'rescue-service' ? ' rescue-service' : ''}`}>{value.mapRole === 'rescue-service' ? 'АСС' : '№'}</span>
             : value.kind === 'hydrant'
               ? <HydrantPlanSymbol object={value} className="editor-hydrant-symbol" />
               : <FireReservoirPlanSymbol object={value} className="editor-reservoir-symbol" />}
@@ -426,7 +441,7 @@ function ObjectEditor({ object, objects, onSave, onEditContour, onClose }: Reado
         {value.kind === 'building' && value.mapRole === 'rescue-service' && <p className="district-special-role-banner">Постоянно выделяемый объект аварийно-спасательной службы. После сохранения он будет показан на обеих картах.</p>}
         {value.kind === 'building' ? (
           <div className="district-editor-fields">
-            <label className="number-field">{value.objectType === 'territory' ? 'Номер территории' : 'Номер здания'}<input autoFocus value={value.number} placeholder={value.objectType === 'territory' ? 'Например, 0.1' : 'Например, 3.15'} onChange={(event) => {
+            {value.mapRole !== 'rescue-service' && <label className="number-field">{value.objectType === 'territory' ? 'Номер территории' : 'Номер здания'}<input autoFocus value={value.number} placeholder={value.objectType === 'territory' ? 'Например, 0.1' : 'Например, 3.15'} onChange={(event) => {
               const number = event.currentTarget.value;
               setValue((current) => {
                 if (current.kind !== 'building') return current;
@@ -434,17 +449,17 @@ function ObjectEditor({ object, objects, onSave, onEditContour, onClose }: Reado
                 if (nextPrefix !== '1' || buildingPrefix(current.number) !== '1') setCustomPrefixOne(false);
                 return buildingWithNumber(current, number);
               });
-            }} /></label>
-            {value.objectType === 'territory' ? (
+            }} /></label>}
+            {value.objectType === 'territory' && value.mapRole !== 'rescue-service' ? (
               <NamedUnitsEditor label="Название территории" units={value.territoryNames} onChange={(territoryNames) => patch({ territoryNames })} />
             ) : <>
             <div className="building-reference-fields">
               <label>Инвентарный номер здания<input value={value.inventoryNumber ?? ''} placeholder="Необязательно" onChange={(event) => patch({ inventoryNumber: event.currentTarget.value })} /></label>
             </div>
             <PlanningDocumentsEditor documents={value.planningDocuments} onChange={(planningDocuments) => patch({ planningDocuments })} />
-            {buildingPrefix(value.number) === '1' ? <div className="building-prefix-one-selector"><label>Подразделение<select value={PREFIX_ONE_WORKSHOPS.some(([full]) => full === value.workshopFull) ? value.workshopFull : customPrefixOne ? 'other' : ''} onChange={(event) => { const selected = PREFIX_ONE_WORKSHOPS.find(([full]) => full === event.currentTarget.value); if (selected === undefined) { setCustomPrefixOne(true); patch({ workshopFull: '', workshopShort: '' }); } else { setCustomPrefixOne(false); patch({ workshopFull: selected[0], workshopShort: selected[1] }); } }}><option value="" disabled>Выберите подразделение</option>{PREFIX_ONE_WORKSHOPS.map(([full, short]) => <option key={short} value={full}>{full} ({short})</option>)}<option value="other">Другое — указать вручную</option></select></label></div> : null}
-            {(buildingPrefix(value.number) === '9' || (buildingPrefix(value.number) === '1' && customPrefixOne)) && <div className="paired-field"><label>{buildingPrefix(value.number) === '9' ? 'Организация — полное название' : 'Подразделение — полное название'}<input value={value.workshopFull} placeholder="Введите своё название" onChange={(event) => patch({ workshopFull: event.currentTarget.value })} /></label><label>Сокращённо<input value={value.workshopShort} placeholder="Необязательно" onChange={(event) => patch({ workshopShort: event.currentTarget.value })} /></label></div>}
-            {FIXED_WORKSHOPS[buildingPrefix(value.number)] !== undefined && <div className="district-auto-workshop"><span>Цех определён по номеру:</span><strong>{value.workshopFull} ({value.workshopShort})</strong></div>}
+            {value.mapRole !== 'rescue-service' && buildingPrefix(value.number) === '1' ? <div className="building-prefix-one-selector"><label>Подразделение<select value={PREFIX_ONE_WORKSHOPS.some(([full]) => full === value.workshopFull) ? value.workshopFull : customPrefixOne ? 'other' : ''} onChange={(event) => { const selected = PREFIX_ONE_WORKSHOPS.find(([full]) => full === event.currentTarget.value); if (selected === undefined) { setCustomPrefixOne(true); patch({ workshopFull: '', workshopShort: '' }); } else { setCustomPrefixOne(false); patch({ workshopFull: selected[0], workshopShort: selected[1] }); } }}><option value="" disabled>Выберите подразделение</option>{PREFIX_ONE_WORKSHOPS.map(([full, short]) => <option key={short} value={full}>{full} ({short})</option>)}<option value="other">Другое — указать вручную</option></select></label></div> : null}
+            {(value.mapRole === 'rescue-service' || buildingPrefix(value.number) === '9' || (buildingPrefix(value.number) === '1' && customPrefixOne)) && <div className="paired-field"><label>{value.mapRole === 'rescue-service' ? 'Наименование формирования' : buildingPrefix(value.number) === '9' ? 'Организация — полное название' : 'Подразделение — полное название'}<input value={value.workshopFull} placeholder="Введите полное название" onChange={(event) => patch({ workshopFull: event.currentTarget.value })} /></label><label>Сокращённое название<input value={value.workshopShort} placeholder="АСС" onChange={(event) => patch({ workshopShort: event.currentTarget.value })} /></label></div>}
+            {value.mapRole !== 'rescue-service' && FIXED_WORKSHOPS[buildingPrefix(value.number)] !== undefined && <div className="district-auto-workshop"><span>Цех определён по номеру:</span><strong>{value.workshopFull} ({value.workshopShort})</strong></div>}
             <NamedUnitsEditor label="Отделение" units={value.departments} onChange={(departments) => patch({ departments })} />
             <NamedUnitsEditor label="Участок" units={value.sites} onChange={(sites) => patch({ sites })} />
             </>}
@@ -459,7 +474,6 @@ function ObjectEditor({ object, objects, onSave, onEditContour, onClose }: Reado
           </div>
         ) : (
           <div className="district-editor-fields reservoir-editor-layout">
-            <FireReservoirIndicatorPlate object={value} editable onChange={(changes) => patch(changes)} />
             <div className="paired-field equal"><label>Номер пожарного водоёма<input autoFocus value={value.number} placeholder="ПВ-1" onChange={(event) => patch({ number: event.currentTarget.value })} /></label><label>Принадлежность<input value={value.owner} onChange={(event) => patch({ owner: event.currentTarget.value })} /></label></div>
             <div className="paired-field equal"><label>Состояние<select value={value.status} onChange={(event) => patch({ status: event.currentTarget.value as DistrictFireReservoir['status'] })}><option value="unknown">Не заполнено</option><option value="serviceable">Исправен</option><option value="faulty">Неисправен</option><option value="disabled">Временно отключён</option></select></label><label>Вид пожарного водоёма<select value={value.reservoirType} onChange={(event) => patch({ reservoirType: event.currentTarget.value as DistrictFireReservoir['reservoirType'] })}><option value="artificial">Искусственный пожарный водоём</option><option value="natural">Естественный пожарный водоём</option><option value="foam">Пенный пожарный водоём</option><option value="foam-solution">Пожарный водоём раствора пенообразователя</option></select></label></div>
             <label>Объём, м³<input type="number" min="0" step="0.1" value={value.volumeM3 ?? ''} placeholder="Укажите объём водоёма" onChange={(event) => patch({ volumeM3: event.currentTarget.value === '' ? null : event.currentTarget.valueAsNumber })} /></label>
@@ -478,17 +492,18 @@ function ObjectEditor({ object, objects, onSave, onEditContour, onClose }: Reado
   );
 }
 
-function ObjectDetails({ object, adminMode, onEdit, onDelete }: Readonly<{
+function ObjectDetails({ object, adminMode, onEdit, onDelete, onOpenDispatch }: Readonly<{
   object: DistrictMapObject | null;
   adminMode: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  onOpenDispatch: () => void;
 }>) {
   if (object === null) return null;
   return (
-    <article className={`district-details-card ${object.kind}${object.kind === 'building' ? ` prefix-${buildingPrefix(object.number)}` : ''}`}>
+    <article className={`district-details-card ${object.kind}${object.kind === 'building' ? ` prefix-${buildingPrefix(object.number)}${object.mapRole === 'rescue-service' ? ' rescue-service' : ''}` : ''}`}>
       <div className="district-details-title">
-        {object.kind === 'building' ? <span>{object.number}</span> : null}
+        {object.kind === 'building' ? <span className={object.mapRole === 'rescue-service' ? 'rescue-service' : ''}>{object.mapRole === 'rescue-service' ? 'АСС' : object.number}</span> : null}
         <div><small>{object.kind === 'building'
           ? object.mapRole === 'response-boundary'
             ? 'Граница района выезда'
@@ -497,15 +512,16 @@ function ObjectDetails({ object, adminMode, onEdit, onDelete }: Readonly<{
               : object.objectType === 'territory' ? 'Территория' : 'Здание'
           : object.kind === 'hydrant' ? 'Пожарный гидрант' : 'Пожарный водоём'}</small><h2>{districtObjectTitle(object)}</h2></div>
       </div>
-      {object.kind === 'building' && object.objectType === 'territory' ? (
+      {object.kind === 'building' && object.objectType === 'territory' && object.mapRole !== 'rescue-service' ? (
         <dl>{object.territoryNames.map((unit, index) => <div key={unit.id}><dt>Название{object.territoryNames.length > 1 ? ` ${index + 1}` : ''}</dt><dd>{unit.fullName || '—'}{unit.shortName.trim() !== '' && <small>{unit.shortName}</small>}</dd></div>)}</dl>
       ) : object.kind === 'building' ? (
         <dl>
-          <div><dt>Цех</dt><dd>{object.workshopFull}<small>{object.workshopShort || '—'}</small></dd></div>
-          {(object.inventoryNumber ?? '').trim() !== '' && <div><dt>Инвентарный номер здания</dt><dd>{object.inventoryNumber}</dd></div>}
-          {object.planningDocuments.map((document) => <div key={document.id}><dt>{document.kind}</dt><dd>{document.number}</dd></div>)}
+          <div><dt>{object.mapRole === 'rescue-service' ? 'Формирование' : 'Цех'}</dt><dd>{object.workshopFull.trim() || (object.mapRole === 'rescue-service' ? 'Аварийно-спасательная служба' : '—')}<small>{object.workshopShort.trim() || (object.mapRole === 'rescue-service' ? 'АСС' : '—')}</small></dd></div>
           {object.departments.map((unit, index) => <div key={unit.id}><dt>Отделение{object.departments.length > 1 ? ` ${index + 1}` : ''}</dt><dd>{unit.fullName || '—'}<small>{unit.shortName || 'Без сокращения'}</small></dd></div>)}
           {object.sites.map((unit, index) => <div key={unit.id}><dt>Участок{object.sites.length > 1 ? ` ${index + 1}` : ''}</dt><dd>{unit.fullName || '—'}<small>{unit.shortName || 'Без сокращения'}</small></dd></div>)}
+          {(object.inventoryNumber ?? '').trim() !== '' && <div><dt>Инвентарный номер здания</dt><dd>{object.inventoryNumber}</dd></div>}
+          {object.planningDocuments.length > 0 && <div className="district-details-section-heading"><dt>Документы предварительного планирования</dt></div>}
+          {object.planningDocuments.map((document) => <div className="district-details-document" key={document.id}><dt>{document.kind}</dt><dd>№ {document.number.replace(/^№\s*/u, '')}</dd></div>)}
         </dl>
       ) : object.kind === 'hydrant' ? (
         <>
@@ -521,7 +537,7 @@ function ObjectDetails({ object, adminMode, onEdit, onDelete }: Readonly<{
         </>
       ) : (
         <>
-          <FireReservoirIndicatorPlate object={object} />
+          <div className="district-reservoir-card-symbol"><FireReservoirPlanSymbol object={object} /></div>
           <dl>
             <div><dt>Номер</dt><dd>{object.number}</dd></div>
             <div><dt>Принадлежность</dt><dd>{object.owner}</dd></div>
@@ -535,6 +551,7 @@ function ObjectDetails({ object, adminMode, onEdit, onDelete }: Readonly<{
       {object.note !== '' && <div className="district-details-note"><strong>Примечание</strong><p>{object.note}</p></div>}
       <p className="district-details-coordinates">{object.point.latitude.toFixed(6)}° с.ш.<br />{object.point.longitude.toFixed(6)}° в.д.</p>
       {adminMode && <div className="district-details-actions"><button onClick={onEdit}>Редактировать</button><button className="danger" onClick={onDelete}>Удалить</button></div>}
+      {object.kind === 'building' && object.mapRole !== 'response-boundary' && (object.objectType === 'building' || object.mapRole === 'rescue-service') && <button type="button" className="district-emergency-button" onClick={onOpenDispatch}>Пожар / Авария</button>}
     </article>
   );
 }
@@ -563,6 +580,7 @@ export function DistrictMapPage(props: Props) {
   const [rulerActive, setRulerActive] = useState(false);
   const [rulerPoints, setRulerPoints] = useState<readonly GeoPoint[]>([]);
   const [searchResetSignal, setSearchResetSignal] = useState(0);
+  const [dispatchBuilding, setDispatchBuilding] = useState<DistrictBuilding | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const actInputRef = useRef<HTMLInputElement>(null);
@@ -688,7 +706,18 @@ export function DistrictMapPage(props: Props) {
   };
   const focusObject = (object: DistrictMapObject) => {
     setCenter(districtObjectFocusPoint(object));
-    setZoom((current) => Math.max(current, 4.5));
+    if (isBuildingWithContour(object)) {
+      const latitudeSpanKm = (Math.max(...object.contour.map((point) => point.latitude)) - Math.min(...object.contour.map((point) => point.latitude))) * KM_PER_LATITUDE_DEGREE;
+      const longitudeSpanKm = (Math.max(...object.contour.map((point) => point.longitude)) - Math.min(...object.contour.map((point) => point.longitude))) * KM_PER_LONGITUDE_DEGREE;
+      const basePixelsPerKm = Math.min(viewSize.width / BASE_WIDTH_KM, viewSize.height / BASE_HEIGHT_KM);
+      const fittedZoom = Math.min(
+        (viewSize.width * 0.56) / Math.max(longitudeSpanKm, 0.025),
+        (viewSize.height * 0.56) / Math.max(latitudeSpanKm, 0.025),
+      ) / basePixelsPerKm;
+      setZoom(Math.max(4.5, Math.min(18, fittedZoom)));
+    } else {
+      setZoom(9);
+    }
     setSelectedId(object.id);
   };
   const clearMapSelection = () => {
@@ -1096,7 +1125,9 @@ export function DistrictMapPage(props: Props) {
             aria-label="Карта района выезда"
           >
             <rect width={viewSize.width} height={viewSize.height} className="map-base" />
-            {visibleObjects.filter((object): object is DistrictBuilding => object.kind === 'building').map((object) => <DistrictObjectContour key={`${object.id}-contour`} object={object} project={projection.project} selected={selectedId === object.id && searchHighlightedId !== object.id} highlighted={searchHighlightedId === object.id} interactionDisabled={rulerActive || contourDraft !== null} onSelect={() => setSelectedId(object.id)} onHoverChange={(hovered) => setHoveredId(hovered ? object.id : null)} />)}
+            {visibleObjects.filter((object): object is DistrictBuilding => object.kind === 'building').map((object) => <DistrictObjectContour key={`${object.id}-contour`} object={object} project={projection.project} selected={selectedId === object.id && searchHighlightedId !== object.id} highlighted={searchHighlightedId === object.id} interactionDisabled={rulerActive || contourDraft !== null} onSelect={() => {
+              setSelectedId(object.id);
+            }} onHoverChange={(hovered) => setHoveredId(hovered ? object.id : null)} />)}
             {contourDraft !== null && <g className={`district-contour-draft ${contourDraft.source}${contourDraft.mapRole === 'response-boundary' ? ' response-boundary-draft' : ''}`}>
               {contourDraft.mapRole === 'response-boundary'
                 ? <polyline points={contourDraft.points.map((point) => { const projected = projection.project(point); return `${projected.x},${projected.y}`; }).join(' ')} />
@@ -1152,12 +1183,10 @@ export function DistrictMapPage(props: Props) {
               })}
               {contourDraft.points.map((point, index) => {
                 const projected = projection.project(point);
-                return <circle
+                return <g
                   key={`vertex-${index}`}
-                  className={`district-contour-vertex${index === 0 ? ' first' : ''}`}
-                  cx={projected.x}
-                  cy={projected.y}
-                  r={index === 0 ? 9 : 7}
+                  className="district-contour-vertex"
+                  transform={`translate(${projected.x} ${projected.y})`}
                   onPointerDown={(event) => {
                     if (event.button !== 0) return;
                     event.preventDefault();
@@ -1165,7 +1194,11 @@ export function DistrictMapPage(props: Props) {
                     contourDragRef.current = { pointerId: event.pointerId, mode: 'vertex', index, clientX: event.clientX, clientY: event.clientY, moved: false };
                     svgRef.current?.setPointerCapture(event.pointerId);
                   }}
-                />;
+                >
+                  <circle r="7" />
+                  <path d="M -4 0 H 4 M 0 -4 V 4" />
+                  <circle className="district-contour-vertex-center" r="1.35" />
+                </g>;
               })}
             </g>}
             {orderedMarkerPlacements.map(({ object, x, y }) => {
@@ -1197,7 +1230,7 @@ export function DistrictMapPage(props: Props) {
       </main>
       {selected !== null && <aside className="district-details-panel">
         <div className="district-panel-heading"><span>Объекты района выезда</span></div>
-        <ObjectDetails object={selected} adminMode={props.adminMode} onEdit={() => setEditorObject(selected)} onDelete={deleteSelected} />
+        <ObjectDetails object={selected} adminMode={props.adminMode} onEdit={() => setEditorObject(selected)} onDelete={deleteSelected} onOpenDispatch={() => { if (selected.kind === 'building') setDispatchBuilding(selected); }} />
       </aside>}
       {props.adminMode && props.managementOpen && <div className="dialog-backdrop district-management-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) props.onCloseManagement(); }}>
         <section className="district-management-dialog" role="dialog" aria-modal="true" aria-labelledby="district-management-title">
@@ -1216,6 +1249,7 @@ export function DistrictMapPage(props: Props) {
         </section>
       </div>}
       {editorObject !== null && <ObjectEditor object={editorObject} objects={props.objects} onSave={upsertObject} onEditContour={startContourEdit} onClose={() => setEditorObject(null)} />}
+      {dispatchBuilding !== null && <FireDispatchTicket building={dispatchBuilding} objects={props.objects} basemap={props.basemap} onClose={() => setDispatchBuilding(null)} />}
     </div>
   );
 }
