@@ -2235,6 +2235,7 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-contour-panel { position: absolute; z-index: 31; left: 50%; bottom: 22px; translate: -50% 0; width: min(520px, calc(100% - 24px)); padding: 10px 12px; display: grid; gap: 6px; border: 1px solid #43aeb3; border-radius: 9px; background: #063847f2; color: #fff; box-shadow: 0 8px 26px #00192399; }
 .district-contour-panel strong { font-size: 12px; }
 .district-contour-panel span { color: #cce8ea; font-size: 9px; }
+.district-contour-panel .district-contour-status { margin: 0; padding: 5px 7px; border-left: 2px solid #65d4ca; background: #0a5360; color: #e9ffff; font-size: 9px; line-height: 1.35; }
 .district-contour-panel > div { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
 .district-contour-panel button { min-height: 30px; padding: 5px 10px; font-size: 9px; }
 .district-auto-workshop { padding: 9px 11px; display: flex; gap: 7px; align-items: center; border: 1px solid #b7d9dc; border-radius: 7px; background: #eef8f8; color: #365c63; font-size: 10px; }
@@ -2802,6 +2803,7 @@ button.wide { width: 100%; margin-top: 10px; }
   font-size: 10px;
   line-height: 1.4;
 }
+.district-management-dialog .district-map-backup-status { border-left-color: #168e99; background: #e5f6f7; color: #17545b; }
 .district-management-dialog .district-act-apply {
   width: 100%;
   min-height: 44px;
@@ -2835,6 +2837,7 @@ button.wide { width: 100%; margin-top: 10px; }
 [data-theme="dark"] .district-management-actions > button,
 [data-theme="dark"] .district-management-actions > label { border-color: #2f7782; background: #0d3f4b; color: #eafafb; }
 [data-theme="dark"] .district-management-actions small { color: #a5c2c7; }
+[data-theme="dark"] .district-management-dialog .district-map-backup-status { background: #0b424c; color: #d9f5f6; }
 
 @media (max-width: 720px), (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
   .file-actions.district-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }

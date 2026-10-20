@@ -88,6 +88,13 @@ export type DistrictMapProject = Readonly<{
   publishedAtIso: string;
 }>;
 
+export type DistrictMapBackup = Readonly<{
+  format: 'himkontur-district-map-backup';
+  version: 1;
+  exportedAtIso: string;
+  project: DistrictMapProject;
+}>;
+
 const STORAGE_KEY = 'himkontur-district-map-project-v1';
 const PENDING_SYNC_STORAGE_KEY = 'himkontur-district-map-pending-sync-v1';
 const MAP_SYNC_CONFIG_URL = './data/map-sync.json';
@@ -368,6 +375,25 @@ function normalizeDistrictMapProject(parsed: unknown): DistrictMapProject | null
     draftSavedAtIso: text(parsed.draftSavedAtIso) || new Date().toISOString(),
     publishedAtIso: text(parsed.publishedAtIso) || new Date().toISOString(),
   };
+}
+
+export function serializeDistrictMapBackup(project: DistrictMapProject): string {
+  const backup: DistrictMapBackup = {
+    format: 'himkontur-district-map-backup',
+    version: 1,
+    exportedAtIso: new Date().toISOString(),
+    project,
+  };
+  return JSON.stringify(backup, null, 2);
+}
+
+export function parseDistrictMapBackup(raw: string): DistrictMapProject | null {
+  const parsed: unknown = JSON.parse(raw);
+  if (isObject(parsed) && parsed.format === 'himkontur-district-map-backup') {
+    if (parsed.version !== 1) return null;
+    return normalizeDistrictMapProject(parsed.project);
+  }
+  return normalizeDistrictMapProject(parsed);
 }
 
 async function fetchBundledDistrictMapProject(): Promise<DistrictMapProject | null> {

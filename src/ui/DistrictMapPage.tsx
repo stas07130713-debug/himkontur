@@ -29,7 +29,10 @@ import {
   FIRE_RESERVOIR_TYPE_LABELS,
   HYDRANT_STATUS_LABELS,
   HYDRANT_TYPE_LABELS,
+  parseDistrictMapBackup,
+  serializeDistrictMapBackup,
 } from './district-map-model';
+import { alignOrthogonalContour } from './district-contour-geometry';
 import { DistrictObjectToolbar } from './DistrictObjectToolbar';
 import { OfflineBasemap } from './OfflineBasemap';
 import type { Basemap } from './MapCanvas';
@@ -577,6 +580,8 @@ export function DistrictMapPage(props: Props) {
   }> | null>(null);
   const [actImportStatus, setActImportStatus] = useState('');
   const [actImporting, setActImporting] = useState(false);
+  const [mapBackupStatus, setMapBackupStatus] = useState('');
+  const [contourStatus, setContourStatus] = useState('');
   const [pendingHydrantAct, setPendingHydrantAct] = useState<Readonly<{ fileName: string; result: HydrantActParseResult }> | null>(null);
   const [panning, setPanning] = useState(false);
   const [rulerActive, setRulerActive] = useState(false);
@@ -586,6 +591,7 @@ export function DistrictMapPage(props: Props) {
   const stageRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const actInputRef = useRef<HTMLInputElement>(null);
+  const mapBackupInputRef = useRef<HTMLInputElement>(null);
   const panRef = useRef<{ pointerId: number; clientX: number; clientY: number; center: GeoPoint } | null>(null);
   const rulerRightPanRef = useRef<{ pointerId: number; clientX: number; clientY: number; center: GeoPoint; timer: number; active: boolean } | null>(null);
   const suppressRulerContextMenuRef = useRef(false);
@@ -670,29 +676,59 @@ export function DistrictMapPage(props: Props) {
     if (rect === undefined) return null;
     return projection.unproject((clientX - rect.left) / rect.width * viewSize.width, (clientY - rect.top) / rect.height * viewSize.height);
   };
+  const removeContourPoint = (index: number) => {
+    setContourDraft((current) => {
+      if (current === null) return null;
+      const minimum = current.mapRole === 'response-boundary' ? 2 : 3;
+      if (current.points.length <= minimum) {
+        setContourStatus(`Для этого контура необходимо оставить не менее ${minimum} точек.`);
+        return current;
+      }
+      setContourStatus('Лишняя точка удалена.');
+      return { ...current, points: current.points.filter((_, pointIndex) => pointIndex !== index) };
+    });
+  };
+  const alignContour = () => {
+    setContourDraft((current) => {
+      if (current === null || current.mapRole === 'response-boundary') return current;
+      const aligned = alignOrthogonalContour(current.points);
+      if (aligned === null) {
+        setContourStatus('Контур оставлен без изменений: программа не уверена, что его стороны должны быть параллельны.');
+        return current;
+      }
+      setContourStatus('Параллельные стороны выровнены, прямые углы и парные размеры восстановлены.');
+      return { ...current, points: aligned };
+    });
+  };
   const finishContour = () => {
     if (contourDraft === null || contourDraft.points.length < (contourDraft.mapRole === 'response-boundary' ? 2 : 3)) return;
+    const finalPoints = contourDraft.mapRole === 'response-boundary'
+      ? contourDraft.points
+      : alignOrthogonalContour(contourDraft.points) ?? contourDraft.points;
     if (contourDraft.editingObjectId !== null) {
       const previous = props.objects.find((object): object is DistrictBuilding => object.id === contourDraft.editingObjectId && object.kind === 'building');
       if (previous !== undefined) {
-        const updated = withAdminChangeNote({ ...previous, contour: [...contourDraft.points], updatedAtIso: new Date().toISOString() }, ['Контур объекта']);
+        const updated = withAdminChangeNote({ ...previous, contour: [...finalPoints], updatedAtIso: new Date().toISOString() }, ['Контур объекта']);
         props.onCommitObjects(props.objects.map((object) => object.id === previous.id ? updated : object));
         selectObject(previous.id);
       }
       setContourDraft(null);
+      setContourStatus('');
       return;
     }
     const point = {
-      latitude: contourDraft.points.reduce((sum, item) => sum + item.latitude, 0) / contourDraft.points.length,
-      longitude: contourDraft.points.reduce((sum, item) => sum + item.longitude, 0) / contourDraft.points.length,
+      latitude: finalPoints.reduce((sum, item) => sum + item.latitude, 0) / finalPoints.length,
+      longitude: finalPoints.reduce((sum, item) => sum + item.longitude, 0) / finalPoints.length,
     };
-    setEditorObject(initialBuilding(point, contourDraft.objectType, contourDraft.points, contourDraft.mapRole));
+    setEditorObject(initialBuilding(point, contourDraft.objectType, finalPoints, contourDraft.mapRole));
     setContourDraft(null);
+    setContourStatus('');
   };
   const startContour = (objectType: 'building' | 'territory', mapRole: DistrictBuildingMapRole = 'ordinary') => {
     if (contextMenu === null) return;
     const automatic = objectType === 'building' ? buildingContourResolverRef.current?.(contextMenu.point) ?? null : null;
     setContourDraft({ objectType, mapRole, points: automatic ?? [contextMenu.point], source: automatic === null ? 'manual' : 'automatic', editingObjectId: null });
+    setContourStatus('');
     setContextMenu(null);
     setSelectedId(null);
   };
@@ -709,6 +745,7 @@ export function DistrictMapPage(props: Props) {
       source: 'editing',
       editingObjectId: object.id,
     });
+    setContourStatus('');
   };
   const focusObject = (object: DistrictMapObject) => {
     setCenter(districtObjectFocusPoint(object));
@@ -781,6 +818,44 @@ export function DistrictMapPage(props: Props) {
     props.onCommitObjects(props.objects.filter((item) => item.id !== selected.id));
     setSelectedId(null);
     setLegendCollapsed(false);
+  };
+  const downloadMapBackup = () => {
+    const now = new Date();
+    const stamp = [
+      now.getFullYear(),
+      String(now.getMonth() + 1).padStart(2, '0'),
+      String(now.getDate()).padStart(2, '0'),
+      String(now.getHours()).padStart(2, '0'),
+      String(now.getMinutes()).padStart(2, '0'),
+    ].join('-');
+    const blob = new Blob([serializeDistrictMapBackup(props.project)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `HIMKONTUR-map-${stamp}.json`;
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    setMapBackupStatus(`Резервная копия сохранена: ${props.objects.length} объектов. Существующие данные карты не изменены.`);
+  };
+  const importMapBackup = async (file: File) => {
+    setMapBackupStatus(`Проверяю резервную копию «${file.name}»…`);
+    try {
+      const backup = parseDistrictMapBackup(await file.text());
+      if (backup === null) {
+        setMapBackupStatus('Файл не является резервной копией карты ХИМКОНТУР. Текущая карта не изменена.');
+        return;
+      }
+      if (!window.confirm(`Загрузить из файла ${backup.draft.length} объектов? Текущая карта будет заменена только после подтверждения.`)) {
+        setMapBackupStatus('Загрузка отменена. Текущая карта не изменена.');
+        return;
+      }
+      props.onCommitObjects([...backup.draft]);
+      setSelectedId(null);
+      setEditorObject(null);
+      setMapBackupStatus(`Загружено ${backup.draft.length} объектов. Они сохранены в этом браузере и поставлены в очередь синхронизации.`);
+    } catch {
+      setMapBackupStatus('Не удалось прочитать файл. Текущая карта не изменена.');
+    }
   };
   const importHydrantAct = async (file: File) => {
     setActImporting(true);
@@ -1195,12 +1270,24 @@ export function DistrictMapPage(props: Props) {
                   key={`vertex-${index}`}
                   className="district-contour-vertex"
                   transform={`translate(${projected.x} ${projected.y})`}
+                  role="button"
+                  aria-label={`Точка ${index + 1}. Правая кнопка мыши удаляет точку`}
                   onPointerDown={(event) => {
+                    if (event.button === 2) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      return;
+                    }
                     if (event.button !== 0) return;
                     event.preventDefault();
                     event.stopPropagation();
                     contourDragRef.current = { pointerId: event.pointerId, mode: 'vertex', index, clientX: event.clientX, clientY: event.clientY, moved: false };
                     svgRef.current?.setPointerCapture(event.pointerId);
+                  }}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    removeContourPoint(index);
                   }}
                 >
                   <circle r="7" />
@@ -1227,7 +1314,17 @@ export function DistrictMapPage(props: Props) {
             <MapRulerOverlay points={rulerPoints} project={projection.project} />
           </svg>
           {contextMenu !== null && <div className="district-add-menu" style={{ left: contextMenu.x, top: contextMenu.y }}><strong>Добавить на карту</strong><button onClick={() => startContour('building')}>Здание с контуром</button><button onClick={() => startContour('territory')}>Территория с контуром</button><button onClick={() => { setEditorObject(initialHydrant(contextMenu.point)); setContextMenu(null); }}>Пожарный гидрант</button><button onClick={() => { setEditorObject(initialFireReservoir(contextMenu.point)); setContextMenu(null); }}>Пожарный водоём</button><button className="secondary" onClick={() => setContextMenu(null)}>Отмена</button></div>}
-          {contourDraft !== null && <div className="district-contour-panel"><strong>{contourDraft.mapRole === 'response-boundary' ? `Граница района выезда: ${pointCountLabel(contourDraft.points.length)}` : contourDraft.source === 'editing' ? 'Изменение границ объекта' : contourDraft.source === 'automatic' ? 'Контур найден автоматически' : `Ручная обводка: ${pointCountLabel(contourDraft.points.length)}`}</strong><span>{contourDraft.mapRole === 'response-boundary' ? 'Ставьте точки вдоль границы — красная линия остаётся незамкнутой и не закрашивает площадь. Удерживайте ПКМ и тяните для перемещения карты.' : contourDraft.source === 'editing' ? 'Перетаскивайте отдельные вершины или целые стороны. Значок «+» на стороне добавляет новую точку. Удерживайте ПКМ и тяните для перемещения карты.' : contourDraft.source === 'automatic' ? 'Перетаскивайте точки или линии. Нажмите «+» на линии, чтобы добавить новый угол. Удерживайте ПКМ и тяните для перемещения карты.' : 'Прицелом ставьте точки. Точки и линии можно перетаскивать; «+» добавляет новый угол. Для замыкания нажмите первую точку. Удерживайте ПКМ и тяните для перемещения карты.'}</span><div>{contourDraft.source === 'automatic' && <button type="button" className="secondary" onClick={() => setContourDraft((current) => current === null ? null : { ...current, points: [], source: 'manual' })}>Нарисовать вручную</button>}<button type="button" className="primary" disabled={contourDraft.points.length < (contourDraft.mapRole === 'response-boundary' ? 2 : 3)} onClick={finishContour}>{contourDraft.source === 'editing' ? 'Сохранить границы' : 'Принять контур'}</button><button type="button" className="secondary" onClick={() => setContourDraft(null)}>Отмена</button></div></div>}
+          {contourDraft !== null && <div className="district-contour-panel">
+            <strong>{contourDraft.mapRole === 'response-boundary' ? `Граница района выезда: ${pointCountLabel(contourDraft.points.length)}` : contourDraft.source === 'editing' ? 'Изменение границ объекта' : contourDraft.source === 'automatic' ? 'Контур найден автоматически' : `Ручная обводка: ${pointCountLabel(contourDraft.points.length)}`}</strong>
+            <span>{contourDraft.mapRole === 'response-boundary' ? 'Ставьте точки вдоль границы. ПКМ по точке удаляет её; удерживайте ПКМ на карте и тяните для перемещения.' : 'Точки и стороны можно перетаскивать; «+» добавляет угол, ПКМ по точке удаляет его. Удерживайте ПКМ на свободном месте и тяните карту.'}</span>
+            {contourStatus !== '' && <p className="district-contour-status">{contourStatus}</p>}
+            <div>
+              {contourDraft.source === 'automatic' && <button type="button" className="secondary" onClick={() => { setContourDraft((current) => current === null ? null : { ...current, points: [], source: 'manual' }); setContourStatus(''); }}>Нарисовать вручную</button>}
+              {contourDraft.mapRole !== 'response-boundary' && contourDraft.points.length >= 4 && <button type="button" className="secondary" onClick={alignContour}>Выровнять автоматически</button>}
+              <button type="button" className="primary" disabled={contourDraft.points.length < (contourDraft.mapRole === 'response-boundary' ? 2 : 3)} onClick={finishContour}>{contourDraft.source === 'editing' ? 'Сохранить границы' : 'Принять контур'}</button>
+              <button type="button" className="secondary" onClick={() => { setContourDraft(null); setContourStatus(''); }}>Отмена</button>
+            </div>
+          </div>}
           <CompassRose className="district-compass" />
           <div className="zoom district-zoom"><button aria-label="Отдалить" onClick={() => changeZoom(1 / 1.4)}>−</button><span>{round(zoom * 100, 0)}%</span><button aria-label="Приблизить" onClick={() => changeZoom(1.4)}>+</button></div>
           <button type="button" className={`map-ruler-control district-ruler-control${rulerActive ? ' active' : ''}`} aria-pressed={rulerActive} title="Линейка: ЛКМ — точки; удержание ПКМ — перемещение карты; короткая ПКМ — сброс" aria-label="Измерить расстояние" onClick={() => { setRulerActive((current) => !current); setRulerPoints([]); }}><img src={appAssetUrl('assets/ruler-glossy.png')} alt="" /></button>
@@ -1248,9 +1345,13 @@ export function DistrictMapPage(props: Props) {
           <p>Выберите действие. Режим добавления объектов позволяет ставить здания и элементы НППВ правой кнопкой мыши, а также перемещать их по карте.</p>
           <div className="district-management-actions">
             <button className="primary" onClick={props.onCloseManagement}><UiIcon name="pin" /><span><strong>Перейти к настройке карты</strong><small>Добавление, редактирование и перемещение объектов</small></span></button>
+            <button type="button" onClick={downloadMapBackup}><UiIcon name="save" /><span><strong>Сохранить резервную копию карты</strong><small>Все здания, территории, НППВ и контуры сохранятся в один файл на компьютере</small></span></button>
+            <button type="button" onClick={() => mapBackupInputRef.current?.click()}><UiIcon name="open" /><span><strong>Загрузить резервную копию карты</strong><small>Перенос актуальной карты в другой браузер или на другой компьютер</small></span></button>
+            <input ref={mapBackupInputRef} className="district-act-file-input" type="file" accept=".json,application/json" aria-label="Выбрать резервную копию карты" onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file !== undefined) void importMapBackup(file); }} />
             <button type="button" className="district-act-upload" disabled={actImporting} onClick={() => actInputRef.current?.click()}><UiIcon name="upload" /><span><strong>{actImporting ? 'Обрабатываю акт…' : 'Загрузить акт проверки наружного противопожарного водоснабжения'}</strong><small>Word (.docx): состояние и причина неисправности сопоставляются строго по номеру ПГ</small></span></button>
             <input ref={actInputRef} className="district-act-file-input" type="file" accept=".docx,.csv,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/csv,text/plain" aria-label="Выбрать файл акта проверки пожарных гидрантов" onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file !== undefined) void importHydrantAct(file); }} />
           </div>
+          {mapBackupStatus !== '' && <p className="district-act-status district-map-backup-status">{mapBackupStatus}</p>}
           {actImportStatus !== '' && <p className="district-act-status">{actImportStatus}</p>}
           {pendingHydrantAct !== null && <button type="button" className="primary district-act-apply" onClick={applyHydrantAct}><UiIcon name="check" /><span>Применить данные акта к пожарным гидрантам на карте</span></button>}
           <button className="secondary exit-admin" onClick={() => { props.onCloseManagement(); props.onExitAdmin(); }}>Завершить режим настройки</button>
