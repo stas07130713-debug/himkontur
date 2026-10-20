@@ -147,7 +147,7 @@ export function App() {
     sourcePlaced,
     controls,
     basemap,
-    districtProject,
+    districtProject: districtProjectRef.current,
   });
   const remember = (label: string) => {
     pastRef.current = [
@@ -163,16 +163,25 @@ export function App() {
     setSourcePlaced(value.sourcePlaced);
     setControls(value.controls);
     setBasemap(value.basemap);
-    const restoredProject = value.districtProject === districtProject
-      ? value.districtProject
+    const currentProject = districtProjectRef.current;
+    const districtChanged = value.districtProject !== currentProject;
+    const restoredProject = !districtChanged
+      ? currentProject
       : {
           ...value.districtProject,
-          revision: Math.max(value.districtProject.revision, districtProject.revision, Date.now()),
+          revision: Math.max(value.districtProject.revision, currentProject.revision, Date.now()),
           draftSavedAtIso: new Date().toISOString(),
           publishedAtIso: new Date().toISOString(),
         };
+    districtProjectRef.current = restoredProject;
     setDistrictProject(restoredProject);
     saveDistrictMapProject(restoredProject);
+    if (districtChanged) {
+      pendingDistrictProjectRef.current = restoredProject;
+      savePendingDistrictMapProject(restoredProject);
+      setDistrictSyncState("pending");
+      void publishPendingDistrictProject();
+    }
   };
   const undo = () => {
     const item = pastRef.current.at(-1);
@@ -183,6 +192,7 @@ export function App() {
       ...futureRef.current,
     ];
     applySnapshot(item.snapshot);
+    districtChangeRememberedRef.current = false;
     setNotice(`Отменено: ${item.label}.`);
     setHistoryRevision((value) => value + 1);
   };
@@ -195,6 +205,7 @@ export function App() {
       { snapshot: snapshot(), label: item.label },
     ];
     applySnapshot(item.snapshot);
+    districtChangeRememberedRef.current = false;
     setNotice(`Возвращено: ${item.label}.`);
     setHistoryRevision((value) => value + 1);
   };
@@ -416,9 +427,13 @@ export function App() {
   const undoLabel = pastRef.current.at(-1)?.label;
   const redoLabel = futureRef.current.at(0)?.label;
   const changeDistrictObjects = (objects: readonly DistrictMapObject[]) => {
-    setDistrictProject((current) => ({ ...current, draft: objects }));
+    setDistrictProject((current) => {
+      const next = { ...current, draft: objects };
+      districtProjectRef.current = next;
+      return next;
+    });
   };
-  const publishPendingDistrictProject = async () => {
+  async function publishPendingDistrictProject() {
     if (districtPublishingRef.current || adminPasswordRef.current === "") return;
     districtPublishingRef.current = true;
     try {
@@ -447,7 +462,7 @@ export function App() {
     } finally {
       districtPublishingRef.current = false;
     }
-  };
+  }
   const commitDistrictObjects = (objects: readonly DistrictMapObject[]) => {
     if (!districtChangeRememberedRef.current) remember("Изменена карта района выезда");
     districtChangeRememberedRef.current = false;

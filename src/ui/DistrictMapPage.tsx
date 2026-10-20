@@ -391,7 +391,7 @@ function ObjectEditor({ object, objects, onSave, onEditContour, onClose }: Reado
   const save = () => {
     const number = value.number.trim();
     if (number === '') { setError('Укажите номер объекта.'); return; }
-    if (value.kind === 'building' && !/^\d+\.\d+$/u.test(number)) { setError('Номер здания должен иметь формат 3.15.'); return; }
+    if (value.kind === 'building' && !/^\d+\.\d+$/u.test(number)) { setError('Номер здания должен иметь формат 3.15'); return; }
     if (objects.some((item) => item.id !== value.id && item.kind === value.kind && item.number.trim().toLocaleLowerCase('ru-RU') === number.toLocaleLowerCase('ru-RU'))) {
       setError('Объект с таким номером уже существует.');
       return;
@@ -503,6 +503,16 @@ function ObjectDetails({ object, adminMode, onEdit, onDelete, onOpenDispatch }: 
   onOpenDispatch: () => void;
 }>) {
   if (object === null) return null;
+  const departmentLabels = object.kind === 'building'
+    ? object.departments
+      .map((unit) => ({ label: unit.shortName.trim() || unit.fullName.trim(), fullName: unit.fullName.trim() }))
+      .filter((unit) => unit.label !== '')
+    : [];
+  const buildingHeaderLabels = object.kind === 'building' && (object.mapRole ?? 'ordinary') === 'ordinary' && object.objectType === 'building'
+    ? departmentLabels.length > 0
+      ? departmentLabels
+      : [{ label: object.workshopShort.trim() || object.workshopFull.trim() || 'Без отделения', fullName: object.workshopFull.trim() }]
+    : [];
   return (
     <article className={`district-details-card ${object.kind}${object.kind === 'building' ? ` prefix-${buildingPrefix(object.number)}${object.mapRole === 'rescue-service' ? ' rescue-service' : ''}` : ''}`}>
       <div className="district-details-title">
@@ -513,7 +523,9 @@ function ObjectDetails({ object, adminMode, onEdit, onDelete, onOpenDispatch }: 
             : object.mapRole === 'rescue-service'
               ? 'Объект АСС'
               : object.objectType === 'territory' ? 'Территория' : 'Здание'
-          : object.kind === 'hydrant' ? 'Пожарный гидрант' : 'Пожарный водоём'}</small><h2>{districtObjectTitle(object)}</h2></div>
+          : object.kind === 'hydrant' ? 'Пожарный гидрант' : 'Пожарный водоём'}</small>{buildingHeaderLabels.length > 0
+            ? <h2 className="district-details-department-title">{buildingHeaderLabels.map((unit, index) => <span className={unit.label.length > 18 ? 'long' : ''} title={unit.fullName || unit.label} key={`${unit.label}-${index}`}>{unit.label}</span>)}</h2>
+            : <h2>{districtObjectTitle(object)}</h2>}</div>
       </div>
       {object.kind === 'building' && object.objectType === 'territory' && object.mapRole !== 'rescue-service' ? (
         <dl>{object.territoryNames.map((unit, index) => <div key={unit.id}><dt>Название{object.territoryNames.length > 1 ? ` ${index + 1}` : ''}</dt><dd>{unit.fullName || '—'}{unit.shortName.trim() !== '' && <small>{unit.shortName}</small>}</dd></div>)}</dl>
@@ -1290,9 +1302,9 @@ export function DistrictMapPage(props: Props) {
                     removeContourPoint(index);
                   }}
                 >
-                  <circle r="7" />
-                  <path d="M -4 0 H 4 M 0 -4 V 4" />
-                  <circle className="district-contour-vertex-center" r="1.35" />
+                  <circle className="district-contour-vertex-hit" r="10" />
+                  <rect className="district-contour-vertex-dot" x="-2.5" y="-2.5" width="5" height="5" rx=".5" transform="rotate(45)" />
+                  <circle className="district-contour-vertex-center" r=".7" />
                 </g>;
               })}
             </g>}

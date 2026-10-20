@@ -2223,12 +2223,11 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-map-surface > svg.contour-drawing.panning { cursor: grabbing; }
 .district-contour-edge-hit { fill: none; stroke: transparent; stroke-width: 18; pointer-events: stroke; cursor: move; }
 .district-contour-vertex { cursor: move; }
-.district-contour-vertex > circle:first-child { fill: #ffffff22; stroke: #008f9b; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
-.district-contour-vertex > path { fill: none; stroke: #006f7a; stroke-width: 1.6; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: none; }
-.district-contour-vertex-center { fill: #006f7a; stroke: #fff; stroke-width: .8; vector-effect: non-scaling-stroke; pointer-events: none; }
-.district-contour-draft.response-boundary-draft .district-contour-vertex > circle:first-child { fill: #ffffff22; stroke: #e3262e; }
-.district-contour-draft.response-boundary-draft .district-contour-vertex > path { stroke: #b51018; }
-.district-contour-draft.response-boundary-draft .district-contour-vertex-center { fill: #b51018; }
+.district-contour-vertex-hit { fill: transparent; stroke: none; pointer-events: all; }
+.district-contour-vertex-dot { fill: #00b8c1; stroke: #fff; stroke-width: 1.2; vector-effect: non-scaling-stroke; pointer-events: none; }
+.district-contour-vertex-center { fill: #003f4a; stroke: none; pointer-events: none; }
+.district-contour-draft.response-boundary-draft .district-contour-vertex-dot { fill: #ef3640; }
+.district-contour-draft.response-boundary-draft .district-contour-vertex-center { fill: #5e0000; }
 .district-contour-add-point { cursor: crosshair; }
 .district-contour-add-point circle { fill: #087f8d; stroke: #fff; stroke-width: 2; vector-effect: non-scaling-stroke; }
 .district-contour-add-point path { fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: none; }
@@ -2255,6 +2254,9 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-details-title > .details-hydrant-symbol { width: 88px; height: 50px; margin-left: -8px; }
 .district-details-title small { color: #71868a; font-size: 10.5px; font-weight: 750; text-transform: uppercase; }
 .district-details-title h2 { margin: 2px 0 0; color: #073c58; font-size: 19px; line-height: 1.15; }
+.district-details-title h2.district-details-department-title { min-width: 0; display: grid; gap: 2px; }
+.district-details-department-title > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; line-height: 1.05; }
+.district-details-department-title > span.long { font-size: 12px; }
 .district-details-card dl { min-width: 0; margin: 0; display: grid; gap: 7px; }
 .district-details-card dl > div { min-width: 0; max-width: 100%; padding: 9px 10px; display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 8px; box-sizing: border-box; border: 1px solid #cee0e2; border-radius: 7px; background: #edf6f6; }
 .district-details-card dt { color: #668084; font-size: 10.5px; font-weight: 750; }
@@ -3347,7 +3349,20 @@ button.wide { width: 100%; margin-top: 10px; }
 }
 .district-legend-building-list input,
 .district-legend-row input { width: 13px; height: 13px; min-height: 13px; max-height: 13px; margin: 0; accent-color: #0fc4c4; }
-.district-legend-building { --object-color: #2d6fd0; background: var(--object-color); }
+.district-legend-building {
+  --object-color: #2d6fd0;
+  background: var(--object-color);
+  color: #fff;
+  font-family: Arial, "Segoe UI", sans-serif;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 18px;
+  text-align: center;
+  text-shadow: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
 .district-legend-building.prefix-0 { --object-color: #191d20; }
 .district-legend-building.prefix-1 { --object-color: #2d6fd0; }
 .district-legend-building.prefix-2 { --object-color: #1e633f; }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GeoPoint } from '../core/types';
 import { distanceMeters, formatRulerDistance } from './map-ruler';
+import { representativeDimensionIndices } from './dispatch-dimensions';
 import type { Basemap } from './MapCanvas';
 import type { DistrictBuilding, DistrictFireReservoir, DistrictHydrant, DistrictMapObject, DistrictPlanningDocument } from './district-map-model';
 import { hydrantNetworkCode } from './district-map-model';
@@ -274,11 +275,10 @@ function edgeLabels(
     index,
     distance: distanceMeters(point, measured[(index + 1) % measured.length] ?? point),
   }));
-  const longestEdge = Math.max(0, ...edgeMetrics.map((edge) => edge.distance));
-  const minimumVisibleDistance = Math.max(6, longestEdge * .075);
+  const representativeIndices = new Set(representativeDimensionIndices(edgeMetrics.map((edge) => edge.distance)));
   const placed: EdgeLabel[] = [];
   const occupied = [...fixedObstacles];
-  edgeMetrics.filter((edge) => edge.distance >= minimumVisibleDistance).sort((left, right) => right.distance - left.distance).forEach(({ index, distance }) => {
+  edgeMetrics.filter((edge) => representativeIndices.has(edge.index)).sort((left, right) => right.distance - left.distance).forEach(({ index, distance }) => {
     const start = projected[index];
     const end = projected[(index + 1) % projected.length];
     if (start === undefined || end === undefined) return;
