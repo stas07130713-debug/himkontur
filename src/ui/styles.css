@@ -2240,7 +2240,7 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-auto-workshop { padding: 9px 11px; display: flex; gap: 7px; align-items: center; border: 1px solid #b7d9dc; border-radius: 7px; background: #eef8f8; color: #365c63; font-size: 10px; }
 .district-auto-workshop strong { color: #075c66; }
 
-.district-details-panel { min-width: 0; min-height: 0; overflow: auto; display: flex; flex-direction: column; border: 1px solid #a7c8cc; border-top: 3px solid #08abb3; border-radius: 10px; background: #f9fdfd; box-shadow: 0 2px 8px #06364418; }
+.district-details-panel { min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; display: flex; flex-direction: column; border: 1px solid #a7c8cc; border-top: 3px solid #08abb3; border-radius: 10px; background: #f9fdfd; box-shadow: 0 2px 8px #06364418; }
 .district-panel-heading { padding: 13px 14px 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid #d2e2e4; }
 .district-panel-heading span { color: #073d58; font-size: 16px; font-weight: 850; }
 .district-panel-heading small { padding: 4px 7px; border-radius: 10px; background: #e3f2f3; color: #16727e; font-size: 8px; font-weight: 800; white-space: nowrap; }
@@ -2248,14 +2248,14 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-empty-symbol { width: 74px; height: 74px; display: grid; place-items: center; border: 2px dashed #9ec4c8; border-radius: 50%; color: #0b8c98; font-size: 38px; }
 .district-details-empty h2 { margin: 15px 0 6px; color: #164a58; font-size: 17px; }
 .district-details-empty p { max-width: 250px; margin: 0; font-size: 11px; line-height: 1.45; }
-.district-details-card { padding: 14px; color: #193a42; }
+.district-details-card { width: 100%; min-width: 0; max-width: 100%; padding: 14px; box-sizing: border-box; overflow-x: hidden; color: #193a42; }
 .district-details-title { margin-bottom: 14px; display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: center; gap: 10px; }
 .district-details-title > span { width: 72px; min-height: 56px; display: grid; place-items: center; border: 2px solid #e7fbfc; border-radius: 8px; background: linear-gradient(145deg, #087e8b, #06485d); color: #fff; box-shadow: 0 3px 10px #063c4d44; font-size: 21px; font-weight: 900; }
 .district-details-title > .details-hydrant-symbol { width: 88px; height: 50px; margin-left: -8px; }
 .district-details-title small { color: #71868a; font-size: 10.5px; font-weight: 750; text-transform: uppercase; }
 .district-details-title h2 { margin: 2px 0 0; color: #073c58; font-size: 19px; line-height: 1.15; }
-.district-details-card dl { margin: 0; display: grid; gap: 7px; }
-.district-details-card dl > div { padding: 9px 10px; display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 8px; border: 1px solid #cee0e2; border-radius: 7px; background: #edf6f6; }
+.district-details-card dl { min-width: 0; margin: 0; display: grid; gap: 7px; }
+.district-details-card dl > div { min-width: 0; max-width: 100%; padding: 9px 10px; display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 8px; box-sizing: border-box; border: 1px solid #cee0e2; border-radius: 7px; background: #edf6f6; }
 .district-details-card dt { color: #668084; font-size: 10.5px; font-weight: 750; }
 .district-details-card dd { min-width: 0; max-width: 100%; margin: 0; overflow-wrap: anywhere; word-break: normal; white-space: normal; color: #173c47; font-size: 13px; font-weight: 800; line-height: 1.35; }
 .district-details-card dl > .district-details-long-row { grid-template-columns: minmax(0, 1fr); gap: 5px; }
@@ -2284,8 +2284,8 @@ button.wide { width: 100%; margin-top: 10px; }
   font-weight: 900;
   letter-spacing: .01em;
 }
-.district-details-card dl > .district-details-section-heading { white-space: nowrap; }
-.district-details-card dl > .district-details-section-heading dt { color: #204f59; font-size: 13px; font-weight: 900; }
+.district-details-card dl > .district-details-section-heading { white-space: normal; }
+.district-details-card dl > .district-details-section-heading dt { max-width: 100%; overflow-wrap: normal; color: #204f59; font-size: clamp(11px, .75vw, 13px); font-weight: 900; line-height: 1.2; }
 .district-details-card dl > .district-details-document { grid-template-columns: 62px minmax(0, 1fr); }
 .district-details-card dl > .district-details-document dt { color: #226672; font-size: 12.5px; font-weight: 900; }
 .district-details-card dl > .district-details-document dd { font-size: 14px; }
@@ -2408,7 +2408,7 @@ button.wide { width: 100%; margin-top: 10px; }
   .settings-mobile-label { display: inline; }
   .district-workspace { width: 100%; height: auto; min-height: calc(100dvh - 190px); padding: 8px; display: flex; flex-direction: column; overflow: visible; }
   .district-map-column { width: 100%; height: 72dvh; min-height: 540px; flex: none; }
-  .district-details-panel { width: 100%; min-height: 360px; overflow: visible; }
+  .district-details-panel { width: 100%; min-height: 360px; overflow-x: hidden; overflow-y: visible; }
   .district-map-topbar { top: 6px; left: 6px; right: 68px; grid-template-columns: 1fr; gap: 5px; }
   .district-basemap-switch { width: max-content; min-height: 34px; }
   .district-basemap-switch button { min-height: 26px; padding: 3px 9px; }
@@ -3677,11 +3677,12 @@ button.wide { width: 100%; margin-top: 10px; }
 .fire-dispatch-verification-note { margin: .4mm 0 0; color: #111; font-size: 8.5pt; font-weight: 850; line-height: 1.25; }
 .fire-dispatch-return-authorization {
   margin-top: .4mm;
-  padding: 1.5mm 1.8mm 1.2mm;
+  min-height: 25mm;
+  padding: 2mm 2.2mm 1.8mm;
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
   align-items: baseline;
-  gap: .8mm 2mm;
+  gap: 1.2mm 2mm;
   border: 1px solid #8fa7aa;
   border-radius: 1.4mm;
   color: #111;
@@ -3690,11 +3691,11 @@ button.wide { width: 100%; margin-top: 10px; }
 }
 .fire-dispatch-return-authorization > strong { font-size: 9.2pt; white-space: nowrap; }
 .fire-dispatch-return-authorization > span { font-weight: 750; }
-.fire-dispatch-hand-fields { grid-column: 1 / -1; display: grid; grid-template-columns: 1.45fr 1.15fr .85fr .8fr; gap: 2mm; }
-.fire-dispatch-hand-fields > span { display: grid; gap: .35mm; color: #444; font-size: 7.2pt; text-align: center; }
+.fire-dispatch-hand-fields { grid-column: 1 / -1; display: grid; grid-template-columns: 1.45fr 1.15fr .85fr .8fr; gap: 2.6mm; }
+.fire-dispatch-hand-fields > span { display: grid; gap: .55mm; color: #444; font-size: 7.4pt; text-align: center; }
 .fire-dispatch-hand-fields i,
-.fire-dispatch-hand-date i { min-width: 0; height: 3.2mm; display: inline-block; border-bottom: 1px solid #222; }
-.fire-dispatch-hand-date { grid-column: 1 / -1; margin-left: auto; display: grid; grid-template-columns: max-content 8mm max-content 33mm max-content 8mm max-content; align-items: end; gap: .7mm; font-size: 8.5pt; font-weight: 750; }
+.fire-dispatch-hand-date i { min-width: 0; height: 6mm; display: inline-block; border-bottom: 1px solid #222; }
+.fire-dispatch-hand-date { grid-column: 1 / -1; margin-left: auto; display: grid; grid-template-columns: max-content 10mm max-content 38mm max-content 10mm max-content; align-items: end; gap: .9mm; font-size: 8.7pt; font-weight: 750; }
 .fire-dispatch-ticket-sheet footer { margin-top: auto; display: flex; justify-content: flex-end; gap: 5mm; color: #333; font-size: 7pt; line-height: 1.2; }
 [data-theme="dark"] .fire-dispatch-ticket-dialog { border-color: #45abb4; background: #062c38; }
 #fire-dispatch-print-image { display: none; }

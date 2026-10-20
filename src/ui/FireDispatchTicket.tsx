@@ -323,15 +323,15 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
       .filter((object): object is WaterSource => object.kind === 'hydrant' || object.kind === 'reservoir')
       .map((source) => ({ source, target: closestPointOnContour(source.point, building.contour) }))
       .sort((left, right) => left.target.distanceM - right.target.distanceM);
-    const nearest = ranked.slice(0, 3);
-    // The three nearest sources define a stable, readable crop. Once that crop is
+    const nearestServiceable = ranked.filter(({ source }) => source.status === 'serviceable').slice(0, 3);
+    // The three nearest serviceable sources define a stable, readable crop. Once that crop is
     // known, also show every other source that physically falls inside it instead
-    // of silently omitting hydrants visible on the same fragment of the map.
-    const fitPoints = [...building.contour, building.point, ...nearest.map(({ source }) => source.point)];
+    // of silently omitting faulty or disabled hydrants visible on the same fragment.
+    const fitPoints = [...building.contour, building.point, ...nearestServiceable.map(({ source }) => source.point)];
     const projection = fitMap(fitPoints);
-    return { ranked, fitPoints, projection };
+    return { ranked, nearestServiceable, fitPoints, projection };
   }, [building, objects]);
-  const { ranked, fitPoints, projection } = dispatchSelection;
+  const { ranked, nearestServiceable, fitPoints, projection } = dispatchSelection;
   const receiveProjector = useCallback((projector: ((point: GeoPoint) => ScreenPoint) | null) => {
     setMapProjector(() => projector === null ? null : (point: GeoPoint) => {
       const normalized = projector(point);
@@ -339,11 +339,14 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
     });
   }, []);
   const project = mapProjector ?? projection.project;
-  const sources = useMemo(() => ranked.filter((entry, index) => {
-    if (index < 3) return true;
-    const point = project(entry.source.point);
-    return point.x >= 0 && point.x <= MAP_WIDTH && point.y >= 0 && point.y <= MAP_HEIGHT;
-  }), [project, ranked]);
+  const sources = useMemo(() => {
+    const linkedIds = new Set(nearestServiceable.map(({ source }) => source.id));
+    return ranked.filter((entry) => {
+      if (linkedIds.has(entry.source.id)) return true;
+      const point = project(entry.source.point);
+      return point.x >= 0 && point.x <= MAP_WIDTH && point.y >= 0 && point.y <= MAP_HEIGHT;
+    });
+  }, [nearestServiceable, project, ranked]);
   const contour = building.contour.map((point) => {
     const screen = project(point);
     return `${screen.x},${screen.y}`;
@@ -356,8 +359,8 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
   const markerObstacles = sources.map(({ source }) => boxAt(project(source.point), 132, 68));
   const waterLabelObstacles: LabelBox[] = [];
   // All sources inside the displayed fragment remain visible, but the route
-  // distance is intentionally shown only for the three nearest ones.
-  const waterLinks = ranked.slice(0, 3).map(({ source, target }) => {
+  // distance is intentionally shown only for the three nearest serviceable ones.
+  const waterLinks = nearestServiceable.map(({ source, target }) => {
     const from = project(source.point);
     const targetPoint = project(target.point);
     const dx = targetPoint.x - from.x;
@@ -371,7 +374,7 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
     const text = formatRulerDistance(target.distanceM);
     const candidates: ScreenPoint[] = [];
     for (const fraction of [.5, .62, .38, .72, .28]) {
-      for (const offset of [13, -13, 18, -18]) {
+      for (const offset of [9, -9, 12, -12]) {
         candidates.push({ x: from.x + (to.x - from.x) * fraction + normal.x * offset, y: from.y + (to.y - from.y) * fraction + normal.y * offset });
       }
     }
