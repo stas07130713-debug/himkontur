@@ -1,7 +1,7 @@
 {
   "id": "district-map-main",
   "name": "Карта района выезда",
-  "revision": 1792381781617,
+  "revision": 1792413307399,
   "draft": [
     {
       "id": "kml-hydrant-095f40d67c2912bd9832",
@@ -6034,8 +6034,8 @@
     {
       "id": "1b417270-6663-4fa6-aaf2-4f1063fdf280",
       "point": {
-        "longitude": 32.83393831431408,
-        "latitude": 67.9121265711706
+        "latitude": 67.9121265711706,
+        "longitude": 32.83393831431408
       },
       "note": "Изменения внесены в раздел «Расположение таблички» администратором 19.10.2026.",
       "updatedAtIso": "2026-10-19T03:49:41.508Z",
@@ -6203,80 +6203,82 @@
     },
     {
       "id": "bbe1862f-7a25-4ad9-97a1-6c50ec9ec60d",
+      "point": {
+        "latitude": 67.91162272259409,
+        "longitude": 32.83859538551536
+      },
+      "note": "Изменения внесены в раздел «Расположение таблички» администратором 19.10.2026.",
+      "updatedAtIso": "2026-10-19T03:47:17.982Z",
       "kind": "building",
       "objectType": "building",
       "mapRole": "ordinary",
       "contour": [
         {
-          "longitude": 32.83795237541199,
-          "latitude": 67.91180455937123
+          "latitude": 67.91180455937123,
+          "longitude": 32.83795237541199
         },
         {
-          "longitude": 32.839479463942865,
-          "latitude": 67.91155626973607
+          "latitude": 67.91155626973607,
+          "longitude": 32.839479463942865
         },
         {
-          "longitude": 32.83939784238112,
-          "latitude": 67.91148036831811
+          "latitude": 67.91148036831811,
+          "longitude": 32.83939784238112
         },
         {
-          "longitude": 32.83951167667195,
-          "latitude": 67.91145937398898
+          "latitude": 67.91145937398898,
+          "longitude": 32.83951167667195
         },
         {
-          "longitude": 32.83948375497184,
-          "latitude": 67.91143676471583
+          "latitude": 67.91143676471583,
+          "longitude": 32.83948375497184
         },
         {
-          "longitude": 32.83997345748608,
-          "latitude": 67.91135440213287
+          "latitude": 67.91135440213287,
+          "longitude": 32.83997345748608
         },
         {
-          "longitude": 32.83986606664939,
-          "latitude": 67.91124619988945
+          "latitude": 67.91124619988945,
+          "longitude": 32.83986606664939
         },
         {
-          "longitude": 32.83924964293598,
-          "latitude": 67.91134551990076
+          "latitude": 67.91134551990076,
+          "longitude": 32.83924964293598
         },
         {
-          "longitude": 32.839326964385634,
-          "latitude": 67.91141011802974
+          "latitude": 67.91141011802974,
+          "longitude": 32.839326964385634
         },
         {
-          "longitude": 32.83779680728912,
-          "latitude": 67.91166234632524
+          "latitude": 67.91166234632524,
+          "longitude": 32.83779680728912
         },
         {
-          "longitude": 32.83771365880966,
-          "latitude": 67.91158972656203
+          "latitude": 67.91158972656203,
+          "longitude": 32.83771365880966
         },
         {
-          "longitude": 32.837123572826385,
-          "latitude": 67.91168554425735
+          "latitude": 67.91168554425735,
+          "longitude": 32.837123572826385
         },
         {
-          "longitude": 32.837249636650085,
-          "latitude": 67.91179447336825
+          "latitude": 67.91179447336825,
+          "longitude": 32.837249636650085
         },
         {
-          "longitude": 32.83779412508011,
-          "latitude": 67.91170672495778
+          "latitude": 67.91170672495778,
+          "longitude": 32.83779412508011
         },
         {
-          "longitude": 32.83782094717026,
-          "latitude": 67.91173093144891
+          "latitude": 67.91173093144891,
+          "longitude": 32.83782094717026
         },
         {
-          "longitude": 32.837858498096466,
-          "latitude": 67.91172487982848
+          "latitude": 67.91172487982848,
+          "longitude": 32.837858498096466
         }
       ],
       "territoryNames": [],
-      "point": {
-        "longitude": 32.83859538551536,
-        "latitude": 67.91162272259409
-      },
       "number": "1.1",
       "inventoryNumber": "",
       "planningDocuments": [],
@@ -6289,9 +6291,118 @@
           "shortName": ""
         }
       ],
-      "sites": [],
+      "sites": []
+    },
+    {
+      "id": "7db5b551-1ad1-49aa-8e4c-33e50487c0b6",
+      "point": {
+        "latitude": 67.90946915845787,
+        "longitude": 32.84982124681417
+      },
       "note": "Изменения внесены в раздел «Расположение таблички» администратором 19.10.2026.",
-      "updatedAtIso": "2026-10-19T03:47:17.982Z"
+      "updatedAtIso": "2026-10-19T06:26:50.160Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90962991591533,
+          "longitude": 32.84894943237305
+        },
+        {
+          "latitude": 67.90962487244272,
+          "longitude": 32.848986983299255
+        },
+        {
+          "latitude": 67.90977012401544,
+          "longitude": 32.84913718700409
+        },
+        {
+          "latitude": 67.90945541112791,
+          "longitude": 32.851282954216
+        },
+        {
+          "latitude": 67.90910740634152,
+          "longitude": 32.85092085599899
+        },
+        {
+          "latitude": 67.90957505395309,
+          "longitude": 32.847735155991046
+        },
+        {
+          "latitude": 67.9097774998812,
+          "longitude": 32.84793392139758
+        },
+        {
+          "latitude": 67.90964565068201,
+          "longitude": 32.84883664761895
+        }
+      ],
+      "territoryNames": [],
+      "number": "1.9",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "Контрольно-аналитический центр",
+      "workshopShort": "КАЦ",
+      "departments": [],
+      "sites": []
+    },
+    {
+      "id": "12ff7a59-d2cb-400b-aeab-e9bd7ebea089",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "longitude": 32.84221708774567,
+          "latitude": 67.92366972802154
+        },
+        {
+          "longitude": 32.842391431331635,
+          "latitude": 67.92382799688644
+        },
+        {
+          "longitude": 32.844287753105164,
+          "latitude": 67.92352960373196
+        },
+        {
+          "longitude": 32.844161689281464,
+          "latitude": 67.92341770531121
+        },
+        {
+          "longitude": 32.84348577260971,
+          "latitude": 67.92352355518244
+        },
+        {
+          "longitude": 32.84343481063843,
+          "latitude": 67.92347819101096
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.92357446335744,
+        "longitude": 32.84332975745201
+      },
+      "number": "4.3",
+      "inventoryNumber": "1231",
+      "planningDocuments": [
+        {
+          "id": "617930bc-0e44-45fe-86f0-8f042fe3ccec",
+          "kind": "ПТП",
+          "number": "9"
+        },
+        {
+          "id": "4569f861-aa8c-4288-b9cf-33aaa99453c6",
+          "kind": "ПМЛА",
+          "number": "12"
+        }
+      ],
+      "workshopFull": "Химико-металлургический цех",
+      "workshopShort": "ХМЦ",
+      "departments": [],
+      "sites": [],
+      "note": "",
+      "updatedAtIso": "2026-10-19T12:35:07.399Z"
     }
   ],
   "published": [
@@ -12326,8 +12437,8 @@
     {
       "id": "1b417270-6663-4fa6-aaf2-4f1063fdf280",
       "point": {
-        "longitude": 32.83393831431408,
-        "latitude": 67.9121265711706
+        "latitude": 67.9121265711706,
+        "longitude": 32.83393831431408
       },
       "note": "Изменения внесены в раздел «Расположение таблички» администратором 19.10.2026.",
       "updatedAtIso": "2026-10-19T03:49:41.508Z",
@@ -12495,80 +12606,82 @@
     },
     {
       "id": "bbe1862f-7a25-4ad9-97a1-6c50ec9ec60d",
+      "point": {
+        "latitude": 67.91162272259409,
+        "longitude": 32.83859538551536
+      },
+      "note": "Изменения внесены в раздел «Расположение таблички» администратором 19.10.2026.",
+      "updatedAtIso": "2026-10-19T03:47:17.982Z",
       "kind": "building",
       "objectType": "building",
       "mapRole": "ordinary",
       "contour": [
         {
-          "longitude": 32.83795237541199,
-          "latitude": 67.91180455937123
+          "latitude": 67.91180455937123,
+          "longitude": 32.83795237541199
         },
         {
-          "longitude": 32.839479463942865,
-          "latitude": 67.91155626973607
+          "latitude": 67.91155626973607,
+          "longitude": 32.839479463942865
         },
         {
-          "longitude": 32.83939784238112,
-          "latitude": 67.91148036831811
+          "latitude": 67.91148036831811,
+          "longitude": 32.83939784238112
         },
         {
-          "longitude": 32.83951167667195,
-          "latitude": 67.91145937398898
+          "latitude": 67.91145937398898,
+          "longitude": 32.83951167667195
         },
         {
-          "longitude": 32.83948375497184,
-          "latitude": 67.91143676471583
+          "latitude": 67.91143676471583,
+          "longitude": 32.83948375497184
         },
         {
-          "longitude": 32.83997345748608,
-          "latitude": 67.91135440213287
+          "latitude": 67.91135440213287,
+          "longitude": 32.83997345748608
         },
         {
-          "longitude": 32.83986606664939,
-          "latitude": 67.91124619988945
+          "latitude": 67.91124619988945,
+          "longitude": 32.83986606664939
         },
         {
-          "longitude": 32.83924964293598,
-          "latitude": 67.91134551990076
+          "latitude": 67.91134551990076,
+          "longitude": 32.83924964293598
         },
         {
-          "longitude": 32.839326964385634,
-          "latitude": 67.91141011802974
+          "latitude": 67.91141011802974,
+          "longitude": 32.839326964385634
         },
         {
-          "longitude": 32.83779680728912,
-          "latitude": 67.91166234632524
+          "latitude": 67.91166234632524,
+          "longitude": 32.83779680728912
         },
         {
-          "longitude": 32.83771365880966,
-          "latitude": 67.91158972656203
+          "latitude": 67.91158972656203,
+          "longitude": 32.83771365880966
         },
         {
-          "longitude": 32.837123572826385,
-          "latitude": 67.91168554425735
+          "latitude": 67.91168554425735,
+          "longitude": 32.837123572826385
         },
         {
-          "longitude": 32.837249636650085,
-          "latitude": 67.91179447336825
+          "latitude": 67.91179447336825,
+          "longitude": 32.837249636650085
         },
         {
-          "longitude": 32.83779412508011,
-          "latitude": 67.91170672495778
+          "latitude": 67.91170672495778,
+          "longitude": 32.83779412508011
         },
         {
-          "longitude": 32.83782094717026,
-          "latitude": 67.91173093144891
+          "latitude": 67.91173093144891,
+          "longitude": 32.83782094717026
         },
         {
-          "longitude": 32.837858498096466,
-          "latitude": 67.91172487982848
+          "latitude": 67.91172487982848,
+          "longitude": 32.837858498096466
         }
       ],
       "territoryNames": [],
-      "point": {
-        "longitude": 32.83859538551536,
-        "latitude": 67.91162272259409
-      },
       "number": "1.1",
       "inventoryNumber": "",
       "planningDocuments": [],
@@ -12581,11 +12694,120 @@
           "shortName": ""
         }
       ],
-      "sites": [],
+      "sites": []
+    },
+    {
+      "id": "7db5b551-1ad1-49aa-8e4c-33e50487c0b6",
+      "point": {
+        "latitude": 67.90946915845787,
+        "longitude": 32.84982124681417
+      },
       "note": "Изменения внесены в раздел «Расположение таблички» администратором 19.10.2026.",
-      "updatedAtIso": "2026-10-19T03:47:17.982Z"
+      "updatedAtIso": "2026-10-19T06:26:50.160Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90962991591533,
+          "longitude": 32.84894943237305
+        },
+        {
+          "latitude": 67.90962487244272,
+          "longitude": 32.848986983299255
+        },
+        {
+          "latitude": 67.90977012401544,
+          "longitude": 32.84913718700409
+        },
+        {
+          "latitude": 67.90945541112791,
+          "longitude": 32.851282954216
+        },
+        {
+          "latitude": 67.90910740634152,
+          "longitude": 32.85092085599899
+        },
+        {
+          "latitude": 67.90957505395309,
+          "longitude": 32.847735155991046
+        },
+        {
+          "latitude": 67.9097774998812,
+          "longitude": 32.84793392139758
+        },
+        {
+          "latitude": 67.90964565068201,
+          "longitude": 32.84883664761895
+        }
+      ],
+      "territoryNames": [],
+      "number": "1.9",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "Контрольно-аналитический центр",
+      "workshopShort": "КАЦ",
+      "departments": [],
+      "sites": []
+    },
+    {
+      "id": "12ff7a59-d2cb-400b-aeab-e9bd7ebea089",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "longitude": 32.84221708774567,
+          "latitude": 67.92366972802154
+        },
+        {
+          "longitude": 32.842391431331635,
+          "latitude": 67.92382799688644
+        },
+        {
+          "longitude": 32.844287753105164,
+          "latitude": 67.92352960373196
+        },
+        {
+          "longitude": 32.844161689281464,
+          "latitude": 67.92341770531121
+        },
+        {
+          "longitude": 32.84348577260971,
+          "latitude": 67.92352355518244
+        },
+        {
+          "longitude": 32.84343481063843,
+          "latitude": 67.92347819101096
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.92357446335744,
+        "longitude": 32.84332975745201
+      },
+      "number": "4.3",
+      "inventoryNumber": "1231",
+      "planningDocuments": [
+        {
+          "id": "617930bc-0e44-45fe-86f0-8f042fe3ccec",
+          "kind": "ПТП",
+          "number": "9"
+        },
+        {
+          "id": "4569f861-aa8c-4288-b9cf-33aaa99453c6",
+          "kind": "ПМЛА",
+          "number": "12"
+        }
+      ],
+      "workshopFull": "Химико-металлургический цех",
+      "workshopShort": "ХМЦ",
+      "departments": [],
+      "sites": [],
+      "note": "",
+      "updatedAtIso": "2026-10-19T12:35:07.399Z"
     }
   ],
-  "draftSavedAtIso": "2026-10-19T03:49:41.617Z",
-  "publishedAtIso": "2026-10-19T03:49:41.617Z"
+  "draftSavedAtIso": "2026-10-19T19:34:54.630Z",
+  "publishedAtIso": "2026-10-19T19:34:54.630Z"
 }
