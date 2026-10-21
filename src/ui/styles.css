@@ -1910,7 +1910,7 @@ button.wide { width: 100%; margin-top: 10px; }
   border-radius: 6px;
   background: #edf7f4;
   color: var(--teal-dark);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.1;
   font-weight: 800;
 }
@@ -2347,15 +2347,22 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-details-card .district-hydrant-plate-block { grid-template-columns: 112px minmax(0, 1fr); padding: 8px; }
 .district-details-card .district-hydrant-plate { max-width: 105px; }
 .district-reservoir-card-symbol {
-  width: 76px;
-  height: 76px;
-  margin: 0 0 12px;
+  width: 150px;
+  height: 150px;
+  margin: 0 auto 12px;
   display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   place-items: center;
-  border-radius: 9px;
-  background: #e9f4fb;
+  overflow: hidden;
+  border: 1px solid #9bc6e3;
+  border-radius: 8px;
+  background: #e9f5ff;
+  box-shadow: 0 3px 10px #113a552b;
 }
-.district-reservoir-card-symbol .reservoir-plan-symbol { width: 62px; height: 62px; }
+.district-reservoir-card-symbol .reservoir-plan-symbol { width: 78px; height: 78px; align-self: end; }
+.district-reservoir-card-values { width: 100%; padding: 7px 8px 9px; display: grid; gap: 2px; box-sizing: border-box; border-top: 1px solid #a9cce2; background: #f7fbff; color: #075a93; font: 850 14px/1.15 Arial, sans-serif; text-align: center; }
+.district-reservoir-card-values strong { font-size: 15px; }
+.district-reservoir-card-values span { white-space: nowrap; }
 .district-editor-note { margin-top: 9px; }
 .district-coordinate { margin: 8px 0 0; color: #738b90; font-family: Consolas, monospace; font-size: 9px; }
 .district-editor-error, .admin-login-error { margin: 8px 0 0; padding: 7px 9px; border-left: 3px solid #d93038; background: #fff0f0; color: #9d252b; font-size: 10px; font-weight: 750; }
@@ -3275,6 +3282,9 @@ button.wide { width: 100%; margin-top: 10px; }
   text-shadow: var(--legend-shadow);
   backdrop-filter: blur(2px);
   pointer-events: auto;
+  font-family: Arial, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
 }
 .district-map-legend.basemap-satellite {
   --legend-ink: #fff;
@@ -3330,7 +3340,16 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-legend-row,
 .district-legend-building-list label { max-width: 100%; box-sizing: border-box; }
 .district-legend-row > span,
-.district-legend-building-list label > span { min-width: 0; overflow-wrap: anywhere; }
+.district-legend-building-list label > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: Arial, "Segoe UI", sans-serif;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-shadow: none;
+}
+.district-map-legend.basemap-satellite .district-legend-row > span,
+.district-map-legend.basemap-satellite .district-legend-building-list label > span { text-shadow: 0 1px 2px #00151f; }
 .district-legend-building-list { display: grid; gap: 2px; }
 .district-legend-building-list label,
 .district-legend-row {
@@ -3354,15 +3373,22 @@ button.wide { width: 100%; margin-top: 10px; }
   background: var(--object-color);
   color: #fff;
   font-family: Arial, "Segoe UI", sans-serif;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0;
-  line-height: 18px;
+  line-height: 1;
   text-align: center;
   text-shadow: none;
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
 }
+.district-legend-reservoir,
+.district-legend-ass { font-family: Arial, "Segoe UI", sans-serif; text-shadow: none; -webkit-font-smoothing: antialiased; text-rendering: geometricPrecision; }
 .district-legend-building.prefix-0 { --object-color: #191d20; }
 .district-legend-building.prefix-1 { --object-color: #2d6fd0; }
 .district-legend-building.prefix-2 { --object-color: #1e633f; }
@@ -3460,7 +3486,7 @@ button.wide { width: 100%; margin-top: 10px; }
 @media (max-width: 720px), (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
   .district-map-legend { right: 7px; bottom: 27px; width: min(220px, calc(100% - 14px)); max-height: 55%; padding: 6px; }
   .district-legend-heading button { padding-inline: 4px; }
-  .district-legend-building-list label, .district-legend-row { grid-template-columns: 14px 27px minmax(0, 1fr); font-size: 9px; }
+  .district-legend-building-list label, .district-legend-row { grid-template-columns: 14px 27px minmax(0, 1fr); font-size: 10px; }
   .district-legend-building { width: 27px; }
 }
 
@@ -3509,6 +3535,9 @@ button.wide { width: 100%; margin-top: 10px; }
 }
 .district-emergency-button:hover { background: linear-gradient(180deg, #fa4e52, #c7161e); }
 .district-emergency-button:active { translate: 0 1px; }
+@media (max-width: 720px), (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
+  .district-emergency-button { display: none; }
+}
 .fire-dispatch-backdrop { z-index: 120; align-items: start; overflow-y: auto; padding: 14px; }
 .fire-dispatch-ticket-dialog {
   width: min(1060px, 98vw);
@@ -3664,7 +3693,7 @@ button.wide { width: 100%; margin-top: 10px; }
 .fire-dispatch-edge-label,
 .fire-dispatch-water-link text,
 .fire-dispatch-reservoir-label { paint-order: stroke; stroke: #fff; stroke-width: 5px; stroke-linejoin: round; font-family: Arial, Helvetica, sans-serif; font-weight: 900; }
-.fire-dispatch-edge-label { fill: #161616; font-size: 12.5px; stroke-width: 4px; }
+.fire-dispatch-edge-label { fill: #161616; font-size: 10px; stroke-width: 3px; }
 .fire-dispatch-water-link line { stroke: #087dcc; stroke-width: 3; stroke-linecap: round; }
 .fire-dispatch-water-arrow { fill: #087dcc; }
 .fire-dispatch-water-link text { fill: #005da4; font-size: 13px; }

@@ -63,6 +63,8 @@ type Props = Readonly<{
   onBasemapChange: (value: Basemap) => void;
   onObjectsChange: (objects: readonly DistrictMapObject[]) => void;
   onObjectChangeStart: () => void;
+  onTransientHistory: (label: string, undo: () => void, redo: () => void) => void;
+  onClearTransientHistory: () => void;
   onCommitObjects: (objects: readonly DistrictMapObject[]) => void;
   managementOpen: boolean;
   onCloseManagement: () => void;
@@ -76,6 +78,7 @@ type ContourDragState =
     index: number;
     clientX: number;
     clientY: number;
+    startPoints: readonly GeoPoint[];
     moved: boolean;
   }
   | {
@@ -87,6 +90,14 @@ type ContourDragState =
     startPoints: readonly GeoPoint[];
     moved: boolean;
   };
+
+type ContourDraft = Readonly<{
+  objectType: 'building' | 'territory';
+  mapRole: DistrictBuildingMapRole;
+  points: readonly GeoPoint[];
+  source: 'automatic' | 'manual' | 'editing';
+  editingObjectId: string | null;
+}>;
 
 const KM_PER_LATITUDE_DEGREE = 111.32;
 const CENTER_LATITUDE = (MAP_BOUNDS.north + MAP_BOUNDS.south) / 2;
@@ -553,7 +564,10 @@ function ObjectDetails({ object, adminMode, onEdit, onDelete, onOpenDispatch }: 
         </>
       ) : (
         <>
-          <div className="district-reservoir-card-symbol"><FireReservoirPlanSymbol object={object} /></div>
+          <div className="district-reservoir-card-symbol" aria-label={`Пожарный водоём ${object.number}, объём ${object.volumeM3 === null ? 'не указан' : `${object.volumeM3.toLocaleString('ru-RU')} м³`}`}>
+            <FireReservoirPlanSymbol object={object} />
+            <div className="district-reservoir-card-values"><strong>{object.number}</strong><span>V = {object.volumeM3 === null ? '—' : object.volumeM3.toLocaleString('ru-RU')} м³</span></div>
+          </div>
           <dl>
             <div><dt>Номер</dt><dd>{object.number}</dd></div>
             <div><dt>Принадлежность</dt><dd>{object.owner}</dd></div>
@@ -583,13 +597,7 @@ export function DistrictMapPage(props: Props) {
   const [searchHighlightedId, setSearchHighlightedId] = useState<string | null>(null);
   const [editorObject, setEditorObject] = useState<DistrictMapObject | null>(null);
   const [contextMenu, setContextMenu] = useState<{ point: GeoPoint; x: number; y: number } | null>(null);
-  const [contourDraft, setContourDraft] = useState<Readonly<{
-    objectType: 'building' | 'territory';
-    mapRole: DistrictBuildingMapRole;
-    points: readonly GeoPoint[];
-    source: 'automatic' | 'manual' | 'editing';
-    editingObjectId: string | null;
-  }> | null>(null);
+  const [contourDraft, setContourDraftState] = useState<ContourDraft | null>(null);
   const [actImportStatus, setActImportStatus] = useState('');
   const [actImporting, setActImporting] = useState(false);
   const [mapBackupStatus, setMapBackupStatus] = useState('');
@@ -615,8 +623,25 @@ export function DistrictMapPage(props: Props) {
   const markerInteractionRef = useRef(false);
   const buildingContourResolverRef = useRef<((point: GeoPoint) => readonly GeoPoint[] | null) | null>(null);
   const contourDragRef = useRef<ContourDragState | null>(null);
+  const contourDraftRef = useRef<ContourDraft | null>(null);
   const objectsRef = useRef(props.objects);
   objectsRef.current = props.objects;
+
+  const setContourDraft = (value: ContourDraft | null) => {
+    contourDraftRef.current = value;
+    setContourDraftState(value);
+  };
+  const cloneContourDraft = (value: ContourDraft): ContourDraft => ({ ...value, points: value.points.map((point) => ({ ...point })) });
+  const applyContourStep = (before: ContourDraft, after: ContourDraft, label: string) => {
+    const previous = cloneContourDraft(before);
+    const next = cloneContourDraft(after);
+    setContourDraft(next);
+    props.onTransientHistory(
+      label,
+      () => { setContourDraft(previous); setContourStatus('Отменено последнее изменение контура.'); },
+      () => { setContourDraft(next); setContourStatus('Изменение контура возвращено.'); },
+    );
+  };
 
   useEffect(() => {
     const element = stageRef.current;
@@ -689,28 +714,26 @@ export function DistrictMapPage(props: Props) {
     return projection.unproject((clientX - rect.left) / rect.width * viewSize.width, (clientY - rect.top) / rect.height * viewSize.height);
   };
   const removeContourPoint = (index: number) => {
-    setContourDraft((current) => {
-      if (current === null) return null;
-      const minimum = current.mapRole === 'response-boundary' ? 2 : 3;
-      if (current.points.length <= minimum) {
-        setContourStatus(`Для этого контура необходимо оставить не менее ${minimum} точек.`);
-        return current;
-      }
-      setContourStatus('Лишняя точка удалена.');
-      return { ...current, points: current.points.filter((_, pointIndex) => pointIndex !== index) };
-    });
+    const current = contourDraftRef.current;
+    if (current === null) return;
+    const minimum = current.mapRole === 'response-boundary' ? 2 : 3;
+    if (current.points.length <= minimum) {
+      setContourStatus(`Для этого контура необходимо оставить не менее ${minimum} точек.`);
+      return;
+    }
+    applyContourStep(current, { ...current, points: current.points.filter((_, pointIndex) => pointIndex !== index) }, 'Удалена точка контура');
+    setContourStatus('Лишняя точка удалена.');
   };
   const alignContour = () => {
-    setContourDraft((current) => {
-      if (current === null || current.mapRole === 'response-boundary') return current;
-      const aligned = alignOrthogonalContour(current.points);
-      if (aligned === null) {
-        setContourStatus('Контур оставлен без изменений: программа не уверена, что его стороны должны быть параллельны.');
-        return current;
-      }
-      setContourStatus('Параллельные стороны выровнены, прямые углы и парные размеры восстановлены.');
-      return { ...current, points: aligned };
-    });
+    const current = contourDraftRef.current;
+    if (current === null || current.mapRole === 'response-boundary') return;
+    const aligned = alignOrthogonalContour(current.points);
+    if (aligned === null) {
+      setContourStatus('Контур оставлен без изменений: программа не уверена, что его стороны должны быть параллельны.');
+      return;
+    }
+    applyContourStep(current, { ...current, points: aligned }, 'Автоматически выровнен контур');
+    setContourStatus('Параллельные стороны выровнены, прямые углы и парные размеры восстановлены.');
   };
   const finishContour = () => {
     if (contourDraft === null || contourDraft.points.length < (contourDraft.mapRole === 'response-boundary' ? 2 : 3)) return;
@@ -721,6 +744,7 @@ export function DistrictMapPage(props: Props) {
       const previous = props.objects.find((object): object is DistrictBuilding => object.id === contourDraft.editingObjectId && object.kind === 'building');
       if (previous !== undefined) {
         const updated = withAdminChangeNote({ ...previous, contour: [...finalPoints], updatedAtIso: new Date().toISOString() }, ['Контур объекта']);
+        props.onClearTransientHistory();
         props.onCommitObjects(props.objects.map((object) => object.id === previous.id ? updated : object));
         selectObject(previous.id);
       }
@@ -733,11 +757,13 @@ export function DistrictMapPage(props: Props) {
       longitude: finalPoints.reduce((sum, item) => sum + item.longitude, 0) / finalPoints.length,
     };
     setEditorObject(initialBuilding(point, contourDraft.objectType, finalPoints, contourDraft.mapRole));
+    props.onClearTransientHistory();
     setContourDraft(null);
     setContourStatus('');
   };
   const startContour = (objectType: 'building' | 'territory', mapRole: DistrictBuildingMapRole = 'ordinary') => {
     if (contextMenu === null) return;
+    props.onClearTransientHistory();
     const automatic = objectType === 'building' ? buildingContourResolverRef.current?.(contextMenu.point) ?? null : null;
     setContourDraft({ objectType, mapRole, points: automatic ?? [contextMenu.point], source: automatic === null ? 'manual' : 'automatic', editingObjectId: null });
     setContourStatus('');
@@ -746,6 +772,7 @@ export function DistrictMapPage(props: Props) {
   };
   const startContourEdit = (object: DistrictBuilding) => {
     if (object.contour.length < (object.mapRole === 'response-boundary' ? 2 : 3)) return;
+    props.onClearTransientHistory();
     setEditorObject(null);
     selectObject(object.id);
     setCenter(districtObjectFocusPoint(object));
@@ -992,7 +1019,7 @@ export function DistrictMapPage(props: Props) {
       if (contourDraft.points.length >= 3 && Math.hypot(localX - first.x, localY - first.y) <= 18) {
         finishContour();
       } else {
-        setContourDraft((current) => current === null ? null : { ...current, points: [...current.points, point], source: 'manual' });
+        applyContourStep(contourDraft, { ...contourDraft, points: [...contourDraft.points, point], source: 'manual' }, 'Добавлена точка контура');
       }
       return;
     }
@@ -1038,12 +1065,14 @@ export function DistrictMapPage(props: Props) {
       if (contourDrag.mode === 'vertex') {
         if (!contourDrag.moved && Math.hypot(event.clientX - contourDrag.clientX, event.clientY - contourDrag.clientY) <= 3) return;
         contourDrag.moved = true;
-        setContourDraft((current) => current === null ? null : { ...current, points: current.points.map((item, itemIndex) => itemIndex === contourDrag.index ? point : item) });
+        const current = contourDraftRef.current;
+        if (current !== null) setContourDraft({ ...current, points: current.points.map((item, itemIndex) => itemIndex === contourDrag.index ? point : item) });
       } else {
         contourDrag.moved = true;
         const latitudeDelta = point.latitude - contourDrag.startPointer.latitude;
         const longitudeDelta = point.longitude - contourDrag.startPointer.longitude;
-        setContourDraft((current) => current === null ? null : {
+        const current = contourDraftRef.current;
+        if (current !== null) setContourDraft({
           ...current,
           points: contourDrag.startPoints.map((item, itemIndex) => itemIndex === contourDrag.startIndex || itemIndex === contourDrag.endIndex
             ? { latitude: item.latitude + latitudeDelta, longitude: item.longitude + longitudeDelta }
@@ -1111,15 +1140,25 @@ export function DistrictMapPage(props: Props) {
     const contourDrag = contourDragRef.current;
     if (contourDrag?.pointerId === event.pointerId) {
       contourDragRef.current = null;
+      const currentDraft = contourDraftRef.current;
+      if (contourDrag.moved && currentDraft !== null) {
+        const before = { ...currentDraft, points: contourDrag.startPoints };
+        const after = cloneContourDraft(currentDraft);
+        props.onTransientHistory(
+          contourDrag.mode === 'vertex' ? 'Перемещена точка контура' : 'Перемещена сторона контура',
+          () => { setContourDraft(before); setContourStatus('Отменено последнее изменение контура.'); },
+          () => { setContourDraft(after); setContourStatus('Изменение контура возвращено.'); },
+        );
+      }
       if (event.type !== 'pointercancel' && !contourDrag.moved) {
         if (contourDrag.mode === 'edge') {
           const point = locate(event.clientX, event.clientY);
-          if (point !== null) setContourDraft((current) => {
-            if (current === null) return null;
+          const current = contourDraftRef.current;
+          if (point !== null && current !== null) {
             const points = [...current.points];
             points.splice(contourDrag.startIndex + 1, 0, point);
-            return { ...current, points };
-          });
+            applyContourStep(current, { ...current, points }, 'Добавлена точка контура');
+          }
         } else if (contourDrag.index === 0 && contourDraft?.source === 'manual' && contourDraft.mapRole !== 'response-boundary' && contourDraft.points.length >= 3) {
           finishContour();
         }
@@ -1263,12 +1302,12 @@ export function DistrictMapPage(props: Props) {
                         latitude: (point.latitude + nextPoint.latitude) / 2,
                         longitude: (point.longitude + nextPoint.longitude) / 2,
                       };
-                      setContourDraft((current) => {
-                        if (current === null) return null;
+                      const current = contourDraftRef.current;
+                      if (current !== null) {
                         const points = [...current.points];
                         points.splice(index + 1, 0, inserted);
-                        return { ...current, points };
-                      });
+                        applyContourStep(current, { ...current, points }, 'Добавлена точка контура');
+                      }
                     }}
                   >
                     <circle r="7" />
@@ -1293,7 +1332,7 @@ export function DistrictMapPage(props: Props) {
                     if (event.button !== 0) return;
                     event.preventDefault();
                     event.stopPropagation();
-                    contourDragRef.current = { pointerId: event.pointerId, mode: 'vertex', index, clientX: event.clientX, clientY: event.clientY, moved: false };
+                    contourDragRef.current = { pointerId: event.pointerId, mode: 'vertex', index, clientX: event.clientX, clientY: event.clientY, startPoints: [...contourDraft.points], moved: false };
                     svgRef.current?.setPointerCapture(event.pointerId);
                   }}
                   onContextMenu={(event) => {
@@ -1331,10 +1370,10 @@ export function DistrictMapPage(props: Props) {
             <span>{contourDraft.mapRole === 'response-boundary' ? 'Ставьте точки вдоль границы. ПКМ по точке удаляет её; удерживайте ПКМ на карте и тяните для перемещения.' : 'Точки и стороны можно перетаскивать; «+» добавляет угол, ПКМ по точке удаляет его. Удерживайте ПКМ на свободном месте и тяните карту.'}</span>
             {contourStatus !== '' && <p className="district-contour-status">{contourStatus}</p>}
             <div>
-              {contourDraft.source === 'automatic' && <button type="button" className="secondary" onClick={() => { setContourDraft((current) => current === null ? null : { ...current, points: [], source: 'manual' }); setContourStatus(''); }}>Нарисовать вручную</button>}
+              {contourDraft.source === 'automatic' && <button type="button" className="secondary" onClick={() => { applyContourStep(contourDraft, { ...contourDraft, points: [], source: 'manual' }, 'Включено ручное рисование контура'); setContourStatus(''); }}>Нарисовать вручную</button>}
               {contourDraft.mapRole !== 'response-boundary' && contourDraft.points.length >= 4 && <button type="button" className="secondary" onClick={alignContour}>Выровнять автоматически</button>}
               <button type="button" className="primary" disabled={contourDraft.points.length < (contourDraft.mapRole === 'response-boundary' ? 2 : 3)} onClick={finishContour}>{contourDraft.source === 'editing' ? 'Сохранить границы' : 'Принять контур'}</button>
-              <button type="button" className="secondary" onClick={() => { setContourDraft(null); setContourStatus(''); }}>Отмена</button>
+              <button type="button" className="secondary" onClick={() => { props.onClearTransientHistory(); setContourDraft(null); setContourStatus(''); }}>Отмена</button>
             </div>
           </div>}
           <CompassRose className="district-compass" />

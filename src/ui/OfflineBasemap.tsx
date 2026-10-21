@@ -341,13 +341,17 @@ type BuildingContourResolver = (point: GeoPoint) => readonly GeoPoint[] | null;
 
 type NormalizedMapProjector = (point: GeoPoint) => Readonly<{ x: number; y: number }>;
 
-export function OfflineBasemap({ center, zoom, basemap, onBuildingContourResolver, onProjectorReady, fitPoints }: Readonly<{
+export function OfflineBasemap({ center, zoom, basemap, onBuildingContourResolver, onProjectorReady, fitPoints, fitPaddingRatio = .14, fitPrimaryPoints, fitPrimaryWidthRatio = .68, fitPrimaryHeightRatio = .62 }: Readonly<{
   center: GeoPoint;
   zoom: number;
   basemap: Basemap;
   onBuildingContourResolver?: (resolver: BuildingContourResolver | null) => void;
   onProjectorReady?: (projector: NormalizedMapProjector | null) => void;
   fitPoints?: readonly GeoPoint[];
+  fitPaddingRatio?: number;
+  fitPrimaryPoints?: readonly GeoPoint[];
+  fitPrimaryWidthRatio?: number;
+  fitPrimaryHeightRatio?: number;
 }>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -360,6 +364,8 @@ export function OfflineBasemap({ center, zoom, basemap, onBuildingContourResolve
   projectorReadyCallbackRef.current = onProjectorReady;
   const fitPointsRef = useRef(fitPoints);
   fitPointsRef.current = fitPoints;
+  const fitOptionsRef = useRef({ fitPaddingRatio, fitPrimaryPoints, fitPrimaryWidthRatio, fitPrimaryHeightRatio });
+  fitOptionsRef.current = { fitPaddingRatio, fitPrimaryPoints, fitPrimaryWidthRatio, fitPrimaryHeightRatio };
   const appliedBasemapRef = useRef<Basemap | null>(null);
   const mapReadyRef = useRef(false);
 
@@ -395,8 +401,29 @@ export function OfflineBasemap({ center, zoom, basemap, onBuildingContourResolve
       const east = Math.max(...points.map((point) => point.longitude));
       const south = Math.min(...points.map((point) => point.latitude));
       const north = Math.max(...points.map((point) => point.latitude));
-      const padding = Math.max(34, Math.min(container.clientWidth, container.clientHeight) * .14);
-      map.fitBounds([[west, south], [east, north]], { padding, duration: 0, maxZoom: 20.5 });
+      const fitOptions = fitOptionsRef.current;
+      const padding = Math.max(24, Math.min(container.clientWidth, container.clientHeight) * fitOptions.fitPaddingRatio);
+      const requiredCamera = map.cameraForBounds([[west, south], [east, north]], { padding, maxZoom: 20.5 });
+      if (requiredCamera?.center === undefined || requiredCamera.zoom === undefined) return false;
+      let targetZoom = requiredCamera.zoom;
+      const primary = fitOptions.fitPrimaryPoints;
+      if (primary !== undefined && primary.length >= 2) {
+        const primaryWest = Math.min(...primary.map((point) => point.longitude));
+        const primaryEast = Math.max(...primary.map((point) => point.longitude));
+        const primarySouth = Math.min(...primary.map((point) => point.latitude));
+        const primaryNorth = Math.max(...primary.map((point) => point.latitude));
+        const horizontalPadding = Math.max(24, container.clientWidth * (1 - fitOptions.fitPrimaryWidthRatio) / 2);
+        const verticalPadding = Math.max(24, container.clientHeight * (1 - fitOptions.fitPrimaryHeightRatio) / 2);
+        const primaryCamera = map.cameraForBounds(
+          [[primaryWest, primarySouth], [primaryEast, primaryNorth]],
+          { padding: { top: verticalPadding, right: horizontalPadding, bottom: verticalPadding, left: horizontalPadding }, maxZoom: 20.5 },
+        );
+        if (primaryCamera?.zoom !== undefined) targetZoom = Math.min(targetZoom, primaryCamera.zoom);
+      }
+      // Keep the center that guarantees all required points are visible. When
+      // a large contour limits the zoom, the extra space only grows, so the
+      // three required water-source symbols remain safely inside the frame.
+      map.jumpTo({ center: requiredCamera.center, zoom: targetZoom });
       return true;
     };
     map.on('load', () => {

@@ -57,6 +57,13 @@ type Snapshot = Readonly<{
   basemap: Basemap;
   districtProject: DistrictMapProject;
 }>;
+type HistoryItem = Readonly<{
+  label: string;
+  group?: string;
+}> & (
+  | Readonly<{ kind: "snapshot"; snapshot: Snapshot }>
+  | Readonly<{ kind: "custom"; undo: () => void; redo: () => void }>
+);
 
 function message(error: unknown): string {
   return error instanceof Error ? error.message : "Неизвестная ошибка.";
@@ -96,8 +103,8 @@ export function App() {
   const [weatherError, setWeatherError] = useState<string | null>(null);
   const [weatherBusy, setWeatherBusy] = useState(false);
   const [, setNotice] = useState<string | null>(null);
-  const pastRef = useRef<{ snapshot: Snapshot; label: string }[]>([]);
-  const futureRef = useRef<{ snapshot: Snapshot; label: string }[]>([]);
+  const pastRef = useRef<HistoryItem[]>([]);
+  const futureRef = useRef<HistoryItem[]>([]);
   const [, setHistoryRevision] = useState(0);
   const districtChangeRememberedRef = useRef(false);
   const districtProjectRef = useRef(districtProject);
@@ -152,9 +159,22 @@ export function App() {
   const remember = (label: string) => {
     pastRef.current = [
       ...pastRef.current.slice(-49),
-      { snapshot: snapshot(), label },
+      { kind: "snapshot", snapshot: snapshot(), label },
     ];
     futureRef.current = [];
+    setHistoryRevision((value) => value + 1);
+  };
+  const rememberCustom = (group: string, label: string, undoAction: () => void, redoAction: () => void) => {
+    pastRef.current = [
+      ...pastRef.current.slice(-49),
+      { kind: "custom", group, label, undo: undoAction, redo: redoAction },
+    ];
+    futureRef.current = [];
+    setHistoryRevision((value) => value + 1);
+  };
+  const clearHistoryGroup = (group: string) => {
+    pastRef.current = pastRef.current.filter((item) => item.group !== group);
+    futureRef.current = futureRef.current.filter((item) => item.group !== group);
     setHistoryRevision((value) => value + 1);
   };
   const applySnapshot = (value: Snapshot) => {
@@ -187,11 +207,16 @@ export function App() {
     const item = pastRef.current.at(-1);
     if (item === undefined) return;
     pastRef.current = pastRef.current.slice(0, -1);
-    futureRef.current = [
-      { snapshot: snapshot(), label: item.label },
-      ...futureRef.current,
-    ];
-    applySnapshot(item.snapshot);
+    if (item.kind === "custom") {
+      item.undo();
+      futureRef.current = [item, ...futureRef.current];
+    } else {
+      futureRef.current = [
+        { kind: "snapshot", snapshot: snapshot(), label: item.label },
+        ...futureRef.current,
+      ];
+      applySnapshot(item.snapshot);
+    }
     districtChangeRememberedRef.current = false;
     setNotice(`Отменено: ${item.label}.`);
     setHistoryRevision((value) => value + 1);
@@ -200,11 +225,16 @@ export function App() {
     const item = futureRef.current[0];
     if (item === undefined) return;
     futureRef.current = futureRef.current.slice(1);
-    pastRef.current = [
-      ...pastRef.current,
-      { snapshot: snapshot(), label: item.label },
-    ];
-    applySnapshot(item.snapshot);
+    if (item.kind === "custom") {
+      item.redo();
+      pastRef.current = [...pastRef.current, item];
+    } else {
+      pastRef.current = [
+        ...pastRef.current,
+        { kind: "snapshot", snapshot: snapshot(), label: item.label },
+      ];
+      applySnapshot(item.snapshot);
+    }
     districtChangeRememberedRef.current = false;
     setNotice(`Возвращено: ${item.label}.`);
     setHistoryRevision((value) => value + 1);
@@ -611,6 +641,8 @@ export function App() {
             remember("Перемещён объект карты района выезда");
             districtChangeRememberedRef.current = true;
           }}
+          onTransientHistory={(label, undoAction, redoAction) => rememberCustom("district-contour", label, undoAction, redoAction)}
+          onClearTransientHistory={() => clearHistoryGroup("district-contour")}
           onCommitObjects={commitDistrictObjects}
           managementOpen={districtManagementOpen}
           onCloseManagement={() => setDistrictManagementOpen(false)}

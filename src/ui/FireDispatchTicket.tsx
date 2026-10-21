@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GeoPoint } from '../core/types';
 import { distanceMeters, formatRulerDistance } from './map-ruler';
-import { representativeDimensionIndices } from './dispatch-dimensions';
 import type { Basemap } from './MapCanvas';
 import type { DistrictBuilding, DistrictFireReservoir, DistrictHydrant, DistrictMapObject, DistrictPlanningDocument } from './district-map-model';
 import { hydrantNetworkCode } from './district-map-model';
@@ -14,7 +13,10 @@ import { canChooseDispatchPdfDirectory, captureDispatchSnapshot, createDispatchP
 
 const MAP_WIDTH = 1000;
 const MAP_HEIGHT = 680;
-const MAP_PADDING = 110;
+const BUILDING_TARGET_WIDTH_RATIO = .68;
+const BUILDING_TARGET_HEIGHT_RATIO = .62;
+const REQUIRED_SOURCE_PADDING_X = 78;
+const REQUIRED_SOURCE_PADDING_Y = 38;
 const EARTH_RADIUS_M = 6_371_000;
 
 type WaterSource = DistrictHydrant | DistrictFireReservoir;
@@ -31,6 +33,20 @@ const EMERGENCY_TYPES = [
   'Другое',
 ] as const;
 
+const DISPATCHER_HISTORY_KEY = 'himkontur-dispatcher-history';
+
+function loadDispatcherHistory(): readonly string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(DISPATCHER_HISTORY_KEY) ?? '[]') as unknown;
+    return Array.isArray(stored)
+      ? stored.filter((item): item is string => typeof item === 'string' && item.trim() !== '').slice(0, 20)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 function EmergencyTypeField({ value, onChange }: Readonly<{ value: string; onChange: (value: string) => void }>) {
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -40,7 +56,7 @@ function EmergencyTypeField({ value, onChange }: Readonly<{ value: string; onCha
     <div className="fire-dispatch-emergency-control">
       <input ref={inputRef}
         role="combobox"
-        aria-label="2. Объект пожара (характер ЧС)"
+        aria-label="2. Вид происшествия (характер ЧС)"
         aria-autocomplete="list"
         aria-expanded={open}
         value={value}
@@ -161,20 +177,55 @@ function localDateAndTime(): Readonly<{ date: string; time: string }> {
   return { date: local.slice(0, 10), time: local.slice(11, 16) };
 }
 
-function fitMap(points: readonly GeoPoint[]): Readonly<{ center: GeoPoint; zoom: number; project: (point: GeoPoint) => ScreenPoint }> {
-  const worlds = points.map(worldCoordinate);
-  const minX = Math.min(...worlds.map((point) => point.x));
-  const maxX = Math.max(...worlds.map((point) => point.x));
-  const minY = Math.min(...worlds.map((point) => point.y));
-  const maxY = Math.max(...worlds.map((point) => point.y));
-  const spanX = Math.max(maxX - minX, 1e-8);
-  const spanY = Math.max(maxY - minY, 1e-8);
-  const zoom = Math.max(12, Math.min(20.5, Math.log2(Math.min(
-    (MAP_WIDTH - MAP_PADDING * 2) / (spanX * 512),
-    (MAP_HEIGHT - MAP_PADDING * 2) / (spanY * 512),
-  ))));
-  const centerWorld = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+function fitMap(buildingPoints: readonly GeoPoint[], requiredSourcePoints: readonly GeoPoint[]): Readonly<{ center: GeoPoint; zoom: number; project: (point: GeoPoint) => ScreenPoint }> {
+  const buildingWorlds = buildingPoints.map(worldCoordinate);
+  const requiredWorlds = [...buildingWorlds, ...requiredSourcePoints.map(worldCoordinate)];
+  const bounds = (points: readonly Readonly<{ x: number; y: number }>[]) => ({
+    minX: Math.min(...points.map((point) => point.x)),
+    maxX: Math.max(...points.map((point) => point.x)),
+    minY: Math.min(...points.map((point) => point.y)),
+    maxY: Math.max(...points.map((point) => point.y)),
+  });
+  const buildingBounds = bounds(buildingWorlds);
+  const requiredBounds = bounds(requiredWorlds);
+  const zoomForBounds = (
+    current: ReturnType<typeof bounds>,
+    availableWidth: number,
+    availableHeight: number,
+  ) => Math.log2(Math.min(
+    availableWidth / (Math.max(current.maxX - current.minX, 1e-8) * 512),
+    availableHeight / (Math.max(current.maxY - current.minY, 1e-8) * 512),
+  ));
+  // The contour has a maximum visual share of the scheme, while the second
+  // bound guarantees that all three required water-source symbols stay inside
+  // the frame. Small objects therefore remain readable and large objects can
+  // never be cropped by a fixed zoom increment.
+  const buildingZoom = zoomForBounds(
+    buildingBounds,
+    MAP_WIDTH * BUILDING_TARGET_WIDTH_RATIO,
+    MAP_HEIGHT * BUILDING_TARGET_HEIGHT_RATIO,
+  );
+  const requiredZoom = zoomForBounds(
+    requiredBounds,
+    MAP_WIDTH - REQUIRED_SOURCE_PADDING_X * 2,
+    MAP_HEIGHT - REQUIRED_SOURCE_PADDING_Y * 2,
+  );
+  const zoom = Math.max(12, Math.min(20.5, buildingZoom, requiredZoom));
   const worldPixels = 512 * 2 ** zoom;
+  const buildingCenter = {
+    x: (buildingBounds.minX + buildingBounds.maxX) / 2,
+    y: (buildingBounds.minY + buildingBounds.maxY) / 2,
+  };
+  const centerInterval = (min: number, max: number, size: number, padding: number) => ({
+    min: max - (size / 2 - padding) / worldPixels,
+    max: min + (size / 2 - padding) / worldPixels,
+  });
+  const xInterval = centerInterval(requiredBounds.minX, requiredBounds.maxX, MAP_WIDTH, REQUIRED_SOURCE_PADDING_X);
+  const yInterval = centerInterval(requiredBounds.minY, requiredBounds.maxY, MAP_HEIGHT, REQUIRED_SOURCE_PADDING_Y);
+  const centerWorld = {
+    x: Math.max(xInterval.min, Math.min(xInterval.max, buildingCenter.x)),
+    y: Math.max(yInterval.min, Math.min(yInterval.max, buildingCenter.y)),
+  };
   return {
     center: geoFromWorld(centerWorld),
     zoom,
@@ -197,7 +248,6 @@ type EdgeLabel = Readonly<{
 }>;
 
 type LabelBox = Readonly<{ left: number; top: number; right: number; bottom: number }>;
-type ScreenSegment = Readonly<{ start: ScreenPoint; end: ScreenPoint }>;
 
 function readableLineAngle(start: ScreenPoint, end: ScreenPoint): number {
   let angle = Math.atan2(end.y - start.y, end.x - start.x) * 180 / Math.PI;
@@ -210,16 +260,20 @@ function boxAt(point: ScreenPoint, width: number, height: number): LabelBox {
   return { left: point.x - width / 2, right: point.x + width / 2, top: point.y - height / 2, bottom: point.y + height / 2 };
 }
 
-function boxesOverlap(first: LabelBox, second: LabelBox, padding = 4): boolean {
-  return first.left < second.right + padding && first.right > second.left - padding && first.top < second.bottom + padding && first.bottom > second.top - padding;
+function rotatedBoxAt(point: ScreenPoint, width: number, height: number, angle: number): LabelBox {
+  const radians = angle * Math.PI / 180;
+  const halfWidth = Math.abs(Math.cos(radians)) * width / 2 + Math.abs(Math.sin(radians)) * height / 2;
+  const halfHeight = Math.abs(Math.sin(radians)) * width / 2 + Math.abs(Math.cos(radians)) * height / 2;
+  return { left: point.x - halfWidth, right: point.x + halfWidth, top: point.y - halfHeight, bottom: point.y + halfHeight };
 }
 
-function pointToSegmentDistance(point: ScreenPoint, segment: ScreenSegment): number {
-  const dx = segment.end.x - segment.start.x;
-  const dy = segment.end.y - segment.start.y;
-  const lengthSquared = dx * dx + dy * dy;
-  const position = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1, ((point.x - segment.start.x) * dx + (point.y - segment.start.y) * dy) / lengthSquared));
-  return Math.hypot(point.x - (segment.start.x + dx * position), point.y - (segment.start.y + dy * position));
+function overlapArea(first: LabelBox, second: LabelBox, padding = 4): number {
+  return Math.max(0, Math.min(first.right, second.right + padding) - Math.max(first.left, second.left - padding))
+    * Math.max(0, Math.min(first.bottom, second.bottom + padding) - Math.max(first.top, second.top - padding));
+}
+
+function boxesOverlap(first: LabelBox, second: LabelBox, padding = 4): boolean {
+  return first.left < second.right + padding && first.right > second.left - padding && first.top < second.bottom + padding && first.bottom > second.top - padding;
 }
 
 function measurementContour(contour: readonly GeoPoint[]): readonly GeoPoint[] {
@@ -264,24 +318,62 @@ function edgeLabels(
   contour: readonly GeoPoint[],
   project: (point: GeoPoint) => ScreenPoint,
   fixedObstacles: readonly LabelBox[],
-  waterSegments: readonly ScreenSegment[],
 ): readonly EdgeLabel[] {
   const measured = measurementContour(contour);
   const projected = measured.map(project);
   const center = projected.reduce<{ x: number; y: number }>((sum, point) => ({ x: sum.x + point.x, y: sum.y + point.y }), { x: 0, y: 0 });
   center.x /= Math.max(1, projected.length);
   center.y /= Math.max(1, projected.length);
-  const edgeMetrics = measured.map((point, index) => ({
-    index,
-    distance: distanceMeters(point, measured[(index + 1) % measured.length] ?? point),
-  }));
-  const representativeIndices = new Set(representativeDimensionIndices(edgeMetrics.map((edge) => edge.distance)));
-  const placed: EdgeLabel[] = [];
-  const occupied = [...fixedObstacles];
-  edgeMetrics.filter((edge) => representativeIndices.has(edge.index)).sort((left, right) => right.distance - left.distance).forEach(({ index, distance }) => {
+  const edgeMetrics = measured.map((point, index) => {
+    const start = projected[index] ?? { x: 0, y: 0 };
+    const end = projected[(index + 1) % projected.length] ?? start;
+    const length = Math.max(1, Math.hypot(end.x - start.x, end.y - start.y));
+    const distance = distanceMeters(point, measured[(index + 1) % measured.length] ?? point);
+    const direction = { x: (end.x - start.x) / length, y: (end.y - start.y) / length };
+    const normal = { x: -direction.y, y: direction.x };
+    const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+    const outward = ((midpoint.x - center.x) * normal.x + (midpoint.y - center.y) * normal.y) >= 0
+      ? normal
+      : { x: -normal.x, y: -normal.y };
+    return {
+      index,
+      distance,
+      displayDistance: distance,
+      hidden: false,
+      direction,
+      outward,
+      midpoint,
+    };
+  });
+  const longestEdge = Math.max(...edgeMetrics.map((edge) => edge.distance), 0);
+  const compactEdgeThreshold = Math.max(8, Math.min(30, longestEdge * .28));
+  for (const shortEdge of edgeMetrics.filter((edge) => edge.distance <= compactEdgeThreshold).sort((left, right) => left.distance - right.distance)) {
+    const target = edgeMetrics
+      .filter((edge) => !edge.hidden && edge.index !== shortEdge.index && edge.distance > shortEdge.distance * 1.08)
+      .map((edge) => {
+        const rawGap = Math.abs(edge.index - shortEdge.index);
+        const indexGap = Math.min(rawGap, edgeMetrics.length - rawGap);
+        const parallel = Math.abs(edge.direction.x * shortEdge.direction.x + edge.direction.y * shortEdge.direction.y);
+        const sameSide = edge.outward.x * shortEdge.outward.x + edge.outward.y * shortEdge.outward.y;
+        const screenDistance = Math.hypot(edge.midpoint.x - shortEdge.midpoint.x, edge.midpoint.y - shortEdge.midpoint.y);
+        // A recess often reverses the polygon's outward normal even though its
+        // short edge belongs to the same visual side of the building. Prefer
+        // nearby edges in the contour and on screen; use the normal only as a
+        // soft tie-breaker instead of rejecting such recesses outright.
+        const score = indexGap * 160 + screenDistance - sameSide * 18 - edge.distance * .08;
+        return { edge, indexGap, parallel, screenDistance, score };
+      })
+      .filter(({ indexGap, parallel, screenDistance }) => indexGap <= 5 && parallel >= .94 && screenDistance <= Math.max(MAP_WIDTH, MAP_HEIGHT) * .55)
+      .sort((left, right) => left.score - right.score)[0]?.edge;
+    if (target !== undefined) {
+      target.displayDistance += shortEdge.displayDistance;
+      shortEdge.hidden = true;
+    }
+  }
+  const entries = edgeMetrics.filter((edge) => !edge.hidden).sort((left, right) => right.displayDistance - left.displayDistance).flatMap(({ index, displayDistance: distance }) => {
     const start = projected[index];
     const end = projected[(index + 1) % projected.length];
-    if (start === undefined || end === undefined) return;
+    if (start === undefined || end === undefined) return [];
     const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
     const dx = end.x - start.x;
     const dy = end.y - start.y;
@@ -292,28 +384,84 @@ function edgeLabels(
       : { x: -firstNormal.x, y: -firstNormal.y };
     const tangent = { x: dx / length, y: dy / length };
     const text = formatRulerDistance(distance);
-    const labelWidth = Math.max(34, text.length * 8);
-    const candidates: ScreenPoint[] = [];
-    for (const offset of [17, 27, 38, 50]) {
-      for (const tangentShift of [0, 24, -24, 45, -45]) {
-        candidates.push({ x: midpoint.x + outward.x * offset + tangent.x * tangentShift, y: midpoint.y + outward.y * offset + tangent.y * tangentShift });
-      }
-    }
-    const selected = candidates.find((candidate) => {
-      const candidateBox = boxAt(candidate, labelWidth, 18);
-      const insideMap = candidateBox.left >= 5 && candidateBox.right <= MAP_WIDTH - 5 && candidateBox.top >= 5 && candidateBox.bottom <= MAP_HEIGHT - 5;
-      return insideMap && occupied.every((box) => !boxesOverlap(candidateBox, box)) && waterSegments.every((segment) => pointToSegmentDistance(candidate, segment) > 18);
-    }) ?? candidates[0] ?? midpoint;
-    occupied.push(boxAt(selected, labelWidth, 18));
-    placed.push({
-      key: `edge-${index}`,
-      x: Math.max(22, Math.min(MAP_WIDTH - 22, selected.x)),
-      y: Math.max(16, Math.min(MAP_HEIGHT - 16, selected.y)),
-      text,
-      angle: readableLineAngle(start, end),
-    });
+    const labelWidth = Math.max(32, text.length * 7.8);
+    const labelHeight = 16;
+    const angle = readableLineAngle(start, end);
+    // A dimension must remain visually attached to its wall. Collision
+    // resolution may flip it to the other side or tighten the offset, but it
+    // must never drift along the tangent or far away from the measured edge.
+    const offsets = [8, 12, 16, 20, 24, 28, 32];
+    const shortShift = Math.min(12, length * .18);
+    const longShift = Math.min(60, length * .42);
+    const shifts = [0, -shortShift, shortShift, -longShift, longShift];
+    const candidates = [
+      ...offsets.flatMap((offset) => shifts.map((shift) => ({
+        offset: offset + Math.abs(shift) * .2,
+        point: { x: midpoint.x + outward.x * offset + tangent.x * shift, y: midpoint.y + outward.y * offset + tangent.y * shift },
+      }))),
+      ...offsets.flatMap((offset) => shifts.map((shift) => ({
+        offset: offset + Math.abs(shift) * .2 + 1,
+        point: { x: midpoint.x - outward.x * offset + tangent.x * shift, y: midpoint.y - outward.y * offset + tangent.y * shift },
+      }))),
+    ].map((candidate) => ({ ...candidate, box: rotatedBoxAt(candidate.point, labelWidth, labelHeight, angle) }));
+    return [{ index, text, angle, candidates }];
   });
-  return placed;
+  const placementScore = (entryIndex: number, candidateIndex: number, selections: readonly number[]): number => {
+    const entry = entries[entryIndex];
+    const candidate = entry?.candidates[candidateIndex];
+    if (entry === undefined || candidate === undefined) return Number.POSITIVE_INFINITY;
+    const outside = Math.max(0, 5 - candidate.box.left) + Math.max(0, candidate.box.right - MAP_WIDTH + 5)
+      + Math.max(0, 5 - candidate.box.top) + Math.max(0, candidate.box.bottom - MAP_HEIGHT + 5);
+    const fixedCollision = fixedObstacles.reduce((sum, obstacle) => sum + overlapArea(candidate.box, obstacle), 0);
+    const labelCollision = entries.reduce((sum, other, otherIndex) => {
+      if (otherIndex === entryIndex) return sum;
+      const otherCandidate = other.candidates[selections[otherIndex] ?? 0];
+      return sum + (otherCandidate === undefined ? 0 : overlapArea(candidate.box, otherCandidate.box));
+    }, 0);
+    return outside * 1_000_000 + labelCollision * 100_000 + fixedCollision * 1_000 + candidate.offset;
+  };
+  const totalScore = (selections: readonly number[]): number => entries.reduce((sum, entry, index) => {
+    const candidate = entry.candidates[selections[index] ?? 0];
+    if (candidate === undefined) return sum;
+    const outside = Math.max(0, 5 - candidate.box.left) + Math.max(0, candidate.box.right - MAP_WIDTH + 5)
+      + Math.max(0, 5 - candidate.box.top) + Math.max(0, candidate.box.bottom - MAP_HEIGHT + 5);
+    const fixedCollision = fixedObstacles.reduce((current, obstacle) => current + overlapArea(candidate.box, obstacle), 0);
+    const pairCollision = entries.slice(index + 1).reduce((current, other, offset) => {
+      const otherCandidate = other.candidates[selections[index + offset + 1] ?? 0];
+      return current + (otherCandidate === undefined ? 0 : overlapArea(candidate.box, otherCandidate.box));
+    }, 0);
+    return sum + outside * 1_000_000 + pairCollision * 100_000 + fixedCollision * 1_000 + candidate.offset;
+  }, 0);
+  let bestSelections = entries.map(() => 0);
+  let bestScore = Number.POSITIVE_INFINITY;
+  for (const seed of [0, 1, 2, 3, 5, 8, 13, 21]) {
+    const selections = entries.map((entry, index) => (seed + index * 3) % Math.max(1, entry.candidates.length));
+    for (let pass = 0; pass < 10; pass += 1) {
+      const order = pass % 2 === 0 ? entries.map((_, index) => index) : entries.map((_, index) => entries.length - 1 - index);
+      order.forEach((entryIndex) => {
+        const entry = entries[entryIndex];
+        if (entry === undefined) return;
+        selections[entryIndex] = entry.candidates.reduce((best, _, candidateIndex) =>
+          placementScore(entryIndex, candidateIndex, selections) < placementScore(entryIndex, best, selections) ? candidateIndex : best, 0);
+      });
+    }
+    const score = totalScore(selections);
+    if (score < bestScore) {
+      bestScore = score;
+      bestSelections = [...selections];
+    }
+  }
+  return entries.map((entry, index) => {
+    const selected = entry.candidates[bestSelections[index] ?? 0] ?? entry.candidates[0];
+    const point = selected?.point ?? { x: 0, y: 0 };
+    return {
+      key: `edge-${entry.index}`,
+      x: Math.max(22, Math.min(MAP_WIDTH - 22, point.x)),
+      y: Math.max(16, Math.min(MAP_HEIGHT - 16, point.y)),
+      text: entry.text,
+      angle: entry.angle,
+    };
+  });
 }
 
 function DispatchMap({ building, objects, basemap }: Readonly<{ building: DistrictBuilding; objects: readonly DistrictMapObject[]; basemap: Basemap }>) {
@@ -327,8 +475,9 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
     // The three nearest serviceable sources define a stable, readable crop. Once that crop is
     // known, also show every other source that physically falls inside it instead
     // of silently omitting faulty or disabled hydrants visible on the same fragment.
-    const fitPoints = [...building.contour, building.point, ...nearestServiceable.map(({ source }) => source.point)];
-    const projection = fitMap(fitPoints);
+    const requiredSourcePoints = nearestServiceable.map(({ source }) => source.point);
+    const fitPoints = [...building.contour, building.point, ...requiredSourcePoints];
+    const projection = fitMap([...building.contour, building.point], requiredSourcePoints);
     return { ranked, nearestServiceable, fitPoints, projection };
   }, [building, objects]);
   const { ranked, nearestServiceable, fitPoints, projection } = dispatchSelection;
@@ -341,25 +490,49 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
   const project = mapProjector ?? projection.project;
   const sources = useMemo(() => {
     const linkedIds = new Set(nearestServiceable.map(({ source }) => source.id));
-    return ranked.filter((entry) => {
-      if (linkedIds.has(entry.source.id)) return true;
+    const visible = ranked.filter((entry) => {
       const point = project(entry.source.point);
-      return point.x >= 0 && point.x <= MAP_WIDTH && point.y >= 0 && point.y <= MAP_HEIGHT;
+      return linkedIds.has(entry.source.id)
+        || (point.x >= 0 && point.x <= MAP_WIDTH && point.y >= 0 && point.y <= MAP_HEIGHT);
     });
+    const selected = visible.filter(({ source }) => linkedIds.has(source.id));
+    const occupied = selected.map(({ source }) => boxAt(project(source.point), source.kind === 'hydrant' ? 132 : 104, 44));
+    visible.filter(({ source }) => !linkedIds.has(source.id)).forEach((entry) => {
+      const box = boxAt(project(entry.source.point), entry.source.kind === 'hydrant' ? 132 : 104, 44);
+      const fullyInside = box.left >= 4 && box.right <= MAP_WIDTH - 4 && box.top >= 4 && box.bottom <= MAP_HEIGHT - 4;
+      if (fullyInside && occupied.every((current) => !boxesOverlap(box, current, 5))) {
+        selected.push(entry);
+        occupied.push(box);
+      }
+    });
+    return selected;
   }, [nearestServiceable, project, ranked]);
   const contour = building.contour.map((point) => {
     const screen = project(point);
     return `${screen.x},${screen.y}`;
   }).join(' ');
   const buildingPoint = project(building.point);
-  const markerScale = fittedBuildingMarkerScale(building, .9, project);
+  const markerScale = fittedBuildingMarkerScale(building, 1, project);
   // The hydrant badge is wider than the symbol itself. Keep a generous safety
   // area around every visible source so a distance label can never sit on top
   // of the «ПГ-… / К-…» plates.
-  const markerObstacles = sources.map(({ source }) => boxAt(project(source.point), 132, 68));
+  const markerObstacles = sources.map(({ source }) => boxAt(project(source.point), source.kind === 'hydrant' ? 132 : 104, 44));
+  const fixedObstacles = [
+    ...markerObstacles,
+    boxAt(buildingPoint, 64, 40),
+    { left: MAP_WIDTH - 105, top: 0, right: MAP_WIDTH, bottom: 105 },
+  ];
+  const labels = edgeLabels(building.contour, project, fixedObstacles);
+  const dimensionObstacles = labels.map((label) => rotatedBoxAt(
+    { x: label.x, y: label.y },
+    Math.max(32, label.text.length * 7.8),
+    16,
+    label.angle,
+  ));
   const waterLabelObstacles: LabelBox[] = [];
-  // All sources inside the displayed fragment remain visible, but the route
-  // distance is intentionally shown only for the three nearest serviceable ones.
+  // The three nearest serviceable sources always receive a route distance.
+  // Additional sources are shown only where their standard horizontal plates
+  // have enough room, keeping the printed fragment readable without scaling.
   const waterLinks = nearestServiceable.map(({ source, target }) => {
     const from = project(source.point);
     const targetPoint = project(target.point);
@@ -383,27 +556,62 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
       const candidateBox = boxAt(candidate, width, 20);
       return candidateBox.left > 5 && candidateBox.right < MAP_WIDTH - 5 && candidateBox.top > 5 && candidateBox.bottom < MAP_HEIGHT - 5
         && markerObstacles.every((box) => !boxesOverlap(candidateBox, box))
+        && dimensionObstacles.every((box) => !boxesOverlap(candidateBox, box))
         && waterLabelObstacles.every((box) => !boxesOverlap(candidateBox, box));
     }) ?? candidates[0] ?? { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
     waterLabelObstacles.push(boxAt(label, width, 20));
     return { source, from, to, label, text, angle: readableLineAngle(from, to) };
   });
-  const fixedObstacles = [
-    ...markerObstacles,
-    ...waterLinks.map((link) => boxAt(link.label, Math.max(40, link.text.length * 9), 20)),
-    boxAt(buildingPoint, 64, 40),
-    { left: MAP_WIDTH - 105, top: 0, right: MAP_WIDTH, bottom: 105 },
-  ];
-  const labels = edgeLabels(building.contour, project, fixedObstacles, waterLinks.map((link) => ({ start: link.from, end: link.to })));
+  const resolvedWaterLabelObstacles: LabelBox[] = [];
+  const displayedWaterLinks = waterLinks.map((link) => {
+    const width = Math.max(40, link.text.length * 9);
+    const originalBox = boxAt(link.label, width, 20);
+    if (dimensionObstacles.every((box) => !boxesOverlap(originalBox, box))) {
+      resolvedWaterLabelObstacles.push(originalBox);
+      return link;
+    }
+    const dx = link.to.x - link.from.x;
+    const dy = link.to.y - link.from.y;
+    const length = Math.max(1, Math.hypot(dx, dy));
+    const normal = { x: -dy / length, y: dx / length };
+    const candidates: ScreenPoint[] = [];
+    for (const fraction of [.5, .62, .38, .72, .28, .82, .18]) {
+      for (const offset of [9, -9, 16, -16, 24, -24]) {
+        candidates.push({
+          x: link.from.x + dx * fraction + normal.x * offset,
+          y: link.from.y + dy * fraction + normal.y * offset,
+        });
+      }
+    }
+    const label = candidates.find((candidate) => {
+      const candidateBox = boxAt(candidate, width, 20);
+      return candidateBox.left > 5 && candidateBox.right < MAP_WIDTH - 5 && candidateBox.top > 5 && candidateBox.bottom < MAP_HEIGHT - 5
+        && markerObstacles.every((box) => !boxesOverlap(candidateBox, box))
+        && dimensionObstacles.every((box) => !boxesOverlap(candidateBox, box))
+        && resolvedWaterLabelObstacles.every((box) => !boxesOverlap(candidateBox, box));
+    }) ?? link.label;
+    resolvedWaterLabelObstacles.push(boxAt(label, width, 20));
+    return { ...link, label };
+  });
   return <>
     <h3 className="fire-dispatch-map-heading">Схема объекта и ближайших водоисточников</h3>
     <div className="fire-dispatch-map" aria-label="Схема объекта и ближайших водоисточников">
-    <OfflineBasemap center={projection.center} zoom={projection.zoom} basemap={basemap} fitPoints={fitPoints} onProjectorReady={receiveProjector} />
+    <OfflineBasemap
+      center={projection.center}
+      zoom={projection.zoom}
+      basemap={basemap}
+      fitPoints={fitPoints}
+      fitPaddingRatio={.11}
+      fitPrimaryPoints={building.contour}
+      fitPrimaryWidthRatio={BUILDING_TARGET_WIDTH_RATIO}
+      fitPrimaryHeightRatio={BUILDING_TARGET_HEIGHT_RATIO}
+      onProjectorReady={receiveProjector}
+    />
     <svg viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} role="img" aria-label={`Объект ${building.number} и водоисточники в пределах схемы`}>
       <defs>
         <marker id="dispatch-water-arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path className="fire-dispatch-water-arrow" d="M0,0 L0,6 L7,3 z" /></marker>
       </defs>
-      {waterLinks.map(({ source, from, to, label, text, angle }) => {
+      {displayedWaterLinks.map(({ source, from, to, label, text, angle }) => {
         return <g key={source.id} className="fire-dispatch-water-link">
           <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} markerEnd="url(#dispatch-water-arrow)" />
           <text x="0" y="0" transform={`translate(${label.x} ${label.y}) rotate(${angle})`} textAnchor="middle" dominantBaseline="middle">{text}</text>
@@ -449,8 +657,16 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
   const [applicantName, setApplicantName] = useState('');
   const [applicantPhone, setApplicantPhone] = useState('');
   const [dispatcher, setDispatcher] = useState('');
+  const [dispatcherSuggestions, setDispatcherSuggestions] = useState<readonly string[]>(loadDispatcherHistory);
   const [busy, setBusy] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
+  const rememberDispatcher = useCallback(() => {
+    const value = dispatcher.trim();
+    if (value === '') return;
+    const next = [value, ...dispatcherSuggestions.filter((item) => item.toLocaleLowerCase('ru-RU') !== value.toLocaleLowerCase('ru-RU'))].slice(0, 20);
+    setDispatcherSuggestions(next);
+    window.localStorage.setItem(DISPATCHER_HISTORY_KEY, JSON.stringify(next));
+  }, [dispatcher, dispatcherSuggestions]);
   useEffect(() => { warmDispatchExport(); }, []);
   const print = async () => {
     if (busy || sheetRef.current === null) return;
@@ -504,16 +720,16 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
         </header>
         <div className="fire-dispatch-form">
           <label data-complete={place.trim() !== ''}><span>1. Место выезда, адрес</span><textarea rows={2} value={place} onChange={(event) => setPlace(event.currentTarget.value)} /></label>
-          <label data-complete={emergencyType.trim() !== ''}><span>2. Объект пожара (характер ЧС)</span><EmergencyTypeField value={emergencyType} onChange={setEmergencyType} /></label>
+          <label data-complete={emergencyType.trim() !== ''}><span>2. Вид происшествия (характер ЧС)</span><EmergencyTypeField value={emergencyType} onChange={setEmergencyType} /></label>
           <div className="fire-dispatch-row">
             <label data-complete={date.trim() !== ''}><span>3. Дата сообщения</span><input type="date" value={date} onChange={(event) => setDate(event.currentTarget.value)} /></label>
             <label data-complete={time.trim() !== ''}><span>Время получения сообщения</span><input type="time" value={time} onChange={(event) => setTime(event.currentTarget.value)} /></label>
           </div>
           <div className="fire-dispatch-row applicant">
-            <label data-complete={applicantName.trim() !== ''}><span>4. Фамилия, имя, отчество заявителя (Фамилия И.О.)</span><input value={applicantName} onChange={(event) => setApplicantName(event.currentTarget.value)} /></label>
+            <label data-complete={applicantName.trim() !== ''}><span>4. Фамилия, имя, отчество заявителя (Фамилия И.О.)</span><input value={applicantName} placeholder="Фамилия И.О." onChange={(event) => setApplicantName(event.currentTarget.value)} /></label>
             <label data-complete={applicantPhone.trim() !== ''}><span>Номер телефона</span><input type="tel" value={applicantPhone} onChange={(event) => setApplicantPhone(event.currentTarget.value)} /></label>
           </div>
-          <div className="fire-dispatch-row dispatcher"><label data-complete={dispatcher.trim() !== ''}><span>5. Дежурный диспетчер подразделения (Фамилия И.О.)</span><input value={dispatcher} placeholder="Фамилия И.О." onChange={(event) => setDispatcher(event.currentTarget.value)} /></label><label><span>Подпись дежурного диспетчера</span><input aria-label="Подпись дежурного диспетчера" /></label></div>
+          <div className="fire-dispatch-row dispatcher"><label data-complete={dispatcher.trim() !== ''}><span>5. Дежурный диспетчер подразделения (Фамилия И.О.)</span><input value={dispatcher} list="fire-dispatch-dispatchers" placeholder="Фамилия И.О." autoComplete="off" onBlur={rememberDispatcher} onChange={(event) => setDispatcher(event.currentTarget.value)} /><datalist id="fire-dispatch-dispatchers">{dispatcherSuggestions.map((name) => <option value={name} key={name} />)}</datalist></label><label><span>Подпись дежурного диспетчера</span><input aria-label="Подпись дежурного диспетчера" /></label></div>
         </div>
         <DispatchMap building={building} objects={objects} basemap={basemap} />
         <section className="fire-dispatch-planning-documents" aria-label="Документы предварительного планирования">
