@@ -34,17 +34,26 @@ import { MobileAccessDialog } from "./MobileAccessDialog";
 import { UpdateCenter } from "./UpdateCenter";
 import { DistrictMapPage } from "./DistrictMapPage";
 import {
-  clearPendingDistrictMapProject,
+  createPendingDistrictMapOperation,
   fetchPublishedDistrictMapProject,
   isPublishedProjectNewer,
   loadDistrictMapProject,
-  loadPendingDistrictMapProject,
-  publishDistrictMapProject,
+  loadPendingDistrictMapOperations,
+  publishDistrictMapOperation,
   saveDistrictMapProject,
-  savePendingDistrictMapProject,
+  savePendingDistrictMapOperations,
   type DistrictMapObject,
+  type PendingDistrictMapOperation,
   type DistrictMapProject,
 } from "./district-map-model";
+import {
+  authenticateMapAdmin,
+  checkMapSynchronization,
+  disabledMapSyncStatus,
+  loadMapSyncConfig,
+  type MapAdminCredential,
+  type MapSyncStatus,
+} from "./map-sync-service";
 
 type Tab = "calculation" | "goods" | "district";
 type Theme = "light" | "dark";
@@ -92,8 +101,10 @@ export function App() {
   const [reportBusy, setReportBusy] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [districtProject, setDistrictProject] = useState(loadDistrictMapProject);
-  const initialPendingDistrictProjectRef = useRef<DistrictMapProject | null>(loadPendingDistrictMapProject());
-  const [districtSyncState, setDistrictSyncState] = useState<DistrictSyncState>(() => initialPendingDistrictProjectRef.current === null ? "ready" : "pending");
+  const initialPendingDistrictOperationsRef = useRef<PendingDistrictMapOperation[]>(loadPendingDistrictMapOperations());
+  const [districtSyncState, setDistrictSyncState] = useState<DistrictSyncState>(() => initialPendingDistrictOperationsRef.current.length === 0 ? "ready" : "pending");
+  const [mapSyncStatus, setMapSyncStatus] = useState<MapSyncStatus>(() => disabledMapSyncStatus());
+  const [mapSyncCheckBusy, setMapSyncCheckBusy] = useState(false);
   const [districtAdmin, setDistrictAdmin] = useState(false);
   const [districtManagementOpen, setDistrictManagementOpen] = useState(false);
   const [adminLoginOpen, setAdminLoginOpen] = useState(false);
@@ -108,9 +119,9 @@ export function App() {
   const [, setHistoryRevision] = useState(0);
   const districtChangeRememberedRef = useRef(false);
   const districtProjectRef = useRef(districtProject);
-  const pendingDistrictProjectRef = useRef<DistrictMapProject | null>(initialPendingDistrictProjectRef.current);
+  const pendingDistrictOperationsRef = useRef<PendingDistrictMapOperation[]>(initialPendingDistrictOperationsRef.current);
   const districtPublishingRef = useRef(false);
-  const adminPasswordRef = useRef("");
+  const adminCredentialRef = useRef<MapAdminCredential | null>(null);
   useEffect(() => { districtProjectRef.current = districtProject; }, [districtProject]);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -125,7 +136,7 @@ export function App() {
     const refresh = async () => {
       const remote = await fetchPublishedDistrictMapProject();
       if (cancelled || remote === null) return;
-      if (pendingDistrictProjectRef.current !== null) {
+      if (pendingDistrictOperationsRef.current.length > 0) {
         setDistrictSyncState("pending");
         return;
       }
@@ -139,7 +150,13 @@ export function App() {
     };
     const onVisibility = () => { if (document.visibilityState === "visible") void refresh(); };
     void refresh();
-    const interval = window.setInterval(() => void refresh(), 30 * 1000);
+    let interval = window.setInterval(() => void refresh(), 60 * 1000);
+    void loadMapSyncConfig().then((config) => {
+      if (cancelled || config === null) return;
+      window.clearInterval(interval);
+      interval = window.setInterval(() => void refresh(), config.pollIntervalMs);
+      if (!config.coordinatorEnabled) setMapSyncStatus(disabledMapSyncStatus('Работает прямая синхронизация с основной базой.'));
+    });
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       cancelled = true;
@@ -147,6 +164,32 @@ export function App() {
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [districtAdmin]);
+
+  const refreshMapSyncStatus = async () => {
+    setMapSyncCheckBusy(true);
+    try {
+      const config = await loadMapSyncConfig();
+      if (config?.coordinatorEnabled !== true) {
+        setMapSyncStatus(disabledMapSyncStatus('Резервный облачный сервис подготовлен, но ещё не включён.'));
+        return;
+      }
+      const status = await checkMapSynchronization(adminCredentialRef.current ?? undefined);
+      setMapSyncStatus(status);
+    } catch (error) {
+      setMapSyncStatus((current) => ({
+        ...current,
+        enabled: true,
+        mode: 'offline',
+        activeProvider: 'local',
+        backupAvailable: false,
+        synchronized: false,
+        pendingOperations: 0,
+        message: message(error),
+      }));
+    } finally {
+      setMapSyncCheckBusy(false);
+    }
+  };
 
   const snapshot = (): Snapshot => ({
     input,
@@ -197,8 +240,9 @@ export function App() {
     setDistrictProject(restoredProject);
     saveDistrictMapProject(restoredProject);
     if (districtChanged) {
-      pendingDistrictProjectRef.current = restoredProject;
-      savePendingDistrictMapProject(restoredProject);
+      const operation = createPendingDistrictMapOperation(currentProject.revision, restoredProject);
+      pendingDistrictOperationsRef.current = [...pendingDistrictOperationsRef.current, operation];
+      savePendingDistrictMapOperations(pendingDistrictOperationsRef.current);
       setDistrictSyncState("pending");
       void publishPendingDistrictProject();
     }
@@ -464,18 +508,19 @@ export function App() {
     });
   };
   async function publishPendingDistrictProject() {
-    if (districtPublishingRef.current || adminPasswordRef.current === "") return;
+    if (districtPublishingRef.current || adminCredentialRef.current === null) return;
     districtPublishingRef.current = true;
     try {
-      while (pendingDistrictProjectRef.current !== null) {
-        const pending = pendingDistrictProjectRef.current;
+      while (pendingDistrictOperationsRef.current.length > 0) {
+        const pending = pendingDistrictOperationsRef.current[0];
+        if (pending === undefined) break;
         setDistrictSyncState("publishing");
-        const synchronized = await publishDistrictMapProject(pending, adminPasswordRef.current);
-        if (pendingDistrictProjectRef.current === pending) {
-          pendingDistrictProjectRef.current = null;
-          clearPendingDistrictMapProject();
+        const synchronized = await publishDistrictMapOperation(pending, adminCredentialRef.current);
+        if (pendingDistrictOperationsRef.current[0]?.operationId === pending.operationId) {
+          pendingDistrictOperationsRef.current = pendingDistrictOperationsRef.current.slice(1);
+          savePendingDistrictMapOperations(pendingDistrictOperationsRef.current);
         }
-        if (pendingDistrictProjectRef.current === null) {
+        if (pendingDistrictOperationsRef.current.length === 0) {
           const next = { ...synchronized, draft: synchronized.published };
           districtProjectRef.current = next;
           setDistrictProject(next);
@@ -483,11 +528,12 @@ export function App() {
           setDistrictSyncState("ready");
         }
       }
+      void refreshMapSyncStatus();
     } catch (error) {
       setDistrictSyncState("error");
       setNotice(`Изменения сохранены на этом устройстве, но пока не отправлены: ${message(error)}`);
       window.setTimeout(() => {
-        if (pendingDistrictProjectRef.current !== null) void publishPendingDistrictProject();
+        if (pendingDistrictOperationsRef.current.length > 0) void publishPendingDistrictProject();
       }, 30_000);
     } finally {
       districtPublishingRef.current = false;
@@ -502,9 +548,10 @@ export function App() {
     // prevents an old browser cache with a numerically inflated revision from
     // rejecting a genuinely newer shared map.
     const published = { ...current, revision: Math.max(current.revision + 1, Date.now()), draft: objects, published: objects, draftSavedAtIso: now, publishedAtIso: now };
+    const operation = createPendingDistrictMapOperation(current.revision, published);
     districtProjectRef.current = published;
-    pendingDistrictProjectRef.current = published;
-    savePendingDistrictMapProject(published);
+    pendingDistrictOperationsRef.current = [...pendingDistrictOperationsRef.current, operation];
+    savePendingDistrictMapOperations(pendingDistrictOperationsRef.current);
     setDistrictProject(published);
     saveDistrictMapProject(published);
     setDistrictSyncState("pending");
@@ -647,11 +694,14 @@ export function App() {
           managementOpen={districtManagementOpen}
           onCloseManagement={() => setDistrictManagementOpen(false)}
           onExitAdmin={() => {
-            adminPasswordRef.current = "";
+            adminCredentialRef.current = null;
             setAdminPassword("");
             setDistrictManagementOpen(false);
             setDistrictAdmin(false);
           }}
+          syncStatus={{ ...mapSyncStatus, pendingOperations: pendingDistrictOperationsRef.current.length + mapSyncStatus.pendingOperations }}
+          syncCheckBusy={mapSyncCheckBusy}
+          onCheckSynchronization={() => void refreshMapSyncStatus()}
         />
       ) : (
         <>
@@ -993,16 +1043,28 @@ export function App() {
             className="admin-login-dialog"
             onSubmit={(event) => {
               event.preventDefault();
-              if (adminPassword !== "1234") {
-                setAdminPasswordError("Неверный пароль.");
-                return;
-              }
-              adminPasswordRef.current = adminPassword;
-              setDistrictAdmin(true);
-              setDistrictManagementOpen(true);
-              setAdminLoginOpen(false);
-              setTab("district");
-              if (pendingDistrictProjectRef.current !== null) void publishPendingDistrictProject();
+              void (async () => {
+                try {
+                  const config = await loadMapSyncConfig();
+                  let credential: MapAdminCredential;
+                  if (config?.coordinatorEnabled === true) {
+                    const authenticated = await authenticateMapAdmin(adminPassword);
+                    credential = authenticated.credential;
+                    setMapSyncStatus(authenticated.status);
+                  } else {
+                    if (adminPassword !== "1234") throw new Error("Неверный пароль.");
+                    credential = { password: adminPassword, sessionToken: "" };
+                  }
+                  adminCredentialRef.current = credential;
+                  setDistrictAdmin(true);
+                  setDistrictManagementOpen(true);
+                  setAdminLoginOpen(false);
+                  setTab("district");
+                  if (pendingDistrictOperationsRef.current.length > 0) void publishPendingDistrictProject();
+                } catch (error) {
+                  setAdminPasswordError(message(error));
+                }
+              })();
             }}
           >
             <button type="button" className="dialog-close" aria-label="Закрыть" onClick={() => setAdminLoginOpen(false)}><UiIcon name="close" /></button>

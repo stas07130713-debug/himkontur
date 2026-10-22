@@ -16,3 +16,4 @@ ui-*.png
 edge-*.png
 tile-*
 cloud/**/*.zip
+cloud/**/.wrangler/

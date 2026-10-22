@@ -1,4 +1,10 @@
 import type { GeoPoint } from '../core/types';
+import {
+  fetchCoordinatedMap,
+  loadMapSyncConfig,
+  publishCoordinatedMap,
+  type MapAdminCredential,
+} from './map-sync-service';
 
 export type DistrictObjectKind = 'building' | 'hydrant' | 'reservoir';
 export type HydrantStatus = 'unknown' | 'serviceable' | 'faulty' | 'disabled';
@@ -95,9 +101,15 @@ export type DistrictMapBackup = Readonly<{
   project: DistrictMapProject;
 }>;
 
+export type PendingDistrictMapOperation = Readonly<{
+  operationId: string;
+  baseRevision: number;
+  project: DistrictMapProject;
+  createdAtIso: string;
+}>;
+
 const STORAGE_KEY = 'himkontur-district-map-project-v1';
 const PENDING_SYNC_STORAGE_KEY = 'himkontur-district-map-pending-sync-v1';
-const MAP_SYNC_CONFIG_URL = './data/map-sync.json';
 const GIST_CONFIG_URL = './data/gist-sync.json';
 const GITHUB_DATA_API = 'https://api.github.com/repos/stas07130713-debug/himkontur/contents/public/data/district-map.json?ref=main';
 const PUBLISHED_DATA_URLS = [
@@ -109,11 +121,6 @@ type GistSyncConfig = Readonly<{
   gistId: string;
   owner: string;
   fileName: string;
-}>;
-
-type MapSyncConfig = Readonly<{
-  apiUrl: string;
-  legacyGist: GistSyncConfig | null;
 }>;
 
 const PREVIEW_OBJECTS: readonly DistrictMapObject[] = [
@@ -352,12 +359,37 @@ export function loadDistrictMapProject(): DistrictMapProject {
   }
 }
 
-export function loadPendingDistrictMapProject(): DistrictMapProject | null {
+export function loadPendingDistrictMapOperations(): PendingDistrictMapOperation[] {
   try {
     const raw = window.localStorage.getItem(PENDING_SYNC_STORAGE_KEY);
-    return raw === null ? null : normalizeDistrictMapProject(JSON.parse(raw));
+    if (raw === null) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (isObject(parsed) && parsed.version === 2 && Array.isArray(parsed.operations)) {
+      return parsed.operations.flatMap((value) => {
+        if (!isObject(value)) return [];
+        const project = normalizeDistrictMapProject(value.project);
+        const operationId = text(value.operationId);
+        if (project === null || operationId === '') return [];
+        return [{
+          operationId,
+          baseRevision: typeof value.baseRevision === 'number' && Number.isSafeInteger(value.baseRevision)
+            ? Math.max(0, value.baseRevision)
+            : Math.max(0, project.revision - 1),
+          project,
+          createdAtIso: text(value.createdAtIso) || project.publishedAtIso,
+        }];
+      });
+    }
+    // Migration from releases <= 0.3.31, which stored just the last project.
+    const legacyProject = normalizeDistrictMapProject(parsed);
+    return legacyProject === null ? [] : [{
+      operationId: `legacy-${legacyProject.revision}`,
+      baseRevision: Math.max(0, legacyProject.revision - 1),
+      project: legacyProject,
+      createdAtIso: legacyProject.publishedAtIso,
+    }];
   } catch {
-    return null;
+    return [];
   }
 }
 
@@ -449,30 +481,8 @@ async function fetchGistSyncConfig(): Promise<GistSyncConfig | null> {
   }
 }
 
-async function fetchMapSyncConfig(): Promise<MapSyncConfig | null> {
-  try {
-    const response = await fetch(`${MAP_SYNC_CONFIG_URL}?ts=${Date.now()}`, { cache: 'no-store' });
-    if (!response.ok) return null;
-    const value: unknown = await response.json();
-    if (!isObject(value)) return null;
-    const legacy = isObject(value.legacyGist) ? value.legacyGist : null;
-    const legacyGist: GistSyncConfig | null = legacy === null ? null : {
-      gistId: text(legacy.gistId),
-      owner: text(legacy.owner),
-      fileName: text(legacy.fileName) || 'district-map.json',
-    };
-    const apiUrl = text(value.apiUrl).replace(/\/+$/u, '');
-    return apiUrl === '' ? null : {
-      apiUrl,
-      legacyGist: legacyGist?.gistId && legacyGist.owner ? legacyGist : null,
-    };
-  } catch {
-    return null;
-  }
-}
-
 async function fetchSynchronizedDistrictMapProject(): Promise<DistrictMapProject | null> {
-  const mapConfig = await fetchMapSyncConfig();
+  const mapConfig = await loadMapSyncConfig();
   const config = mapConfig?.legacyGist ?? await fetchGistSyncConfig();
   if (config === null) return null;
   const rawUrl = `https://gist.githubusercontent.com/${encodeURIComponent(config.owner)}/${encodeURIComponent(config.gistId)}/raw/${encodeURIComponent(config.fileName)}`;
@@ -480,12 +490,12 @@ async function fetchSynchronizedDistrictMapProject(): Promise<DistrictMapProject
 }
 
 async function fetchCloudDistrictMapProject(): Promise<DistrictMapProject | null> {
-  const config = await fetchMapSyncConfig();
+  const config = await loadMapSyncConfig();
   if (config === null) return null;
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 10_000);
   try {
-    const response = await fetch(`${config.apiUrl}?ts=${Date.now()}`, {
+    const response = await fetch(`${config.primaryApiUrl}?ts=${Date.now()}`, {
       cache: 'no-store',
       signal: controller.signal,
     });
@@ -522,6 +532,10 @@ async function fetchGithubDistrictMapProject(): Promise<DistrictMapProject | nul
 }
 
 export async function fetchPublishedDistrictMapProject(): Promise<DistrictMapProject | null> {
+  const config = await loadMapSyncConfig();
+  const coordinated = config?.coordinatorEnabled === true
+    ? await fetchCoordinatedMap().then((value) => normalizeDistrictMapProject(value.project)).catch(() => null)
+    : null;
   const [cloud, synchronized, bundled, direct] = await Promise.all([
     fetchCloudDistrictMapProject(),
     fetchSynchronizedDistrictMapProject(),
@@ -529,27 +543,35 @@ export async function fetchPublishedDistrictMapProject(): Promise<DistrictMapPro
     fetchDirectPublishedDistrictMapProject(),
   ]);
   const remote = direct ?? await fetchGithubDistrictMapProject();
-  return [cloud, synchronized, remote, bundled]
+  return [coordinated, cloud, synchronized, remote, bundled]
     .filter((project): project is DistrictMapProject => project !== null)
     .reduce<DistrictMapProject | null>((newest, project) => (
       newest === null || isPublishedProjectNewer(project, newest) ? project : newest
     ), null);
 }
 
-export async function publishDistrictMapProject(project: DistrictMapProject, adminPassword: string): Promise<DistrictMapProject> {
-  const config = await fetchMapSyncConfig();
+export async function publishDistrictMapOperation(operation: PendingDistrictMapOperation, credential: MapAdminCredential): Promise<DistrictMapProject> {
+  const config = await loadMapSyncConfig();
   if (config === null) throw new Error('Облачная синхронизация ещё не настроена.');
+  if (config.coordinatorEnabled) {
+    const result = await publishCoordinatedMap({ ...operation, credential });
+    const published = normalizeDistrictMapProject(result.project);
+    if (published === null) throw new Error('Сервис синхронизации вернул некорректные данные.');
+    return published;
+  }
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 20_000);
   try {
-    const response = await fetch(config.apiUrl, {
+    const response = await fetch(config.primaryApiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        adminPassword,
-        project,
+        adminPassword: credential.password,
+        operationId: operation.operationId,
+        baseRevision: operation.baseRevision,
+        project: operation.project,
         updatedBy: 'Администратор ХИМКОНТУР',
       }),
       cache: 'no-store',
@@ -583,12 +605,24 @@ export function saveDistrictMapProject(project: DistrictMapProject): void {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
 }
 
-export function savePendingDistrictMapProject(project: DistrictMapProject): void {
-  window.localStorage.setItem(PENDING_SYNC_STORAGE_KEY, JSON.stringify(project));
+export function createPendingDistrictMapOperation(baseRevision: number, project: DistrictMapProject): PendingDistrictMapOperation {
+  const randomPart = typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return {
+    operationId: `map-${randomPart}`,
+    baseRevision,
+    project,
+    createdAtIso: new Date().toISOString(),
+  };
 }
 
-export function clearPendingDistrictMapProject(): void {
-  window.localStorage.removeItem(PENDING_SYNC_STORAGE_KEY);
+export function savePendingDistrictMapOperations(operations: readonly PendingDistrictMapOperation[]): void {
+  if (operations.length === 0) {
+    window.localStorage.removeItem(PENDING_SYNC_STORAGE_KEY);
+    return;
+  }
+  window.localStorage.setItem(PENDING_SYNC_STORAGE_KEY, JSON.stringify({ version: 2, operations }));
 }
 
 export function districtObjectTitle(object: DistrictMapObject): string {

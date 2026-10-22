@@ -54,6 +54,7 @@ import {
   isBuildingWithContour,
   type DistrictLayerKey,
 } from './district-map-visuals';
+import type { MapSyncStatus } from './map-sync-service';
 
 type Props = Readonly<{
   project: DistrictMapProject;
@@ -69,6 +70,9 @@ type Props = Readonly<{
   managementOpen: boolean;
   onCloseManagement: () => void;
   onExitAdmin: () => void;
+  syncStatus: MapSyncStatus;
+  syncCheckBusy: boolean;
+  onCheckSynchronization: () => void;
 }>;
 
 type ContourDragState =
@@ -1402,6 +1406,18 @@ export function DistrictMapPage(props: Props) {
             <button type="button" className="district-act-upload" disabled={actImporting} onClick={() => actInputRef.current?.click()}><UiIcon name="upload" /><span><strong>{actImporting ? 'Обрабатываю акт…' : 'Загрузить акт проверки наружного противопожарного водоснабжения'}</strong><small>Word (.docx): состояние и причина неисправности сопоставляются строго по номеру ПГ</small></span></button>
             <input ref={actInputRef} className="district-act-file-input" type="file" accept=".docx,.csv,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/csv,text/plain" aria-label="Выбрать файл акта проверки пожарных гидрантов" onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file !== undefined) void importHydrantAct(file); }} />
           </div>
+          <section className="district-sync-diagnostics" aria-label="Состояние синхронизации карты">
+            <div className="district-sync-diagnostics-heading">
+              <div><strong>Синхронизация карты</strong><small>{props.syncStatus.message || 'Проверка основной и резервной базы данных.'}</small></div>
+              <button type="button" className="secondary" disabled={props.syncCheckBusy} onClick={props.onCheckSynchronization}>{props.syncCheckBusy ? 'Проверяю…' : 'Проверить'}</button>
+            </div>
+            <div className="district-sync-diagnostics-grid">
+              <span><small>Основная база</small><strong className={props.syncStatus.primaryAvailable === false ? 'is-error' : ''}>{props.syncStatus.primaryAvailable === true ? 'Яндекс доступен' : props.syncStatus.primaryAvailable === false ? 'Яндекс недоступен' : 'Не проверена'}</strong></span>
+              <span><small>Резервная база</small><strong className={props.syncStatus.backupAvailable === false ? 'is-error' : ''}>{props.syncStatus.backupAvailable === true ? 'Cloudflare доступен' : props.syncStatus.backupAvailable === false ? 'Cloudflare недоступен' : 'Не включена'}</strong></span>
+              <span><small>Текущий режим</small><strong>{props.syncStatus.mode === 'primary' ? 'Основная база' : props.syncStatus.mode === 'backup' ? 'Резервный режим' : props.syncStatus.mode === 'recovering' ? 'Восстановление' : props.syncStatus.mode === 'conflict' ? 'Требуется проверка' : props.syncStatus.mode === 'disabled' ? 'Резерв выключен' : 'Автономно'}</strong></span>
+              <span><small>Локальная очередь</small><strong>{props.syncStatus.pendingOperations} оп.</strong></span>
+            </div>
+          </section>
           {mapBackupStatus !== '' && <p className="district-act-status district-map-backup-status">{mapBackupStatus}</p>}
           {actImportStatus !== '' && <p className="district-act-status">{actImportStatus}</p>}
           {pendingHydrantAct !== null && <button type="button" className="primary district-act-apply" onClick={applyHydrantAct}><UiIcon name="check" /><span>Применить данные акта к пожарным гидрантам на карте</span></button>}

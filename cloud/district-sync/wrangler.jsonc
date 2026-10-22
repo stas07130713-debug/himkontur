@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "himkontur-district-sync",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  "triggers": { "crons": ["*/5 * * * *"] },
+  "vars": {
+    "YANDEX_API_URL": "https://functions.yandexcloud.net/d4eqi6k1daj25oqpk6bp",
+    "ALLOWED_ORIGINS": "https://stas07130713-debug.github.io,http://127.0.0.1:4183,http://127.0.0.1:4194,http://127.0.0.1:4196,http://localhost:5173,null"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "himkontur-district-map",
+      "database_id": "363fe41f-0353-4457-9e31-618e4e6be0a9",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
