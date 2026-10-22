@@ -3,7 +3,9 @@ import html2canvas from 'html2canvas';
 async function waitForMapFrame(map: HTMLElement): Promise<void> {
   const offlineMap = map.querySelector<HTMLElement>('.offline-vector-map');
   if (offlineMap === null) return;
-  const deadline = performance.now() + 5_000;
+  // Do not hold report creation for several seconds when an online tile is
+  // slow: the autonomous map and vector overlays are already available.
+  const deadline = performance.now() + 1_200;
   while (!['idle', 'loaded'].includes(offlineMap.dataset.mapStatus ?? '') && performance.now() < deadline) {
     await new Promise<void>((resolve) => window.setTimeout(resolve, 50));
   }
@@ -63,7 +65,7 @@ export async function captureMapForReport(map: HTMLElement, sidePanel?: HTMLElem
     // ResizeObserver and MapLibre both need a settled frame after the phone
     // layout is temporarily normalized to the report's landscape geometry.
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-    await new Promise<void>((resolve) => window.setTimeout(resolve, 250));
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 80));
     await waitForMapFrame(map);
     // MapLibre owns both the autonomous vector map and satellite imagery.
     // Waiting for its idle frame keeps PDF and Word captures identical to the
@@ -72,7 +74,7 @@ export async function captureMapForReport(map: HTMLElement, sidePanel?: HTMLElem
     await document.fonts.ready;
     const canvas = await html2canvas(workspace, {
       backgroundColor: '#edf3f2',
-      scale: Math.min(2, Math.max(1.25, window.devicePixelRatio || 1)),
+      scale: Math.min(1.5, Math.max(1.15, window.devicePixelRatio || 1)),
       useCORS: true,
       allowTaint: false,
       logging: false,

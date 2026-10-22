@@ -47,9 +47,10 @@ import {
   BUILDING_LAYER_KEYS,
   DISTRICT_LAYER_KEYS,
   NPPV_LAYER_KEYS,
+  commonBuildingMarkerScale,
   districtLayerKey,
   districtObjectFocusPoint,
-  fittedBuildingMarkerScale,
+  districtResponseBoundaryCenter,
   hasDistrictMarker,
   isBuildingWithContour,
   type DistrictLayerKey,
@@ -591,11 +592,16 @@ function ObjectDetails({ object, adminMode, onEdit, onDelete, onOpenDispatch }: 
 }
 
 export function DistrictMapPage(props: Props) {
-  const [center, setCenter] = useState<GeoPoint>(MAP_INITIAL_CENTER);
+  const compactViewport = () => window.matchMedia('(max-width: 720px)').matches;
+  const [center, setCenter] = useState<GeoPoint>(() => districtResponseBoundaryCenter(props.objects) ?? MAP_INITIAL_CENTER);
   const [zoom, setZoom] = useState(1.65);
   const [viewSize, setViewSize] = useState({ width: 1000, height: 700 });
-  const [visibleLayers, setVisibleLayers] = useState<ReadonlySet<DistrictLayerKey>>(() => new Set(DISTRICT_LAYER_KEYS));
-  const [legendCollapsed, setLegendCollapsed] = useState(false);
+  const [visibleLayers, setVisibleLayers] = useState<ReadonlySet<DistrictLayerKey>>(() => {
+    const layers = new Set<DistrictLayerKey>(DISTRICT_LAYER_KEYS);
+    if (compactViewport()) for (const key of NPPV_LAYER_KEYS) layers.delete(key);
+    return layers;
+  });
+  const [legendCollapsed, setLegendCollapsed] = useState(compactViewport);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [searchHighlightedId, setSearchHighlightedId] = useState<string | null>(null);
@@ -614,6 +620,8 @@ export function DistrictMapPage(props: Props) {
   const [dispatchBuilding, setDispatchBuilding] = useState<DistrictBuilding | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const detailsPanelRef = useRef<HTMLElement>(null);
+  const initialViewportFittedRef = useRef(false);
   const actInputRef = useRef<HTMLInputElement>(null);
   const mapBackupInputRef = useRef<HTMLInputElement>(null);
   const panRef = useRef<{ pointerId: number; clientX: number; clientY: number; center: GeoPoint } | null>(null);
@@ -699,6 +707,7 @@ export function DistrictMapPage(props: Props) {
   });
   const visibleObjects = props.objects.filter((object) => object.id === searchHighlightedId
     || visibleLayers.has(districtLayerKey(object)));
+  const commonMarkerScale = commonBuildingMarkerScale(visibleObjects, markerScale, projection.project);
   const markerPlacements = useMemo(() => {
     const raw = visibleObjects
       .filter(hasDistrictMarker)
@@ -809,10 +818,17 @@ export function DistrictMapPage(props: Props) {
   const clearMapSelection = () => {
     setSelectedId(null);
     setSearchHighlightedId(null);
-    setLegendCollapsed(false);
+    setLegendCollapsed(compactViewport());
     setSearchResetSignal((current) => current + 1);
   };
-  const changeZoom = (factor: number, anchor?: GeoPoint) => setZoom((currentZoom) => {
+  useEffect(() => {
+    if (selectedId === null || !compactViewport()) return;
+    const frame = window.requestAnimationFrame(() => detailsPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [selectedId]);
+  const changeZoom = (factor: number, anchor?: GeoPoint) => {
+    if (compactViewport()) setLegendCollapsed(true);
+    setZoom((currentZoom) => {
     const nextZoom = Math.max(0.45, Math.min(64, currentZoom * factor));
     const appliedFactor = nextZoom / currentZoom;
     if (anchor !== undefined && Math.abs(appliedFactor - 1) > 0.0001) {
@@ -826,7 +842,29 @@ export function DistrictMapPage(props: Props) {
       });
     }
     return nextZoom;
-  });
+    });
+  };
+  useEffect(() => {
+    if (initialViewportFittedRef.current) return;
+    const boundaryPoints = props.objects
+      .filter((object): object is DistrictBuilding => object.kind === 'building' && object.mapRole === 'response-boundary')
+      .flatMap((object) => object.contour);
+    const boundaryCenter = districtResponseBoundaryCenter(props.objects);
+    if (boundaryCenter === null || boundaryPoints.length < 2) return;
+    const stageRect = stageRef.current?.getBoundingClientRect();
+    const width = Math.max(1, stageRect?.width ?? viewSize.width);
+    const height = Math.max(1, stageRect?.height ?? viewSize.height);
+    const latitudeSpanKm = (Math.max(...boundaryPoints.map((point) => point.latitude)) - Math.min(...boundaryPoints.map((point) => point.latitude))) * KM_PER_LATITUDE_DEGREE;
+    const longitudeSpanKm = (Math.max(...boundaryPoints.map((point) => point.longitude)) - Math.min(...boundaryPoints.map((point) => point.longitude))) * KM_PER_LONGITUDE_DEGREE;
+    const basePixelsPerKm = Math.min(width / BASE_WIDTH_KM, height / BASE_HEIGHT_KM);
+    const fittedZoom = Math.min(
+      (width * .82) / Math.max(longitudeSpanKm, .2),
+      (height * .82) / Math.max(latitudeSpanKm, .2),
+    ) / basePixelsPerKm;
+    setCenter(boundaryCenter);
+    setZoom(Math.max(.65, Math.min(8, fittedZoom)));
+    initialViewportFittedRef.current = true;
+  }, [props.objects, viewSize.height, viewSize.width]);
   useEffect(() => {
     const element = stageRef.current;
     if (element === null) return;
@@ -979,6 +1017,7 @@ export function DistrictMapPage(props: Props) {
   };
 
   const onMapPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (compactViewport()) setLegendCollapsed(true);
     if (contourDraft !== null && event.button === 2) {
       event.preventDefault();
       rulerRightPanRef.current = {
@@ -1364,7 +1403,7 @@ export function DistrictMapPage(props: Props) {
                 },
               } : {};
               const contourSearch = searchHighlightedId === object.id && isBuildingWithContour(object);
-              return <DistrictMapMarker key={object.id} object={object} x={x} y={y} selected={selectedId === object.id && !contourSearch} highlighted={searchHighlightedId === object.id && !contourSearch} editing={props.adminMode} detailLevel={markerDetailLevel} scale={fittedBuildingMarkerScale(object, markerScale, projection.project)} interactionDisabled={rulerActive || contourDraft !== null} onSelect={() => selectObject(object.id)} onHoverChange={(hovered) => setHoveredId(hovered ? object.id : null)} {...dragProps} />;
+              return <DistrictMapMarker key={object.id} object={object} x={x} y={y} selected={selectedId === object.id && !contourSearch} highlighted={searchHighlightedId === object.id && !contourSearch} editing={props.adminMode} detailLevel={markerDetailLevel} scale={object.kind === 'building' ? commonMarkerScale : markerScale} interactionDisabled={rulerActive || contourDraft !== null} onSelect={() => selectObject(object.id)} onHoverChange={(hovered) => setHoveredId(hovered ? object.id : null)} {...dragProps} />;
             })}
             <MapRulerOverlay points={rulerPoints} project={projection.project} />
           </svg>
@@ -1388,7 +1427,7 @@ export function DistrictMapPage(props: Props) {
           <div className="district-map-attribution">{props.basemap === 'standard' ? '© OpenStreetMap contributors' : 'Спутник: Esri World Imagery · автономная копия'}</div>
         </div>
       </main>
-      {selected !== null && <aside className="district-details-panel">
+      {selected !== null && <aside className="district-details-panel" ref={detailsPanelRef}>
         <div className="district-panel-heading"><span>Объекты района выезда</span></div>
         <ObjectDetails object={selected} adminMode={props.adminMode} onEdit={() => setEditorObject(selected)} onDelete={deleteSelected} onOpenDispatch={() => { if (selected.kind === 'building') setDispatchBuilding(selected); }} />
       </aside>}

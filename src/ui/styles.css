@@ -3050,6 +3050,119 @@ button.wide { width: 100%; margin-top: 10px; }
   }
 }
 
+/* Compact control-point tiles and stable mobile toolbars. */
+.control-palette .inline-controls-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 4px;
+  padding-top: 0;
+}
+.control-palette .inline-controls-list .section-heading {
+  position: sticky;
+  z-index: 3;
+  top: 0;
+  grid-column: 1 / -1;
+  min-height: 30px;
+  margin: 0 0 2px;
+  padding: 4px 2px;
+  background: var(--panel, #fff);
+  border-bottom: 1px solid #d8e5e5;
+}
+.control-palette .inline-controls-list .section-heading .link {
+  min-height: 25px;
+  padding: 2px 7px;
+}
+.control-palette .inline-controls-list .placed-control-row {
+  min-height: 48px;
+  margin: 0 !important;
+  padding: 4px;
+  grid-template-columns: 27px minmax(0, 1fr) 18px;
+  gap: 3px;
+  cursor: pointer;
+}
+.control-palette .inline-controls-list .placed-control-row .building-icon { width: 25px; height: 25px; }
+.control-palette .inline-controls-list .placed-control-row strong { font-size: 9px; }
+.control-palette .inline-controls-list .placed-control-row small { font-size: 8px; line-height: 1.15; }
+.control-palette .inline-controls-list .placed-control-row:focus-visible {
+  outline: 2px solid #08aeb7;
+  outline-offset: 1px;
+}
+[data-theme="dark"] .control-palette .inline-controls-list .section-heading {
+  border-bottom-color: #31515a;
+  background: #0a222c;
+}
+
+.control-marker.search-highlight .control-point-dot {
+  stroke: #17f4ec;
+  stroke-width: 8px;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: control-point-focus-pulse .7s ease-in-out 4;
+}
+.control-marker.search-highlight .map-building-image { animation: control-point-image-pulse .7s ease-in-out 4; }
+@keyframes control-point-focus-pulse {
+  0%, 100% { opacity: .5; transform: scale(.8); }
+  50% { opacity: 1; transform: scale(1.65); }
+}
+@keyframes control-point-image-pulse {
+  0%, 100% { opacity: .58; }
+  50% { opacity: 1; filter: drop-shadow(0 0 10px #16f2e9); }
+}
+
+.calculation-map-legend { max-height: min(68%, 410px); overflow-y: auto; }
+.calculation-map-legend .legend-source-marker,
+.calculation-map-legend .legend-sector { width: 29px; height: 19px; }
+.calculation-map-legend .building-icon.compact { width: 29px; height: 22px; }
+
+.fire-dispatch-ticket-sheet.mobile-map-only {
+  width: min(100%, 760px);
+  min-height: 0;
+  padding: 10px;
+  gap: 8px;
+}
+.fire-dispatch-ticket-sheet.mobile-map-only .fire-dispatch-map { aspect-ratio: 1000 / 680; }
+
+@media (max-width: 720px), (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
+  .topbar { padding-block: 5px 4px; gap: 4px; }
+  .topbar .main-tabs { height: 39px; gap: 4px; }
+  .topbar .main-tabs button { min-height: 39px; padding-inline: 2px; }
+  .topbar .main-tabs .main-tab-icon { width: 21px; height: 21px; flex-basis: 21px; }
+  .file-actions { padding: 0; gap: 3px; }
+  .file-actions > button,
+  .file-actions > .map-settings-action {
+    height: 36px;
+    min-height: 36px;
+    padding: 3px 2px;
+    gap: 3px;
+    box-sizing: border-box;
+    font-size: 8.5px;
+    line-height: 1.05;
+  }
+  .file-actions > button .ui-mini-icon,
+  .file-actions > .mobile-access-action .ui-mini-icon {
+    width: 16px;
+    height: 16px;
+    flex-basis: 16px;
+  }
+  .control-palette .inline-controls-list { grid-template-columns: 1fr; }
+  .calculation-map-legend,
+  .district-map-legend { max-height: 48%; }
+  .calculation-map-legend.collapsed,
+  .district-map-legend.collapsed { max-height: none; }
+  .fire-dispatch-screen-actions { position: sticky; top: 0; }
+  .fire-dispatch-ticket-dialog { align-content: start; }
+  .fire-dispatch-screen-actions { align-items: center; }
+  .fire-dispatch-screen-actions button { height: 38px; min-height: 38px; padding: 5px 9px; font-size: 11px; }
+  .district-emergency-button { display: block; }
+  .fire-dispatch-ticket-sheet.mobile-map-only { padding: 6px; }
+  .fire-dispatch-ticket-sheet.mobile-map-only .fire-dispatch-planning-documents {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    font-size: 10px;
+  }
+}
+
 @media (max-width: 720px) and (orientation: portrait) {
   .map-column > .zoom { top: 140px; right: 10px; }
   .map-column > .source-focus { top: 218px; right: 10px; }
@@ -3794,5 +3907,18 @@ button.wide { width: 100%; margin-top: 10px; }
     break-inside: avoid !important;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+  }
+}
+
+/* Keep the phone action row narrower than the three-tab row above it. This
+   block intentionally closes the cascade because older responsive sections
+   retain a 42 px minimum for the map-settings action. */
+@media (max-width: 720px), (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
+  .file-actions > button,
+  .file-actions > .map-settings-action {
+    height: 36px !important;
+    min-height: 36px !important;
+    padding-block: 2px !important;
+    box-sizing: border-box;
   }
 }

@@ -42,6 +42,19 @@ export function districtObjectFocusPoint(object: DistrictMapObject): GeoPoint {
   };
 }
 
+export function districtResponseBoundaryCenter(objects: readonly DistrictMapObject[]): GeoPoint | null {
+  const points = objects
+    .filter((object): object is DistrictBuilding => object.kind === 'building' && object.mapRole === 'response-boundary')
+    .flatMap((object) => object.contour);
+  if (points.length === 0) return null;
+  const latitudes = points.map((point) => point.latitude);
+  const longitudes = points.map((point) => point.longitude);
+  return {
+    latitude: (Math.min(...latitudes) + Math.max(...latitudes)) / 2,
+    longitude: (Math.min(...longitudes) + Math.max(...longitudes)) / 2,
+  };
+}
+
 export function fittedBuildingMarkerScale(
   object: DistrictMapObject,
   baseScale: number,
@@ -53,6 +66,16 @@ export function fittedBuildingMarkerScale(
   const height = Math.max(...points.map((point) => point.y)) - Math.min(...points.map((point) => point.y));
   const fitted = Math.min((width * 0.72) / 42, (height * 0.72) / 26, 1);
   return Math.min(baseScale, Math.max(0.08, fitted));
+}
+
+export function commonBuildingMarkerScale(
+  objects: readonly DistrictMapObject[],
+  baseScale: number,
+  project: (point: GeoPoint) => Readonly<{ x: number; y: number }>,
+): number {
+  const buildings = objects.filter((object) => object.kind === 'building' && hasDistrictMarker(object));
+  if (buildings.length === 0) return baseScale;
+  return buildings.reduce((smallest, object) => Math.min(smallest, fittedBuildingMarkerScale(object, baseScale, project)), baseScale);
 }
 
 export function isBuildingWithContour(object: DistrictMapObject): object is DistrictBuilding {

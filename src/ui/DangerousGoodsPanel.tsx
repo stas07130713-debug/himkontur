@@ -265,9 +265,9 @@ function transportChemicalHazardSummary(good: DangerousGood | null): string {
   return `Опасность определяется транспортным классом ${good.className || 'не указан'} и паспортом безопасности конкретного продукта.`;
 }
 
-type Props = Readonly<{ initialQuery?: string }>;
+type Props = Readonly<{ initialQuery?: string; resetSignal?: number }>;
 
-export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
+export function DangerousGoodsPanel({ initialQuery = '', resetSignal = 0 }: Props) {
   const [query, setQuery] = useState(initialQuery);
   const [database, setDatabase] = useState<readonly DangerousGood[]>([]);
   const [workplacePdkDatabase, setWorkplacePdkDatabase] = useState<WorkplacePdkDatabase | null>(null);
@@ -374,6 +374,18 @@ export function DangerousGoodsPanel({ initialQuery = '' }: Props) {
     setRecognitionProgress(0);
     setRecognitionError(null);
   };
+  useEffect(() => {
+    if (resetSignal === 0) return;
+    clearPhotoIdentification();
+    setQuery('');
+    setSelected(null);
+    setStatus('manual');
+    setPhotoSourceOpen(false);
+    if (cameraInputRef.current !== null) cameraInputRef.current.value = '';
+    if (galleryInputRef.current !== null) galleryInputRef.current.value = '';
+  // Reset is an explicit user action represented by a monotonically growing signal.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetSignal]);
   const chooseFromSearch = (good: DangerousGood) => {
     clearPhotoIdentification();
     chooseGood(good, 'manual');

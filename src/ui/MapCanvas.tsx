@@ -12,7 +12,7 @@ import { round } from "../core/math";
 import { buildPlumeBands } from "../core/plume-shape";
 import type { CalculationResult, GeoPoint } from "../core/types";
 import { MAP_BOUNDS, MAP_INITIAL_CENTER } from "./defaults";
-import { MapLegend } from "./MapLegend";
+import { MapLegend, type CalculationLayerKey, type CalculationLayerState } from "./MapLegend";
 import type { ControlTemplate } from "./ControlPalette";
 import type { SourceConfiguration, SourceKind } from "./source-library";
 import { appAssetUrl } from "./app-url";
@@ -25,7 +25,7 @@ import { CompassRose } from "./CompassRose";
 import { UiIcon } from "./UiIcon";
 import { MapRulerOverlay } from "./MapRulerOverlay";
 import { DistrictObjectContour } from "./DistrictObjectContour";
-import { districtObjectFocusPoint, fittedBuildingMarkerScale, hasDistrictMarker, isBuildingWithContour } from "./district-map-visuals";
+import { commonBuildingMarkerScale, districtObjectFocusPoint, districtResponseBoundaryCenter, hasDistrictMarker, isBuildingWithContour } from "./district-map-visuals";
 
 export type ControlPoint = Readonly<{
   id: string;
@@ -57,6 +57,7 @@ type Props = Readonly<{
   onControlChange: (id: string, point: GeoPoint) => void;
   onControlDelete: (control: ControlPoint) => void;
   onControlDragStart?: (control: ControlPoint) => void;
+  controlFocus?: Readonly<{ id: string; revision: number }> | null;
 }>;
 
 const DEFAULT_WIDTH = 1000;
@@ -222,16 +223,22 @@ function plumeBandPath(
 }
 
 export function MapCanvas(props: Props) {
+  const compactViewport = () => window.matchMedia('(max-width: 720px)').matches;
   const [zoom, setZoom] = useState(1.65);
-  const [mapCenter, setMapCenter] = useState<GeoPoint>(MAP_INITIAL_CENTER);
+  const [mapCenter, setMapCenter] = useState<GeoPoint>(() => districtResponseBoundaryCenter(props.districtObjects ?? []) ?? MAP_INITIAL_CENTER);
   const rotation = 0;
   const [showPrimary, setShowPrimary] = useState(true);
   const [showSecondary, setShowSecondary] = useState(true);
+  const [showCombined, setShowCombined] = useState(true);
+  const [showSource, setShowSource] = useState(true);
+  const [showControls, setShowControls] = useState(true);
   const [showDistrictBuildings, setShowDistrictBuildings] = useState(false);
   const [showDistrictHydrants, setShowDistrictHydrants] = useState(false);
-  const [showDistrictBoundary, setShowDistrictBoundary] = useState(true);
-  const [showRescueService, setShowRescueService] = useState(true);
+  const [showDistrictBoundary, setShowDistrictBoundary] = useState(false);
+  const [showRescueService, setShowRescueService] = useState(false);
   const [districtToolsOpen, setDistrictToolsOpen] = useState(false);
+  const [legendCollapsed, setLegendCollapsed] = useState(compactViewport);
+  const [highlightedControlId, setHighlightedControlId] = useState<string | null>(null);
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(null);
   const [hoveredDistrictId, setHoveredDistrictId] = useState<string | null>(null);
   const [searchDistrictId, setSearchDistrictId] = useState<string | null>(null);
@@ -306,6 +313,7 @@ export function MapCanvas(props: Props) {
   }, [mapCenter, viewHeight, viewWidth, zoom]);
   const changeZoom = useCallback(
     (factor: number, anchor?: GeoPoint) => {
+      if (compactViewport()) setLegendCollapsed(true);
       setZoom((currentZoom) => {
         const nextZoom = Math.max(online ? 0.2 : 0.5, Math.min(64, currentZoom * factor));
         const appliedFactor = nextZoom / currentZoom;
@@ -357,6 +365,17 @@ export function MapCanvas(props: Props) {
   useEffect(() => {
     setWidthMeasureFraction(null);
   }, [props.result]);
+  useEffect(() => {
+    const focus = props.controlFocus;
+    if (focus === null || focus === undefined) return;
+    const control = props.controls.find((item) => item.id === focus.id);
+    if (control === undefined) return;
+    setMapCenter(clampMapCenter(control.point, viewWidth, viewHeight, 3));
+    setZoom((current) => Math.max(current, 3));
+    setHighlightedControlId(control.id);
+    const timer = window.setTimeout(() => setHighlightedControlId((current) => current === control.id ? null : current), 2_600);
+    return () => window.clearTimeout(timer);
+  }, [props.controlFocus, props.controls, viewHeight, viewWidth]);
   useEffect(() => {
     const depth = props.result?.finalDepthKm;
     if (depth === undefined) return;
@@ -465,6 +484,7 @@ export function MapCanvas(props: Props) {
   };
   const onMapPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
     setContextMenu(null);
+    if (compactViewport()) setLegendCollapsed(true);
     if (rulerActive && event.button === 2) {
       event.preventDefault();
       const held = {
@@ -783,8 +803,47 @@ export function MapCanvas(props: Props) {
     if (object.mapRole === 'rescue-service') return showRescueService;
     return showDistrictBuildings;
   });
+  const calculationLayers: CalculationLayerState = {
+    source: showSource,
+    primary: showPrimary,
+    secondary: showSecondary,
+    combined: showCombined,
+    controls: showControls,
+    buildings: showDistrictBuildings,
+    nppv: showDistrictHydrants,
+    boundary: showDistrictBoundary,
+    rescue: showRescueService,
+  };
+  const availableCalculationLayers: CalculationLayerState = {
+    source: props.sourcePlaced,
+    primary: props.result !== null,
+    secondary: props.result !== null,
+    combined: props.result !== null,
+    controls: hasControls,
+    buildings: districtObjects.some((object) => object.kind === 'building' && (object.mapRole === undefined || object.mapRole === 'ordinary')),
+    nppv: districtObjects.some((object) => object.kind !== 'building'),
+    boundary: districtObjects.some((object) => object.kind === 'building' && object.mapRole === 'response-boundary'),
+    rescue: districtObjects.some((object) => object.kind === 'building' && object.mapRole === 'rescue-service'),
+  };
+  const setCalculationLayer = (key: CalculationLayerKey, visible: boolean) => {
+    if (key === 'source') setShowSource(visible);
+    else if (key === 'primary') setShowPrimary(visible);
+    else if (key === 'secondary') setShowSecondary(visible);
+    else if (key === 'combined') setShowCombined(visible);
+    else if (key === 'controls') setShowControls(visible);
+    else if (key === 'buildings') setShowDistrictBuildings(visible);
+    else if (key === 'nppv') setShowDistrictHydrants(visible);
+    else if (key === 'boundary') setShowDistrictBoundary(visible);
+    else setShowRescueService(visible);
+  };
+  const setAllCalculationLayers = (visible: boolean) => {
+    for (const key of Object.keys(availableCalculationLayers) as CalculationLayerKey[]) {
+      if (availableCalculationLayers[key]) setCalculationLayer(key, visible);
+    }
+  };
   const districtMarkerDetailLevel = zoom >= 4.2 ? "full" : "compact";
   const districtMarkerScale = Math.max(0.2, Math.min(1, zoom / 4.8));
+  const commonBuildingScale = commonBuildingMarkerScale(visibleDistrictObjects, districtMarkerScale, projection.project);
   const districtRawPlacements = visibleDistrictObjects
     .filter(hasDistrictMarker)
     .map((object) => ({ object, ...projection.project(object.point) }));
@@ -823,24 +882,6 @@ export function MapCanvas(props: Props) {
                 Спутник
               </button>
             </div>
-            <div className="layer-toggles">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={showPrimary}
-                  onChange={(event) => setShowPrimary(event.currentTarget.checked)}
-                />
-                Первичное облако АХОВ
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={showSecondary}
-                  onChange={(event) => setShowSecondary(event.currentTarget.checked)}
-                />
-                Вторичное облако АХОВ
-              </label>
-            </div>
             <button type="button" className={`district-tools-toggle${districtToolsOpen ? ' active' : ''}`} aria-expanded={districtToolsOpen} title="Поиск и отображение объектов района выезда" aria-label="Показать поиск зданий и элементов НППВ" onClick={() => setDistrictToolsOpen((current) => !current)}><UiIcon name="chevronDown" /></button>
           </div>
           {districtToolsOpen && <>
@@ -855,10 +896,6 @@ export function MapCanvas(props: Props) {
               resetSignal={searchResetSignal}
               compact
             />
-            <div className="calculation-special-layer-toggles" aria-label="Условные обозначения специальных объектов">
-              <label><input type="checkbox" checked={showDistrictBoundary} onChange={(event) => setShowDistrictBoundary(event.currentTarget.checked)} /><i className="district-legend-boundary" aria-hidden="true" /><span>Граница района</span></label>
-              <label><input type="checkbox" checked={showRescueService} onChange={(event) => setShowRescueService(event.currentTarget.checked)} /><i className="district-legend-ass">АСС</i><span>АСС</span></label>
-            </div>
           </>}
         </div>
         {props.sourcePlaced && (
@@ -985,7 +1022,7 @@ export function MapCanvas(props: Props) {
                 className="map-base"
               />
               {visibleDistrictObjects.filter((object): object is DistrictBuilding => object.kind === 'building' && (object.mapRole === undefined || object.mapRole === 'ordinary')).map((object) => <DistrictObjectContour key={`${object.id}-contour`} object={object} project={projection.project} selected={selectedDistrictId === object.id && searchDistrictId !== object.id} highlighted={searchDistrictId === object.id} interactionDisabled={rulerActive} onSelect={() => setSelectedDistrictId(object.id)} onHoverChange={(hovered) => setHoveredDistrictId(hovered ? object.id : null)} />)}
-              {props.result !== null && (
+              {props.result !== null && showCombined && (
                 <>
                   <path
                     d={plumePath(
@@ -1001,7 +1038,11 @@ export function MapCanvas(props: Props) {
               )}
               {props.result !== null && (
                 <g className="calculated-plume-shape">
-                  {plumeBands.map((band) => (
+                  {plumeBands.filter((band) => (
+                    (band.kind !== 'primary' || showPrimary)
+                    && (band.kind !== 'secondary' || showSecondary)
+                    && (band.kind !== 'combined' || showCombined)
+                  )).map((band) => (
                     <path
                       key={`${band.fromKm}-${band.toKm}-${band.kind}`}
                       d={plumeBandPath(
@@ -1050,7 +1091,7 @@ export function MapCanvas(props: Props) {
                   )}
                 </>
               )}
-              {dimensions !== null && (
+              {dimensions !== null && showCombined && (
                 <>
                   <g
                     className={`plume-dimensions plume-dimensions-top${dimensions.compact ? " compact-labels" : ""}`}
@@ -1126,7 +1167,7 @@ export function MapCanvas(props: Props) {
                   )}
                 </>
               )}
-              {props.sourcePlaced && (
+              {props.sourcePlaced && showSource && (
                 <g
                   transform={`translate(${sourceScreen.x} ${sourceScreen.y})`}
                   className={`source-marker${draggingSource ? " dragging" : ""}${objectsLocked ? " locked" : ""}`}
@@ -1182,7 +1223,7 @@ export function MapCanvas(props: Props) {
                   </g>
                 </g>
               )}
-              {props.controls.map((control) => {
+              {showControls && props.controls.map((control) => {
                 const screen = projection.project(control.point);
                 const kind = control.kind ?? "administrative";
                 const evaluated =
@@ -1210,7 +1251,7 @@ export function MapCanvas(props: Props) {
                   <g
                     key={control.id}
                     transform={`translate(${screen.x} ${screen.y})`}
-                    className={`control-marker control-${kind}${affectedNow ? " affected" : ""}${future ? " future-affected" : ""}${objectsLocked ? " locked" : ""}`}
+                    className={`control-marker control-${kind}${affectedNow ? " affected" : ""}${future ? " future-affected" : ""}${objectsLocked ? " locked" : ""}${highlightedControlId === control.id ? " search-highlight" : ""}`}
                     onPointerDown={(event) =>
                       onControlPointerDown(event, control)
                     }
@@ -1271,7 +1312,7 @@ export function MapCanvas(props: Props) {
                     highlighted={searchDistrictId === object.id && !contourSearch}
                     interactionDisabled={rulerActive}
                     detailLevel={districtMarkerDetailLevel}
-                    scale={fittedBuildingMarkerScale(object, districtMarkerScale, projection.project)}
+                    scale={object.kind === 'building' ? commonBuildingScale : districtMarkerScale}
                     onSelect={() => setSelectedDistrictId(object.id)}
                     onHoverChange={(hovered) => setHoveredDistrictId(hovered ? object.id : null)}
                   />
@@ -1352,16 +1393,7 @@ export function MapCanvas(props: Props) {
                 : `${scaleDistanceKm} км`}
             </span>
           </div>
-          <MapLegend
-            compact
-            basemap={props.basemap}
-            hasSource={props.sourcePlaced}
-            showOverlap={false}
-            showPrimary={props.result !== null && showPrimary}
-            showSecondary={props.result !== null && showSecondary}
-            showCombined={props.result !== null}
-            hasControls={hasControls}
-          />
+          <MapLegend basemap={props.basemap} available={availableCalculationLayers} visible={calculationLayers} collapsed={legendCollapsed} onCollapsedChange={setLegendCollapsed} onLayerChange={setCalculationLayer} onAllChange={setAllCalculationLayers} />
           <div className="map-coordinate-bar">
             ⌖{" "}
             {props.sourcePlaced

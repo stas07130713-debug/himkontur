@@ -1,10 +1,15 @@
 import { spawn } from 'node:child_process';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const pageUrl = process.argv[2] ?? 'http://127.0.0.1:4178/';
 const port = 9760 + Math.floor(Math.random() * 100);
+const edgeProfileDirectory = resolve('..', '.test-runtime', `district-map-edge-profile-${process.pid}`);
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+mkdirSync(edgeProfileDirectory, { recursive: true });
 const edge = spawn('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', [
-  '--headless=new', '--disable-gpu', `--remote-debugging-port=${port}`, '--window-size=1366,768', pageUrl,
+  '--headless=new', '--disable-gpu', `--remote-debugging-port=${port}`, '--window-size=1366,768',
+  `--user-data-dir=${edgeProfileDirectory}`, pageUrl,
 ], { stdio: 'ignore' });
 
 try {
@@ -243,6 +248,8 @@ try {
   if (!result.boundaryLegend || !result.assLegend || !result.hideAllSingleLine) failures.push('переключатели границы района и АСС в условных обозначениях');
   if (!result.specialCreationRemoved) failures.push('разовые команды создания границы района и АСС не удалены');
   if (!result.switchedToSatellite || !result.undoRestoredMap || !result.redoRestoredSatellite) failures.push('кнопки назад и вперёд');
+  const screenshot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+  writeFileSync('artifacts/district-map-functional-audit.png', Buffer.from(screenshot.data, 'base64'));
   console.log(JSON.stringify(result, null, 2));
   if (failures.length > 0) throw new Error(`Не пройдены проверки: ${failures.join(', ')}.`);
   socket.close();

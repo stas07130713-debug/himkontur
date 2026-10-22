@@ -32,8 +32,14 @@ try {
   mkdirSync(resolve('artifacts'), { recursive: true });
   const cases = [];
   let dangerousGoodsAutoReveal = false;
+  let dangerousGoodsResetWorks = false;
   let expandedSourceCanScroll = false;
   let updateModalProminent = false;
+  let districtLegendStartsCollapsed = false;
+  let districtNppvStartsHidden = false;
+  let districtLegendAutoCollapses = false;
+  let districtBuildingAutoReveal = false;
+  let mobileDispatchMapOnly = false;
   for (const size of [{ width: 390, height: 844 }, { width: 430, height: 932 }, { width: 844, height: 390 }]) {
     await command('Emulation.setDeviceMetricsOverride', { ...size, deviceScaleFactor: 1, mobile: true });
     await delay(800);
@@ -54,6 +60,16 @@ try {
           const bar = document.querySelector('.file-actions')?.getBoundingClientRect();
           return Boolean(bar && actions.length === 2 && actions.every((rect) => Math.abs(actions[0].width - rect.width) <= 2 && rect.left >= bar.left && rect.right <= bar.right));
         })(),
+        actionsCompact: (() => {
+          const actions = [...document.querySelectorAll('.file-actions > button:not(.history-action)')]
+            .map((node) => node.getBoundingClientRect());
+          const bar = document.querySelector('.file-actions')?.getBoundingClientRect();
+          return Boolean(bar && actions.length === 2 && bar.height <= 42 && actions.every((rect) => rect.height <= 38));
+        })(),
+        actionRects: {
+          bar: document.querySelector('.file-actions')?.getBoundingClientRect().toJSON(),
+          buttons: [...document.querySelectorAll('.file-actions > button:not(.history-action)')].map((node) => node.getBoundingClientRect().toJSON()),
+        },
         themeSwitch: visible('.topbar > .theme-switch'),
         themeDoesNotOverlapTabs: (() => {
           const theme = document.querySelector('.topbar > .theme-switch')?.getBoundingClientRect();
@@ -154,18 +170,76 @@ try {
       })()`);
       const goodsShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
       writeFileSync(resolve('artifacts', 'mobile-dangerous-goods-390.png'), Buffer.from(goodsShot.data, 'base64'));
-      await evaluate(`document.querySelectorAll('.main-tabs button')[0]?.click()`);
+      await evaluate(`document.querySelector('.dangerous-goods-reset')?.click()`);
+      await delay(120);
+      dangerousGoodsResetWorks = await evaluate(`(() => {
+        const input = document.querySelector('.goods-search-box input');
+        return Boolean(input && input.value === '' && document.querySelector('.emergency-empty') !== null);
+      })()`);
+      await evaluate(`document.querySelectorAll('.main-tabs button')[2]?.click()`);
+      await delay(700);
+      const districtChecks = await evaluate(`(async () => {
+        scrollTo(0, 0);
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const legend = document.querySelector('.district-map-legend');
+        const startsCollapsed = Boolean(legend?.classList.contains('collapsed'));
+        legend?.querySelector('.district-legend-collapse')?.click();
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const nppvInputs = [...(legend?.querySelectorAll('.district-legend-row') ?? [])]
+          .filter((row) => row.textContent?.includes('Пожарные гидранты') || row.textContent?.includes('Пожарные водоёмы'))
+          .map((row) => row.querySelector('input'))
+          .filter(Boolean);
+        const nppvHidden = nppvInputs.length >= 2 && nppvInputs.every((input) => !input.checked);
+        document.querySelector('.district-map-surface svg')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 180, clientY: 420, button: 0 }));
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const autoCollapsed = Boolean(legend?.classList.contains('collapsed'));
+        document.querySelector('.district-map-marker.building-number-marker')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await new Promise((resolve) => setTimeout(resolve, 650));
+        const details = document.querySelector('.district-details-panel');
+        const buildingRevealed = Boolean(details && scrollY > 0 && details.getBoundingClientRect().top < innerHeight - 100);
+        return { startsCollapsed, nppvHidden, autoCollapsed, buildingRevealed };
+      })()`);
+      districtLegendStartsCollapsed = districtChecks.startsCollapsed;
+      districtNppvStartsHidden = districtChecks.nppvHidden;
+      districtLegendAutoCollapses = districtChecks.autoCollapsed;
+      districtBuildingAutoReveal = districtChecks.buildingRevealed;
+      const districtShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
+      writeFileSync(resolve('artifacts', 'mobile-district-map-390.png'), Buffer.from(districtShot.data, 'base64'));
+      await evaluate(`document.querySelector('.district-emergency-button')?.click()`);
+      await delay(1500);
+      mobileDispatchMapOnly = await evaluate(`(() => {
+        const dialog = document.querySelector('.fire-dispatch-ticket-dialog');
+        const sheet = document.querySelector('.fire-dispatch-ticket-sheet.mobile-map-only');
+        const actions = dialog?.querySelector('.fire-dispatch-screen-actions')?.textContent ?? '';
+        return Boolean(dialog && sheet
+          && sheet.querySelector('.fire-dispatch-map')
+          && sheet.querySelector('.fire-dispatch-planning-documents')
+          && !sheet.textContent?.includes('ПУТЁВКА')
+          && !actions.includes('Распечатать')
+          && actions.includes('Сохранить схему PDF')
+          && actions.includes('Закрыть'));
+      })()`);
+      const dispatchShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+      writeFileSync(resolve('artifacts', 'mobile-dispatch-map-390.png'), Buffer.from(dispatchShot.data, 'base64'));
+      await evaluate(`document.querySelector('.fire-dispatch-screen-actions button:last-child')?.click()`);
+      await evaluate(`document.querySelectorAll('.main-tabs button')[0]?.click(); scrollTo(0, 0);`);
     }
     if (size.width === 844) {
       const shot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
       writeFileSync(resolve('artifacts', 'mobile-calculation-landscape-844.png'), Buffer.from(shot.data, 'base64'));
     }
   }
-  const failures = cases.filter((item) => item.scrollWidth > item.viewport + 1 || !item.tabs || !item.mobileButton || !item.mobileSubtitle || !item.actionsBalanced || !item.themeSwitch || !item.themeDoesNotOverlapTabs || !item.left || !item.map || !item.fullCloudLabels || !item.compassAvoidsToolbarContent || !item.mapControlsRightAligned || !item.mapOverlayControlsDoNotOverlap || !item.right || !item.mobileOrder || !item.calculate);
+  const failures = cases.filter((item) => item.scrollWidth > item.viewport + 1 || !item.tabs || !item.mobileButton || !item.mobileSubtitle || !item.actionsBalanced || !item.actionsCompact || !item.themeSwitch || !item.themeDoesNotOverlapTabs || !item.left || !item.map || !item.fullCloudLabels || !item.compassAvoidsToolbarContent || !item.mapControlsRightAligned || !item.mapOverlayControlsDoNotOverlap || !item.right || !item.mobileOrder || !item.calculate);
   if (!dangerousGoodsAutoReveal) failures.push({ check: 'dangerous-goods-auto-reveal' });
+  if (!dangerousGoodsResetWorks) failures.push({ check: 'dangerous-goods-reset' });
   if (!expandedSourceCanScroll) failures.push({ check: 'expanded-source-mobile-scroll' });
   if (!updateModalProminent) failures.push({ check: 'android-update-modal-prominence' });
-  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, expandedSourceCanScroll, updateModalProminent, cases, failures };
+  if (!districtLegendStartsCollapsed) failures.push({ check: 'district-legend-starts-collapsed' });
+  if (!districtNppvStartsHidden) failures.push({ check: 'district-nppv-starts-hidden' });
+  if (!districtLegendAutoCollapses) failures.push({ check: 'district-legend-auto-collapses' });
+  if (!districtBuildingAutoReveal) failures.push({ check: 'district-building-auto-reveal' });
+  if (!mobileDispatchMapOnly) failures.push({ check: 'mobile-dispatch-map-only' });
+  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, dangerousGoodsResetWorks, expandedSourceCanScroll, updateModalProminent, districtLegendStartsCollapsed, districtNppvStartsHidden, districtLegendAutoCollapses, districtBuildingAutoReveal, mobileDispatchMapOnly, cases, failures };
   writeFileSync(resolve('artifacts', 'mobile-layout-audit.json'), JSON.stringify(report, null, 2));
   if (failures.length) throw new Error(`Мобильная компоновка не прошла проверку: ${JSON.stringify(failures)}`);
   console.log(`Мобильная компоновка проверена на ${cases.map((item) => `${item.width}×${item.height}`).join(', ')}: горизонтального сдвига нет; найденный опасный груз открывается автоматически; после ввода следуют результаты, карта и контрольные точки.`);

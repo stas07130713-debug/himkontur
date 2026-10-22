@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DistrictBuilding, DistrictHydrant } from './district-map-model';
-import { districtLayerKey, districtObjectFocusPoint, fittedBuildingMarkerScale, hasDistrictMarker, isBuildingWithContour } from './district-map-visuals';
+import { commonBuildingMarkerScale, districtLayerKey, districtObjectFocusPoint, districtResponseBoundaryCenter, fittedBuildingMarkerScale, hasDistrictMarker, isBuildingWithContour } from './district-map-visuals';
 
 const building: DistrictBuilding = {
   id: 'building-1',
@@ -46,6 +46,23 @@ describe('district map visual helpers', () => {
     const scale = fittedBuildingMarkerScale(building, 1, (point) => ({ x: point.longitude * 5, y: point.latitude * 5 }));
     expect(scale).toBeLessThan(1);
     expect(scale).toBeGreaterThanOrEqual(0.08);
+  });
+
+  it('uses one marker scale for all visible buildings', () => {
+    const smaller = { ...building, id: 'building-2', contour: building.contour.map((point) => ({ latitude: point.latitude / 2, longitude: point.longitude / 2 })) };
+    const project = (point: Readonly<{ latitude: number; longitude: number }>) => ({ x: point.longitude * 5, y: point.latitude * 5 });
+    expect(commonBuildingMarkerScale([building, smaller], 1, project)).toBe(fittedBuildingMarkerScale(smaller, 1, project));
+  });
+
+  it('centers a newly opened map on the response boundary', () => {
+    const boundary: DistrictBuilding = {
+      ...building,
+      id: 'boundary',
+      objectType: 'territory',
+      mapRole: 'response-boundary',
+      contour: [{ latitude: 4, longitude: 2 }, { latitude: 8, longitude: 10 }],
+    };
+    expect(districtResponseBoundaryCenter([building, boundary])).toEqual({ latitude: 6, longitude: 6 });
   });
 
   it('keeps territory numbers in data without drawing a territory plate', () => {

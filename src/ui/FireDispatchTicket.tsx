@@ -276,50 +276,15 @@ function boxesOverlap(first: LabelBox, second: LabelBox, padding = 4): boolean {
   return first.left < second.right + padding && first.right > second.left - padding && first.top < second.bottom + padding && first.bottom > second.top - padding;
 }
 
-function measurementContour(contour: readonly GeoPoint[]): readonly GeoPoint[] {
-  if (contour.length < 4) return contour;
-  let current = [...contour];
-  let changed = true;
-  while (changed && current.length > 3) {
-    changed = false;
-    const next = current.filter((point, index) => {
-      const previous = current[(index - 1 + current.length) % current.length];
-      const following = current[(index + 1) % current.length];
-      if (previous === undefined || following === undefined) return true;
-      const latitudeScale = Math.PI / 180 * EARTH_RADIUS_M;
-      const longitudeScale = latitudeScale * Math.cos(point.latitude * Math.PI / 180);
-      const first = {
-        x: (point.longitude - previous.longitude) * longitudeScale,
-        y: (point.latitude - previous.latitude) * latitudeScale,
-      };
-      const second = {
-        x: (following.longitude - point.longitude) * longitudeScale,
-        y: (following.latitude - point.latitude) * latitudeScale,
-      };
-      const firstLength = Math.hypot(first.x, first.y);
-      const secondLength = Math.hypot(second.x, second.y);
-      if (firstLength < 1.2 || secondLength < 1.2) {
-        changed = true;
-        return false;
-      }
-      const cosine = (first.x * second.x + first.y * second.y) / (firstLength * secondLength);
-      if (cosine > .985) {
-        changed = true;
-        return false;
-      }
-      return true;
-    });
-    current = next;
-  }
-  return current;
-}
-
 function edgeLabels(
   contour: readonly GeoPoint[],
   project: (point: GeoPoint) => ScreenPoint,
   fixedObstacles: readonly LabelBox[],
 ): readonly EdgeLabel[] {
-  const measured = measurementContour(contour);
+  // Every physical wall keeps its own dimension. Labels may move to the
+  // inside or outside of that wall, but neighbouring short walls are never
+  // merged into one value.
+  const measured = contour;
   const projected = measured.map(project);
   const center = projected.reduce<{ x: number; y: number }>((sum, point) => ({ x: sum.x + point.x, y: sum.y + point.y }), { x: 0, y: 0 });
   center.x /= Math.max(1, projected.length);
@@ -345,32 +310,7 @@ function edgeLabels(
       midpoint,
     };
   });
-  const longestEdge = Math.max(...edgeMetrics.map((edge) => edge.distance), 0);
-  const compactEdgeThreshold = Math.max(8, Math.min(30, longestEdge * .28));
-  for (const shortEdge of edgeMetrics.filter((edge) => edge.distance <= compactEdgeThreshold).sort((left, right) => left.distance - right.distance)) {
-    const target = edgeMetrics
-      .filter((edge) => !edge.hidden && edge.index !== shortEdge.index && edge.distance > shortEdge.distance * 1.08)
-      .map((edge) => {
-        const rawGap = Math.abs(edge.index - shortEdge.index);
-        const indexGap = Math.min(rawGap, edgeMetrics.length - rawGap);
-        const parallel = Math.abs(edge.direction.x * shortEdge.direction.x + edge.direction.y * shortEdge.direction.y);
-        const sameSide = edge.outward.x * shortEdge.outward.x + edge.outward.y * shortEdge.outward.y;
-        const screenDistance = Math.hypot(edge.midpoint.x - shortEdge.midpoint.x, edge.midpoint.y - shortEdge.midpoint.y);
-        // A recess often reverses the polygon's outward normal even though its
-        // short edge belongs to the same visual side of the building. Prefer
-        // nearby edges in the contour and on screen; use the normal only as a
-        // soft tie-breaker instead of rejecting such recesses outright.
-        const score = indexGap * 160 + screenDistance - sameSide * 18 - edge.distance * .08;
-        return { edge, indexGap, parallel, screenDistance, score };
-      })
-      .filter(({ indexGap, parallel, screenDistance }) => indexGap <= 5 && parallel >= .94 && screenDistance <= Math.max(MAP_WIDTH, MAP_HEIGHT) * .55)
-      .sort((left, right) => left.score - right.score)[0]?.edge;
-    if (target !== undefined) {
-      target.displayDistance += shortEdge.displayDistance;
-      shortEdge.hidden = true;
-    }
-  }
-  const entries = edgeMetrics.filter((edge) => !edge.hidden).sort((left, right) => right.displayDistance - left.displayDistance).flatMap(({ index, displayDistance: distance }) => {
+  const entries = edgeMetrics.filter((edge) => !edge.hidden && edge.displayDistance >= .5).sort((left, right) => right.displayDistance - left.displayDistance).flatMap(({ index, displayDistance: distance }) => {
     const start = projected[index];
     const end = projected[(index + 1) % projected.length];
     if (start === undefined || end === undefined) return [];
@@ -406,61 +346,27 @@ function edgeLabels(
     ].map((candidate) => ({ ...candidate, box: rotatedBoxAt(candidate.point, labelWidth, labelHeight, angle) }));
     return [{ index, text, angle, candidates }];
   });
-  const placementScore = (entryIndex: number, candidateIndex: number, selections: readonly number[]): number => {
-    const entry = entries[entryIndex];
-    const candidate = entry?.candidates[candidateIndex];
-    if (entry === undefined || candidate === undefined) return Number.POSITIVE_INFINITY;
-    const outside = Math.max(0, 5 - candidate.box.left) + Math.max(0, candidate.box.right - MAP_WIDTH + 5)
-      + Math.max(0, 5 - candidate.box.top) + Math.max(0, candidate.box.bottom - MAP_HEIGHT + 5);
-    const fixedCollision = fixedObstacles.reduce((sum, obstacle) => sum + overlapArea(candidate.box, obstacle), 0);
-    const labelCollision = entries.reduce((sum, other, otherIndex) => {
-      if (otherIndex === entryIndex) return sum;
-      const otherCandidate = other.candidates[selections[otherIndex] ?? 0];
-      return sum + (otherCandidate === undefined ? 0 : overlapArea(candidate.box, otherCandidate.box));
-    }, 0);
-    return outside * 1_000_000 + labelCollision * 100_000 + fixedCollision * 1_000 + candidate.offset;
-  };
-  const totalScore = (selections: readonly number[]): number => entries.reduce((sum, entry, index) => {
-    const candidate = entry.candidates[selections[index] ?? 0];
-    if (candidate === undefined) return sum;
-    const outside = Math.max(0, 5 - candidate.box.left) + Math.max(0, candidate.box.right - MAP_WIDTH + 5)
-      + Math.max(0, 5 - candidate.box.top) + Math.max(0, candidate.box.bottom - MAP_HEIGHT + 5);
-    const fixedCollision = fixedObstacles.reduce((current, obstacle) => current + overlapArea(candidate.box, obstacle), 0);
-    const pairCollision = entries.slice(index + 1).reduce((current, other, offset) => {
-      const otherCandidate = other.candidates[selections[index + offset + 1] ?? 0];
-      return current + (otherCandidate === undefined ? 0 : overlapArea(candidate.box, otherCandidate.box));
-    }, 0);
-    return sum + outside * 1_000_000 + pairCollision * 100_000 + fixedCollision * 1_000 + candidate.offset;
-  }, 0);
-  let bestSelections = entries.map(() => 0);
-  let bestScore = Number.POSITIVE_INFINITY;
-  for (const seed of [0, 1, 2, 3, 5, 8, 13, 21]) {
-    const selections = entries.map((entry, index) => (seed + index * 3) % Math.max(1, entry.candidates.length));
-    for (let pass = 0; pass < 10; pass += 1) {
-      const order = pass % 2 === 0 ? entries.map((_, index) => index) : entries.map((_, index) => entries.length - 1 - index);
-      order.forEach((entryIndex) => {
-        const entry = entries[entryIndex];
-        if (entry === undefined) return;
-        selections[entryIndex] = entry.candidates.reduce((best, _, candidateIndex) =>
-          placementScore(entryIndex, candidateIndex, selections) < placementScore(entryIndex, best, selections) ? candidateIndex : best, 0);
-      });
-    }
-    const score = totalScore(selections);
-    if (score < bestScore) {
-      bestScore = score;
-      bestSelections = [...selections];
-    }
-  }
-  return entries.map((entry, index) => {
-    const selected = entry.candidates[bestSelections[index] ?? 0] ?? entry.candidates[0];
-    const point = selected?.point ?? { x: 0, y: 0 };
-    return {
+  const occupied: LabelBox[] = [];
+  return entries.flatMap((entry) => {
+    const candidateScore = (candidate: (typeof entry.candidates)[number]): number => {
+      const outside = Math.max(0, 5 - candidate.box.left) + Math.max(0, candidate.box.right - MAP_WIDTH + 5)
+        + Math.max(0, 5 - candidate.box.top) + Math.max(0, candidate.box.bottom - MAP_HEIGHT + 5);
+      const fixedCollision = fixedObstacles.reduce((sum, obstacle) => sum + overlapArea(candidate.box, obstacle), 0);
+      const labelCollision = occupied.reduce((sum, obstacle) => sum + overlapArea(candidate.box, obstacle), 0);
+      return outside * 1_000_000 + labelCollision * 100_000 + fixedCollision * 1_000 + candidate.offset;
+    };
+    const first = entry.candidates[0];
+    if (first === undefined) return [];
+    const selected = entry.candidates.reduce((best, candidate) => candidateScore(candidate) < candidateScore(best) ? candidate : best, first);
+    occupied.push(selected.box);
+    const point = selected.point;
+    return [{
       key: `edge-${entry.index}`,
       x: Math.max(22, Math.min(MAP_WIDTH - 22, point.x)),
       y: Math.max(16, Math.min(MAP_HEIGHT - 16, point.y)),
       text: entry.text,
       angle: entry.angle,
-    };
+    }];
   });
 }
 
@@ -647,6 +553,7 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
   onClose: () => void;
 }>) {
   const sheetRef = useRef<HTMLElement>(null);
+  const [mobileMapOnly, setMobileMapOnly] = useState(() => window.matchMedia('(max-width: 720px)').matches);
   const initial = localDateAndTime();
   const [division, setDivision] = useState('МВАСО АСС');
   const [crew, setCrew] = useState('');
@@ -667,13 +574,19 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
     setDispatcherSuggestions(next);
     window.localStorage.setItem(DISPATCHER_HISTORY_KEY, JSON.stringify(next));
   }, [dispatcher, dispatcherSuggestions]);
-  useEffect(() => { warmDispatchExport(); }, []);
+  useEffect(() => {
+    warmDispatchExport();
+    const media = window.matchMedia('(max-width: 720px)');
+    const update = () => setMobileMapOnly(media.matches);
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
   const print = async () => {
     if (busy || sheetRef.current === null) return;
     setBusy(true);
     setSaveStatus('Подготавливается печать…');
     try {
-      const imageDataUrl = await captureDispatchSnapshot(sheetRef.current, { scale: 1.35 });
+      const imageDataUrl = await captureDispatchSnapshot(sheetRef.current, { scale: 1.1 });
       setSaveStatus('Открывается окно печати…');
       printDispatchSnapshot(imageDataUrl);
     } catch (error) {
@@ -693,7 +606,7 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
         return;
       }
       setSaveStatus('Формируется PDF…');
-      const imageDataUrl = await captureDispatchSnapshot(sheetRef.current, { scale: 1.65 });
+      const imageDataUrl = await captureDispatchSnapshot(sheetRef.current, { scale: mobileMapOnly ? 1.2 : 1.35 });
       const pdf = await createDispatchPdf(imageDataUrl);
       const location = await saveDispatchPdf(pdf, dispatchFilename(date, building, emergencyType), false);
       setSaveStatus(`PDF сохранён: ${location}`);
@@ -705,15 +618,15 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
   };
   const planningDocuments = building.planningDocuments.filter((document) => document.number.trim() !== '');
   return <div className="dialog-backdrop fire-dispatch-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section className="fire-dispatch-ticket-dialog" role="dialog" aria-modal="true" aria-labelledby="fire-dispatch-ticket-title">
+    <section className="fire-dispatch-ticket-dialog" role="dialog" aria-modal="true" aria-labelledby={mobileMapOnly ? undefined : 'fire-dispatch-ticket-title'} aria-label={mobileMapOnly ? 'Схема объекта и водоисточников' : undefined}>
       <div className="fire-dispatch-screen-actions">
         {saveStatus !== '' && <span className="fire-dispatch-save-status" role="status">{saveStatus}</span>}
-        <button type="button" className="primary" disabled={busy} onClick={() => { void print(); }}>{busy ? 'Подождите…' : 'Распечатать'}</button>
-        <button type="button" className="secondary" disabled={busy} onClick={() => { void savePdf(); }}>Загрузить PDF в папку</button>
+        {!mobileMapOnly && <button type="button" className="primary" disabled={busy} onClick={() => { void print(); }}>{busy ? 'Подождите…' : 'Распечатать'}</button>}
+        <button type="button" className="secondary" disabled={busy} onClick={() => { void savePdf(); }}>{mobileMapOnly ? 'Сохранить схему PDF' : 'Загрузить PDF в папку'}</button>
         <button type="button" className="secondary" disabled={busy} onClick={onClose}><UiIcon name="close" /> Закрыть</button>
       </div>
-      <article className="fire-dispatch-ticket-sheet" ref={sheetRef}>
-        <header>
+      <article className={`fire-dispatch-ticket-sheet${mobileMapOnly ? ' mobile-map-only' : ''}`} ref={sheetRef}>
+        {!mobileMapOnly && <><header>
           <h1 id="fire-dispatch-ticket-title">ПУТЁВКА</h1>
           <h2>для выезда профессионального аварийно-спасательного формирования</h2>
           <div className="fire-dispatch-row division-row"><label data-complete={division.trim() !== ''}>Подразделение<input value={division} onChange={(event) => setDivision(event.currentTarget.value)} /></label><label data-complete={crew.trim() !== ''}>Дежурное отделение<select value={crew} onChange={(event) => setCrew(event.currentTarget.value)}><option value="">Указать отделение</option><option value="1-е отделение">1-е отделение</option><option value="2-е отделение">2-е отделение</option><option value="3-е отделение">3-е отделение</option><option value="4-е отделение">4-е отделение</option></select></label></div>
@@ -730,7 +643,7 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
             <label data-complete={applicantPhone.trim() !== ''}><span>Номер телефона</span><input type="tel" value={applicantPhone} onChange={(event) => setApplicantPhone(event.currentTarget.value)} /></label>
           </div>
           <div className="fire-dispatch-row dispatcher"><label data-complete={dispatcher.trim() !== ''}><span>5. Дежурный диспетчер подразделения (Фамилия И.О.)</span><input value={dispatcher} list="fire-dispatch-dispatchers" placeholder="Фамилия И.О." autoComplete="off" onBlur={rememberDispatcher} onChange={(event) => setDispatcher(event.currentTarget.value)} /><datalist id="fire-dispatch-dispatchers">{dispatcherSuggestions.map((name) => <option value={name} key={name} />)}</datalist></label><label><span>Подпись дежурного диспетчера</span><input aria-label="Подпись дежурного диспетчера" /></label></div>
-        </div>
+        </div></>}
         <DispatchMap building={building} objects={objects} basemap={basemap} />
         <section className="fire-dispatch-planning-documents" aria-label="Документы предварительного планирования">
           <strong>Документы предварительного планирования</strong>
@@ -738,8 +651,8 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
             ? <span className="empty">На объект не разработаны</span>
             : planningDocuments.map((document, index) => <span key={`${document.kind}-${document.number}-${index}`}>{planningDocumentText(document)}</span>)}</div>
         </section>
-        <p className="fire-dispatch-verification-note">* Перед выдачей путёвки диспетчер обязан самостоятельно проверить правильность заполнения данных и соответствие схемы выбранному объекту.</p>
-        <section className="fire-dispatch-return-authorization" aria-label="Разрешение на возвращение к месту дислокации">
+        {!mobileMapOnly && <p className="fire-dispatch-verification-note">* Перед выдачей путёвки диспетчер обязан самостоятельно проверить правильность заполнения данных и соответствие схемы выбранному объекту.</p>}
+        {!mobileMapOnly && <><section className="fire-dispatch-return-authorization" aria-label="Разрешение на возвращение к месту дислокации">
           <strong>Возвращение на место дислокации РАЗРЕШАЮ</strong>
           <span>Ответственный руководитель по ликвидации аварии:</span>
           <div className="fire-dispatch-hand-fields">
@@ -750,7 +663,7 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
           </div>
           <div className="fire-dispatch-hand-date">Дата «<i />» <i /> 20<i /> г.</div>
         </section>
-        <footer><span>Сформировано системой «ХИМКОНТУР»</span></footer>
+        <footer><span>Сформировано системой «ХИМКОНТУР»</span></footer></>}
       </article>
     </section>
   </div>;

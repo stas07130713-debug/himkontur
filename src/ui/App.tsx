@@ -87,10 +87,12 @@ export function App() {
       : "light",
   );
   const [goodsQuery, setGoodsQuery] = useState("");
+  const [goodsResetRevision, setGoodsResetRevision] = useState(0);
   const [input, setInput] = useState<CalculationInput>(DEFAULT_INPUT);
   const [source, setSource] = useState<SourceConfiguration>(DEFAULT_SOURCE);
   const [sourcePlaced, setSourcePlaced] = useState(true);
   const [controls, setControls] = useState<readonly ControlPoint[]>([]);
+  const [controlFocus, setControlFocus] = useState<Readonly<{ id: string; revision: number }> | null>(null);
   // The bundled map is the dependable default on every device. Satellite
   // imagery is an optional online/cached layer selected by the user.
   const [basemap, setBasemap] = useState<Basemap>("standard");
@@ -452,7 +454,10 @@ export function App() {
       const rightPanel = document.querySelector<HTMLElement>(".right-column");
       if (rightPanel === null)
         throw new Error("правая панель результатов не найдена");
-      const { captureMapForReport } = await import("./map-report-capture");
+      const [{ captureMapForReport }, exporter] = await Promise.all([
+        import("./map-report-capture"),
+        import("./report-export"),
+      ]);
       const mapImageDataUrl = await captureMapForReport(map, rightPanel);
       const mapAspectRatio = await new Promise<number>((resolve, reject) => {
         const capturedMap = new Image();
@@ -476,7 +481,6 @@ export function App() {
         // the live page has already returned to its responsive mobile layout.
         mapAspectRatio,
       };
-      const exporter = await import("./report-export");
       if (format === "pdf")
         await exporter.exportCalculationPdf(
           calculation.result,
@@ -591,6 +595,13 @@ export function App() {
             <UiIcon name="new" />
             <span className="action-label">Новый расчёт</span>
           </button>}
+          {tab === "goods" && <button className="dangerous-goods-reset" title="Очистить все введённые данные вкладки «Опасный груз»" aria-label="Сбросить данные опасного груза" onClick={() => {
+            setGoodsQuery("");
+            setGoodsResetRevision((current) => current + 1);
+          }}>
+            <UiIcon name="new" />
+            <span className="action-label">Сбросить</span>
+          </button>}
           {tab === "district" && <button className={`map-settings-action${districtAdmin ? " active" : ""}`} title="Настройка карты района выезда" aria-label="Настройка карты" onClick={() => {
             if (districtAdmin) setDistrictManagementOpen(true);
             else {
@@ -674,7 +685,7 @@ export function App() {
         </div>
       </header>
       {tab === "goods" ? (
-        <DangerousGoodsPanel initialQuery={goodsQuery} />
+        <DangerousGoodsPanel initialQuery={goodsQuery} resetSignal={goodsResetRevision} />
       ) : tab === "district" ? (
         <DistrictMapPage
           project={districtProject}
@@ -867,6 +878,7 @@ export function App() {
                   current.filter((item) => item.id !== control.id),
                 );
               }}
+              controlFocus={controlFocus}
             />
             <aside className="right-column">
               <ResultsPanel
@@ -941,6 +953,16 @@ export function App() {
                         <article
                           className={`placed-control-row status-${stateClass}`}
                           key={control.id}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Показать ${control.name} на карте`}
+                          onClick={() => setControlFocus({ id: control.id, revision: Date.now() })}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              setControlFocus({ id: control.id, revision: Date.now() });
+                            }
+                          }}
                         >
                           <BuildingIcon
                             kind={control.kind ?? "administrative"}
@@ -955,7 +977,8 @@ export function App() {
                           </div>
                           <button
                             aria-label={`Удалить ${control.name}`}
-                            onClick={() => {
+                            onClick={(event) => {
+                              event.stopPropagation();
                               remember(`Удалена точка «${control.name}»`);
                               setControls((current) =>
                                 current.filter(
