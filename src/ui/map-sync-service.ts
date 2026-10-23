@@ -176,6 +176,7 @@ async function coordinatorRequest(path: string, init: RequestInit, timeoutMs: nu
   } catch (error) {
     if (error instanceof MapSyncRequestError) throw error;
     if (controller.signal.aborted) throw new MapSyncRequestError('Сервис синхронизации не ответил вовремя.');
+    if (error instanceof TypeError) throw new MapSyncRequestError('Не удалось связаться с сервером настройки карты. Проверьте интернет и повторите вход.');
     throw new MapSyncRequestError(error instanceof Error ? error.message : 'Нет связи с сервисом синхронизации.');
   } finally {
     window.clearTimeout(timeout);

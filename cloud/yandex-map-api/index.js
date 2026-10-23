@@ -22,7 +22,7 @@ function requestOrigin(event) {
 
 function corsHeaders(event) {
   const origin = requestOrigin(event);
-  const allowed = String(process.env.ALLOWED_ORIGINS ?? 'https://stas07130713-debug.github.io,http://localhost:5173,http://127.0.0.1:4183,http://127.0.0.1:4194,http://127.0.0.1:4196,null')
+  const allowed = String(process.env.ALLOWED_ORIGINS ?? 'https://stas07130713-debug.github.io,https://localhost,http://localhost,capacitor://localhost,http://localhost:5173,http://127.0.0.1:4183,http://127.0.0.1:4194,http://127.0.0.1:4196,null')
     .split(',').map((value) => value.trim()).filter(Boolean);
   return {
     ...(allowed.includes(origin) ? { 'Access-Control-Allow-Origin': origin } : {}),

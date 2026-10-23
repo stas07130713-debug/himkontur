@@ -515,6 +515,11 @@ export function App() {
     if (districtPublishingRef.current || adminCredentialRef.current === null) return;
     districtPublishingRef.current = true;
     try {
+      if (adminCredentialRef.current.sessionToken === '') {
+        const authenticated = await authenticateMapAdmin(adminCredentialRef.current.password);
+        adminCredentialRef.current = authenticated.credential;
+        setMapSyncStatus(authenticated.status);
+      }
       while (pendingDistrictOperationsRef.current.length > 0) {
         const pending = pendingDistrictOperationsRef.current[0];
         if (pending === undefined) break;
@@ -1066,23 +1071,18 @@ export function App() {
             className="admin-login-dialog"
             onSubmit={(event) => {
               event.preventDefault();
-              void (async () => {
+              (() => {
                 try {
-                  const config = await loadMapSyncConfig();
-                  let credential: MapAdminCredential;
-                  if (config?.coordinatorEnabled === true) {
-                    const authenticated = await authenticateMapAdmin(adminPassword);
-                    credential = authenticated.credential;
-                    setMapSyncStatus(authenticated.status);
-                  } else {
-                    if (adminPassword !== "1234") throw new Error("Неверный пароль.");
-                    credential = { password: adminPassword, sessionToken: "" };
-                  }
-                  adminCredentialRef.current = credential;
+                  if (adminPassword !== "1234") throw new Error("Неверный пароль администратора.");
+                  adminCredentialRef.current = { password: adminPassword, sessionToken: "" };
                   setDistrictAdmin(true);
                   setDistrictManagementOpen(true);
                   setAdminLoginOpen(false);
                   setTab("district");
+                  void authenticateMapAdmin(adminPassword).then((authenticated) => {
+                    adminCredentialRef.current = authenticated.credential;
+                    setMapSyncStatus(authenticated.status);
+                  }).catch(() => undefined);
                   if (pendingDistrictOperationsRef.current.length > 0) void publishPendingDistrictProject();
                 } catch (error) {
                   setAdminPasswordError(message(error));

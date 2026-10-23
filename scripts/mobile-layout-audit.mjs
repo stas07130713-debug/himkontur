@@ -32,6 +32,7 @@ try {
   const evaluate = async (expression) => (await command('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true })).result.value;
   await command('Runtime.enable');
   await command('Page.enable');
+  await command('Network.enable');
   await delay(3000);
   mkdirSync(resolve('artifacts'), { recursive: true });
   const cases = [];
@@ -53,6 +54,7 @@ try {
   let searchFocusIsBorderless = false;
   let mobileDispatchPinchZoom = false;
   let mobileDispatchTouchActions = null;
+  let adminLoginWorksOffline = false;
   for (const size of [{ width: 390, height: 844 }, { width: 430, height: 932 }, { width: 844, height: 390 }]) {
     await command('Emulation.setDeviceMetricsOverride', { ...size, deviceScaleFactor: 1, mobile: true });
     await delay(800);
@@ -302,6 +304,23 @@ try {
       const dispatchShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
       writeFileSync(resolve('artifacts', 'mobile-dispatch-map-390.png'), Buffer.from(dispatchShot.data, 'base64'));
       await evaluate(`document.querySelector('.fire-dispatch-screen-actions button:last-child')?.click()`);
+      await command('Network.setBlockedURLs', { urls: ['*himkontur-district-sync*', '*functions.yandexcloud.net*'] });
+      adminLoginWorksOffline = await evaluate(`(async () => {
+        document.querySelector('button[aria-label="Настройка карты"]')?.click();
+        await new Promise((resolve) => setTimeout(resolve, 80));
+        const password = document.querySelector('.admin-login-dialog input[type="password"]');
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+        if (!(password instanceof HTMLInputElement) || !setter) return false;
+        setter.call(password, '1234');
+        password.dispatchEvent(new Event('input', { bubbles: true }));
+        password.closest('form')?.requestSubmit();
+        await new Promise((resolve) => setTimeout(resolve, 180));
+        const result = document.querySelector('.admin-login-dialog') === null
+          && document.querySelector('.district-management-dialog') !== null;
+        document.querySelector('.district-management-dialog .dialog-close')?.click();
+        return result;
+      })()`);
+      await command('Network.setBlockedURLs', { urls: [] });
       await evaluate(`document.querySelectorAll('.main-tabs button')[0]?.click(); scrollTo(0, 0);`);
     }
     if (size.width === 844) {
@@ -327,7 +346,8 @@ try {
   if (!unifiedDistrictCommandBar) failures.push({ check: 'unified-district-command-bar' });
   if (!searchFocusIsBorderless) failures.push({ check: 'search-focus-is-borderless' });
   if (!mobileDispatchPinchZoom) failures.push({ check: 'mobile-dispatch-pinch-zoom' });
-  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, dangerousGoodsResetWorks, dangerousGoodsActionsHorizontal, calculationLegendAligned, expandedSourceCanScroll, updateModalProminent, districtLegendStartsCollapsed, districtNppvStartsHidden, districtLegendAutoCollapses, districtBuildingAutoReveal, districtLegendHeaderContained, districtSearchCaretVisible, mobileDispatchMapOnly, unifiedCalculationCommandBar, unifiedDistrictCommandBar, searchFocusIsBorderless, mobileDispatchPinchZoom, mobileDispatchTouchActions, cases, failures };
+  if (!adminLoginWorksOffline) failures.push({ check: 'admin-login-works-without-cloud' });
+  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, dangerousGoodsResetWorks, dangerousGoodsActionsHorizontal, calculationLegendAligned, expandedSourceCanScroll, updateModalProminent, districtLegendStartsCollapsed, districtNppvStartsHidden, districtLegendAutoCollapses, districtBuildingAutoReveal, districtLegendHeaderContained, districtSearchCaretVisible, mobileDispatchMapOnly, unifiedCalculationCommandBar, unifiedDistrictCommandBar, searchFocusIsBorderless, mobileDispatchPinchZoom, mobileDispatchTouchActions, adminLoginWorksOffline, cases, failures };
   writeFileSync(resolve('artifacts', 'mobile-layout-audit.json'), JSON.stringify(report, null, 2));
   if (failures.length) throw new Error(`Мобильная компоновка не прошла проверку: ${JSON.stringify(failures)}`);
   console.log(`Мобильная компоновка проверена на ${cases.map((item) => `${item.width}×${item.height}`).join(', ')}: горизонтального сдвига нет; найденный опасный груз открывается автоматически; после ввода следуют результаты, карта и контрольные точки.`);
