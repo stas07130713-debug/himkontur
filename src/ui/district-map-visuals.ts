@@ -68,14 +68,28 @@ export function fittedBuildingMarkerScale(
   return Math.min(baseScale, Math.max(0.08, fitted));
 }
 
-export function commonBuildingMarkerScale(
+function buildingFootprint(object: DistrictBuilding): number {
+  if (object.contour.length < 3) return 0;
+  const latitudes = object.contour.map((point) => point.latitude);
+  const longitudes = object.contour.map((point) => point.longitude);
+  return (Math.max(...latitudes) - Math.min(...latitudes))
+    * (Math.max(...longitudes) - Math.min(...longitudes));
+}
+
+export function twoTierBuildingMarkerScales(
   objects: readonly DistrictMapObject[],
   baseScale: number,
-  project: (point: GeoPoint) => Readonly<{ x: number; y: number }>,
-): number {
-  const buildings = objects.filter((object) => object.kind === 'building' && hasDistrictMarker(object));
-  if (buildings.length === 0) return baseScale;
-  return buildings.reduce((smallest, object) => Math.min(smallest, fittedBuildingMarkerScale(object, baseScale, project)), baseScale);
+): ReadonlyMap<string, number> {
+  const buildings = objects.filter((object): object is DistrictBuilding => object.kind === 'building' && hasDistrictMarker(object));
+  if (buildings.length === 0) return new Map();
+  const footprints = buildings.map((object) => buildingFootprint(object)).sort((left, right) => left - right);
+  const threshold = footprints[Math.floor((footprints.length - 1) / 3)] ?? 0;
+  const smallScale = Math.max(0.28, baseScale * 0.72);
+  const largeScale = Math.max(0.42, baseScale);
+  return new Map(buildings.map((object) => [
+    object.id,
+    buildingFootprint(object) <= threshold ? smallScale : largeScale,
+  ]));
 }
 
 export function isBuildingWithContour(object: DistrictMapObject): object is DistrictBuilding {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DistrictBuilding, DistrictHydrant } from './district-map-model';
-import { commonBuildingMarkerScale, districtLayerKey, districtObjectFocusPoint, districtResponseBoundaryCenter, fittedBuildingMarkerScale, hasDistrictMarker, isBuildingWithContour } from './district-map-visuals';
+import { districtLayerKey, districtObjectFocusPoint, districtResponseBoundaryCenter, fittedBuildingMarkerScale, hasDistrictMarker, isBuildingWithContour, twoTierBuildingMarkerScales } from './district-map-visuals';
 
 const building: DistrictBuilding = {
   id: 'building-1',
@@ -48,10 +48,13 @@ describe('district map visual helpers', () => {
     expect(scale).toBeGreaterThanOrEqual(0.08);
   });
 
-  it('uses one marker scale for all visible buildings', () => {
+  it('uses exactly two readable marker sizes for small and large buildings', () => {
     const smaller = { ...building, id: 'building-2', contour: building.contour.map((point) => ({ latitude: point.latitude / 2, longitude: point.longitude / 2 })) };
-    const project = (point: Readonly<{ latitude: number; longitude: number }>) => ({ x: point.longitude * 5, y: point.latitude * 5 });
-    expect(commonBuildingMarkerScale([building, smaller], 1, project)).toBe(fittedBuildingMarkerScale(smaller, 1, project));
+    const largest = { ...building, id: 'building-3', contour: building.contour.map((point) => ({ latitude: point.latitude * 2, longitude: point.longitude * 2 })) };
+    const scales = twoTierBuildingMarkerScales([building, smaller, largest], 1);
+    expect(new Set(scales.values()).size).toBe(2);
+    expect(scales.get(smaller.id)).toBeLessThan(scales.get(largest.id) ?? 0);
+    expect(scales.get(smaller.id)).toBeGreaterThanOrEqual(0.28);
   });
 
   it('centers a newly opened map on the response boundary', () => {

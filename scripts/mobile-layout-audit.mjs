@@ -4,9 +4,12 @@ import { resolve } from 'node:path';
 
 const pageUrl = process.argv[2] ?? 'http://127.0.0.1:5173/';
 const port = 9980 + Math.floor(Math.random() * 15);
+const edgeProfileDirectory = resolve('..', '.test-runtime', `mobile-layout-edge-profile-${process.pid}`);
 const delay = (ms) => new Promise((done) => setTimeout(done, ms));
+mkdirSync(edgeProfileDirectory, { recursive: true });
 const edge = spawn('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', [
-  '--headless=new', '--disable-gpu', '--hide-scrollbars', `--remote-debugging-port=${port}`, '--window-size=430,932', pageUrl,
+  '--headless=new', '--disable-gpu', '--hide-scrollbars', `--remote-debugging-port=${port}`,
+  `--user-data-dir=${edgeProfileDirectory}`, '--window-size=430,932', pageUrl,
 ], { stdio: 'ignore' });
 
 try {
@@ -33,12 +36,16 @@ try {
   const cases = [];
   let dangerousGoodsAutoReveal = false;
   let dangerousGoodsResetWorks = false;
+  let dangerousGoodsActionsHorizontal = false;
+  let calculationLegendAligned = false;
   let expandedSourceCanScroll = false;
   let updateModalProminent = false;
   let districtLegendStartsCollapsed = false;
   let districtNppvStartsHidden = false;
   let districtLegendAutoCollapses = false;
   let districtBuildingAutoReveal = false;
+  let districtLegendHeaderContained = false;
+  let districtSearchCaretVisible = false;
   let mobileDispatchMapOnly = false;
   for (const size of [{ width: 390, height: 844 }, { width: 430, height: 932 }, { width: 844, height: 390 }]) {
     await command('Emulation.setDeviceMetricsOverride', { ...size, deviceScaleFactor: 1, mobile: true });
@@ -146,6 +153,23 @@ try {
         document.querySelector('.source-editor[open] > summary')?.click();
         return result;
       })()`);
+      calculationLegendAligned = await evaluate(`(async () => {
+        const legend = document.querySelector('.calculation-map-legend');
+        legend?.querySelector('.district-legend-collapse')?.click();
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const content = legend?.querySelector('.district-legend-content');
+        const rows = [...(content?.querySelectorAll('.district-legend-row') ?? [])];
+        const positions = rows.map((row) => row.getBoundingClientRect());
+        const labels = rows.map((row) => row.querySelector('span')?.getBoundingClientRect()).filter(Boolean);
+        return Boolean(content && getComputedStyle(content).display === 'grid' && rows.length >= 5
+          && positions.every((rect, index) => index === 0 || rect.top >= positions[index - 1].bottom - 1)
+          && labels.every((rect) => rect.width >= 90));
+      })()`);
+      await evaluate(`document.querySelector('.calculation-map-legend')?.scrollIntoView({ block: 'center' })`);
+      await delay(120);
+      const legendShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+      writeFileSync(resolve('artifacts', 'mobile-calculation-legend-390.png'), Buffer.from(legendShot.data, 'base64'));
+      await evaluate(`document.querySelector('.calculation-map-legend .district-legend-collapse')?.click(); scrollTo(0, 0)`);
       const shot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
       writeFileSync(resolve('artifacts', 'mobile-calculation-390.png'), Buffer.from(shot.data, 'base64'));
       await evaluate(`document.querySelector('.mobile-access-action')?.click()`);
@@ -155,6 +179,10 @@ try {
       await evaluate(`document.querySelector('.dialog-close')?.click()`);
       await evaluate(`document.querySelectorAll('.main-tabs button')[1]?.click()`);
       await delay(300);
+      dangerousGoodsActionsHorizontal = await evaluate(`(() => {
+        const buttons = [...document.querySelectorAll('.file-actions.goods-actions > button:not(.history-action)')].map((node) => node.getBoundingClientRect());
+        return buttons.length === 2 && Math.abs(buttons[0].top - buttons[1].top) <= 1 && buttons.every((rect) => rect.width > 100);
+      })()`);
       await evaluate(`(() => {
         scrollTo(0, 0);
         const input = document.querySelector('.goods-search-box input');
@@ -185,6 +213,12 @@ try {
         const startsCollapsed = Boolean(legend?.classList.contains('collapsed'));
         legend?.querySelector('.district-legend-collapse')?.click();
         await new Promise((resolve) => requestAnimationFrame(resolve));
+        const legendRect = legend?.getBoundingClientRect();
+        const allButtonRect = legend?.querySelector('.district-legend-all')?.getBoundingClientRect();
+        const headerContained = Boolean(legendRect && allButtonRect && allButtonRect.left >= legendRect.left && allButtonRect.right <= legendRect.right);
+        const searchInput = document.querySelector('.district-search input');
+        searchInput?.focus();
+        const caretVisible = Boolean(searchInput && getComputedStyle(searchInput).caretColor !== 'rgba(0, 0, 0, 0)');
         const nppvInputs = [...(legend?.querySelectorAll('.district-legend-row') ?? [])]
           .filter((row) => row.textContent?.includes('Пожарные гидранты') || row.textContent?.includes('Пожарные водоёмы'))
           .map((row) => row.querySelector('input'))
@@ -197,12 +231,14 @@ try {
         await new Promise((resolve) => setTimeout(resolve, 650));
         const details = document.querySelector('.district-details-panel');
         const buildingRevealed = Boolean(details && scrollY > 0 && details.getBoundingClientRect().top < innerHeight - 100);
-        return { startsCollapsed, nppvHidden, autoCollapsed, buildingRevealed };
+        return { startsCollapsed, nppvHidden, autoCollapsed, buildingRevealed, headerContained, caretVisible };
       })()`);
       districtLegendStartsCollapsed = districtChecks.startsCollapsed;
       districtNppvStartsHidden = districtChecks.nppvHidden;
       districtLegendAutoCollapses = districtChecks.autoCollapsed;
       districtBuildingAutoReveal = districtChecks.buildingRevealed;
+      districtLegendHeaderContained = districtChecks.headerContained;
+      districtSearchCaretVisible = districtChecks.caretVisible;
       const districtShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
       writeFileSync(resolve('artifacts', 'mobile-district-map-390.png'), Buffer.from(districtShot.data, 'base64'));
       await evaluate(`document.querySelector('.district-emergency-button')?.click()`);
@@ -232,14 +268,18 @@ try {
   const failures = cases.filter((item) => item.scrollWidth > item.viewport + 1 || !item.tabs || !item.mobileButton || !item.mobileSubtitle || !item.actionsBalanced || !item.actionsCompact || !item.themeSwitch || !item.themeDoesNotOverlapTabs || !item.left || !item.map || !item.fullCloudLabels || !item.compassAvoidsToolbarContent || !item.mapControlsRightAligned || !item.mapOverlayControlsDoNotOverlap || !item.right || !item.mobileOrder || !item.calculate);
   if (!dangerousGoodsAutoReveal) failures.push({ check: 'dangerous-goods-auto-reveal' });
   if (!dangerousGoodsResetWorks) failures.push({ check: 'dangerous-goods-reset' });
+  if (!dangerousGoodsActionsHorizontal) failures.push({ check: 'dangerous-goods-actions-horizontal' });
+  if (!calculationLegendAligned) failures.push({ check: 'calculation-legend-aligned' });
   if (!expandedSourceCanScroll) failures.push({ check: 'expanded-source-mobile-scroll' });
   if (!updateModalProminent) failures.push({ check: 'android-update-modal-prominence' });
   if (!districtLegendStartsCollapsed) failures.push({ check: 'district-legend-starts-collapsed' });
   if (!districtNppvStartsHidden) failures.push({ check: 'district-nppv-starts-hidden' });
   if (!districtLegendAutoCollapses) failures.push({ check: 'district-legend-auto-collapses' });
   if (!districtBuildingAutoReveal) failures.push({ check: 'district-building-auto-reveal' });
+  if (!districtLegendHeaderContained) failures.push({ check: 'district-legend-header-contained' });
+  if (!districtSearchCaretVisible) failures.push({ check: 'district-search-caret-visible' });
   if (!mobileDispatchMapOnly) failures.push({ check: 'mobile-dispatch-map-only' });
-  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, dangerousGoodsResetWorks, expandedSourceCanScroll, updateModalProminent, districtLegendStartsCollapsed, districtNppvStartsHidden, districtLegendAutoCollapses, districtBuildingAutoReveal, mobileDispatchMapOnly, cases, failures };
+  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, dangerousGoodsResetWorks, dangerousGoodsActionsHorizontal, calculationLegendAligned, expandedSourceCanScroll, updateModalProminent, districtLegendStartsCollapsed, districtNppvStartsHidden, districtLegendAutoCollapses, districtBuildingAutoReveal, districtLegendHeaderContained, districtSearchCaretVisible, mobileDispatchMapOnly, cases, failures };
   writeFileSync(resolve('artifacts', 'mobile-layout-audit.json'), JSON.stringify(report, null, 2));
   if (failures.length) throw new Error(`Мобильная компоновка не прошла проверку: ${JSON.stringify(failures)}`);
   console.log(`Мобильная компоновка проверена на ${cases.map((item) => `${item.width}×${item.height}`).join(', ')}: горизонтального сдвига нет; найденный опасный груз открывается автоматически; после ввода следуют результаты, карта и контрольные точки.`);

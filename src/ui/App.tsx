@@ -590,7 +590,7 @@ export function App() {
             Карта района выезда
           </button>
         </nav>
-        <div className={`file-actions${tab === "calculation" ? " calculation-actions" : ""}${tab === "district" ? " district-actions" : ""}`}>
+        <div className={`file-actions${tab === "calculation" ? " calculation-actions" : ""}${tab === "goods" ? " goods-actions" : ""}${tab === "district" ? " district-actions" : ""}`}>
           {tab === "calculation" && <button className="new-calculation" title="Начать новый расчёт и очистить введённые данные" aria-label="Новый расчёт — очистить введённые данные" onClick={newCalculation}>
             <UiIcon name="new" />
             <span className="action-label">Новый расчёт</span>

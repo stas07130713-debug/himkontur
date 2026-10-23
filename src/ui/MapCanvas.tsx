@@ -25,7 +25,7 @@ import { CompassRose } from "./CompassRose";
 import { UiIcon } from "./UiIcon";
 import { MapRulerOverlay } from "./MapRulerOverlay";
 import { DistrictObjectContour } from "./DistrictObjectContour";
-import { commonBuildingMarkerScale, districtObjectFocusPoint, districtResponseBoundaryCenter, hasDistrictMarker, isBuildingWithContour } from "./district-map-visuals";
+import { districtObjectFocusPoint, districtResponseBoundaryCenter, hasDistrictMarker, isBuildingWithContour, twoTierBuildingMarkerScales } from "./district-map-visuals";
 
 export type ControlPoint = Readonly<{
   id: string;
@@ -370,12 +370,12 @@ export function MapCanvas(props: Props) {
     if (focus === null || focus === undefined) return;
     const control = props.controls.find((item) => item.id === focus.id);
     if (control === undefined) return;
-    setMapCenter(clampMapCenter(control.point, viewWidth, viewHeight, 3));
+    setMapCenter(control.point);
     setZoom((current) => Math.max(current, 3));
     setHighlightedControlId(control.id);
     const timer = window.setTimeout(() => setHighlightedControlId((current) => current === control.id ? null : current), 2_600);
     return () => window.clearTimeout(timer);
-  }, [props.controlFocus, props.controls, viewHeight, viewWidth]);
+  }, [props.controlFocus, props.controls]);
   useEffect(() => {
     const depth = props.result?.finalDepthKm;
     if (depth === undefined) return;
@@ -843,7 +843,7 @@ export function MapCanvas(props: Props) {
   };
   const districtMarkerDetailLevel = zoom >= 4.2 ? "full" : "compact";
   const districtMarkerScale = Math.max(0.2, Math.min(1, zoom / 4.8));
-  const commonBuildingScale = commonBuildingMarkerScale(visibleDistrictObjects, districtMarkerScale, projection.project);
+  const buildingMarkerScales = twoTierBuildingMarkerScales(visibleDistrictObjects, districtMarkerScale);
   const districtRawPlacements = visibleDistrictObjects
     .filter(hasDistrictMarker)
     .map((object) => ({ object, ...projection.project(object.point) }));
@@ -1312,7 +1312,7 @@ export function MapCanvas(props: Props) {
                     highlighted={searchDistrictId === object.id && !contourSearch}
                     interactionDisabled={rulerActive}
                     detailLevel={districtMarkerDetailLevel}
-                    scale={object.kind === 'building' ? commonBuildingScale : districtMarkerScale}
+                    scale={object.kind === 'building' ? buildingMarkerScales.get(object.id) ?? districtMarkerScale : districtMarkerScale}
                     onSelect={() => setSelectedDistrictId(object.id)}
                     onHoverChange={(hovered) => setHoveredDistrictId(hovered ? object.id : null)}
                   />

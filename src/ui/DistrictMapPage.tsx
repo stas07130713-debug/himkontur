@@ -47,12 +47,12 @@ import {
   BUILDING_LAYER_KEYS,
   DISTRICT_LAYER_KEYS,
   NPPV_LAYER_KEYS,
-  commonBuildingMarkerScale,
   districtLayerKey,
   districtObjectFocusPoint,
   districtResponseBoundaryCenter,
   hasDistrictMarker,
   isBuildingWithContour,
+  twoTierBuildingMarkerScales,
   type DistrictLayerKey,
 } from './district-map-visuals';
 import type { MapSyncStatus } from './map-sync-service';
@@ -707,7 +707,7 @@ export function DistrictMapPage(props: Props) {
   });
   const visibleObjects = props.objects.filter((object) => object.id === searchHighlightedId
     || visibleLayers.has(districtLayerKey(object)));
-  const commonMarkerScale = commonBuildingMarkerScale(visibleObjects, markerScale, projection.project);
+  const buildingMarkerScales = twoTierBuildingMarkerScales(visibleObjects, markerScale);
   const markerPlacements = useMemo(() => {
     const raw = visibleObjects
       .filter(hasDistrictMarker)
@@ -1403,7 +1403,7 @@ export function DistrictMapPage(props: Props) {
                 },
               } : {};
               const contourSearch = searchHighlightedId === object.id && isBuildingWithContour(object);
-              return <DistrictMapMarker key={object.id} object={object} x={x} y={y} selected={selectedId === object.id && !contourSearch} highlighted={searchHighlightedId === object.id && !contourSearch} editing={props.adminMode} detailLevel={markerDetailLevel} scale={object.kind === 'building' ? commonMarkerScale : markerScale} interactionDisabled={rulerActive || contourDraft !== null} onSelect={() => selectObject(object.id)} onHoverChange={(hovered) => setHoveredId(hovered ? object.id : null)} {...dragProps} />;
+              return <DistrictMapMarker key={object.id} object={object} x={x} y={y} selected={selectedId === object.id && !contourSearch} highlighted={searchHighlightedId === object.id && !contourSearch} editing={props.adminMode} detailLevel={markerDetailLevel} scale={object.kind === 'building' ? buildingMarkerScales.get(object.id) ?? markerScale : markerScale} interactionDisabled={rulerActive || contourDraft !== null} onSelect={() => selectObject(object.id)} onHoverChange={(hovered) => setHoveredId(hovered ? object.id : null)} {...dragProps} />;
             })}
             <MapRulerOverlay points={rulerPoints} project={projection.project} />
           </svg>
