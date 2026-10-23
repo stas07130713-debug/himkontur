@@ -23,10 +23,20 @@ jobs:
 
       - name: Download and validate shared database
         env:
-          MAP_API_URL: https://functions.yandexcloud.net/d4eqi6k1daj25oqpk6bp
+          PRIMARY_MAP_API_URL: https://functions.yandexcloud.net/d4eqi6k1daj25oqpk6bp
+          BACKUP_MAP_API_URL: https://himkontur-district-sync.stas07130713.workers.dev/v1/map
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error --location "${MAP_API_URL}?ts=$(date +%s)" --output /tmp/district-map-response.json
+          timestamp="$(date +%s)"
+          if curl --fail --silent --show-error --location "${PRIMARY_MAP_API_URL}?ts=${timestamp}" --output /tmp/district-map-response.json; then
+            echo "Downloaded the map from the primary Yandex database."
+          else
+            echo "The primary database is unavailable; downloading the current Cloudflare recovery copy."
+            curl --fail --silent --show-error --location \
+              --header "Origin: https://stas07130713-debug.github.io" \
+              "${BACKUP_MAP_API_URL}?ts=${timestamp}" \
+              --output /tmp/district-map-response.json
+          fi
           node - <<'NODE'
           const fs = require('node:fs');
           const payload = JSON.parse(fs.readFileSync('/tmp/district-map-response.json', 'utf8'));
@@ -53,4 +63,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/data/district-map.json
           git commit -m "data: backup district map revision"
+          git pull --rebase origin main
           git push origin HEAD:main
