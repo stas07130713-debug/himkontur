@@ -3,12 +3,12 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const pageUrl = process.argv[2] ?? 'http://127.0.0.1:5173/';
-const port = 9980 + Math.floor(Math.random() * 15);
+const port = 10000 + Math.floor(Math.random() * 20000);
 const edgeProfileDirectory = resolve('..', '.test-runtime', `mobile-layout-edge-profile-${process.pid}`);
 const delay = (ms) => new Promise((done) => setTimeout(done, ms));
 mkdirSync(edgeProfileDirectory, { recursive: true });
 const edge = spawn('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', [
-  '--headless=new', '--disable-gpu', '--hide-scrollbars', `--remote-debugging-port=${port}`,
+  '--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run', '--disable-background-networking', `--remote-debugging-port=${port}`,
   `--user-data-dir=${edgeProfileDirectory}`, '--window-size=430,932', pageUrl,
 ], { stdio: 'ignore' });
 
@@ -18,7 +18,8 @@ try {
     await delay(200);
     try {
       const entries = await fetch(`http://127.0.0.1:${port}/json`).then((response) => response.json());
-      target = entries.find((entry) => entry.type === 'page');
+      target = entries.find((entry) => entry.type === 'page' && entry.url.startsWith(pageUrl))
+        ?? entries.find((entry) => entry.type === 'page');
     } catch { /* Edge is starting. */ }
   }
   if (!target?.webSocketDebuggerUrl) throw new Error('Не удалось открыть мобильную проверку.');
@@ -47,6 +48,11 @@ try {
   let districtLegendHeaderContained = false;
   let districtSearchCaretVisible = false;
   let mobileDispatchMapOnly = false;
+  let unifiedCalculationCommandBar = false;
+  let unifiedDistrictCommandBar = false;
+  let searchFocusIsBorderless = false;
+  let mobileDispatchPinchZoom = false;
+  let mobileDispatchTouchActions = null;
   for (const size of [{ width: 390, height: 844 }, { width: 430, height: 932 }, { width: 844, height: 390 }]) {
     await command('Emulation.setDeviceMetricsOverride', { ...size, deviceScaleFactor: 1, mobile: true });
     await delay(800);
@@ -165,6 +171,19 @@ try {
           && positions.every((rect, index) => index === 0 || rect.top >= positions[index - 1].bottom - 1)
           && labels.every((rect) => rect.width >= 90));
       })()`);
+      unifiedCalculationCommandBar = await evaluate(`(() => {
+        const bar = document.querySelector('.calculation-map-toolbar .mobile-map-command-bar');
+        const map = [...(bar?.querySelectorAll('.segmented button') ?? [])].find((button) => button.textContent?.trim() === 'Карта');
+        const satellite = [...(bar?.querySelectorAll('.segmented button') ?? [])].find((button) => button.textContent?.trim() === 'Спутник');
+        const wind = bar?.querySelector('.toolbar-wind-summary');
+        const toggle = bar?.querySelector('.district-tools-toggle');
+        const elements = [map, satellite, wind, toggle];
+        const rects = elements.map((node) => node?.getBoundingClientRect());
+        const overlaps = (a, b) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+        return Boolean(bar && elements.every(Boolean) && rects.every((rect) => rect && rect.width > 0 && rect.height > 0)
+          && elements.every((node) => getComputedStyle(node).visibility !== 'hidden')
+          && rects.every((rect, index) => rects.slice(index + 1).every((other) => !overlaps(rect, other))));
+      })()`);
       await evaluate(`document.querySelector('.calculation-map-legend')?.scrollIntoView({ block: 'center' })`);
       await delay(120);
       const legendShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
@@ -216,9 +235,22 @@ try {
         const legendRect = legend?.getBoundingClientRect();
         const allButtonRect = legend?.querySelector('.district-legend-all')?.getBoundingClientRect();
         const headerContained = Boolean(legendRect && allButtonRect && allButtonRect.left >= legendRect.left && allButtonRect.right <= legendRect.right);
+        const commandBar = document.querySelector('.district-map-primary-tools');
+        const mapButton = [...(commandBar?.querySelectorAll('.segmented button') ?? [])].find((button) => button.textContent?.trim() === 'Карта');
+        const satelliteButton = [...(commandBar?.querySelectorAll('.segmented button') ?? [])].find((button) => button.textContent?.trim() === 'Спутник');
+        const toolsToggle = commandBar?.querySelector('.district-tools-toggle');
+        toolsToggle?.click();
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         const searchInput = document.querySelector('.district-search input');
         searchInput?.focus();
         const caretVisible = Boolean(searchInput && getComputedStyle(searchInput).caretColor !== 'rgba(0, 0, 0, 0)');
+        const focusStyle = searchInput ? getComputedStyle(searchInput) : null;
+        const focusBorderless = Boolean(focusStyle && focusStyle.outlineStyle === 'none' && focusStyle.boxShadow === 'none');
+        const commandRect = commandBar?.getBoundingClientRect();
+        const commandItems = [mapButton, satelliteButton, toolsToggle];
+        const commandRects = commandItems.map((node) => node?.getBoundingClientRect());
+        const commandContained = Boolean(commandRect && commandItems.every(Boolean)
+          && commandRects.every((rect) => rect && rect.width > 0 && rect.left >= commandRect.left && rect.right <= commandRect.right));
         const nppvInputs = [...(legend?.querySelectorAll('.district-legend-row') ?? [])]
           .filter((row) => row.textContent?.includes('Пожарные гидранты') || row.textContent?.includes('Пожарные водоёмы'))
           .map((row) => row.querySelector('input'))
@@ -227,11 +259,12 @@ try {
         document.querySelector('.district-map-surface svg')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 180, clientY: 420, button: 0 }));
         await new Promise((resolve) => requestAnimationFrame(resolve));
         const autoCollapsed = Boolean(legend?.classList.contains('collapsed'));
-        document.querySelector('.district-map-marker.building-number-marker')?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        document.querySelector('.district-object-contour:not(.territory):not(.response-boundary):not(.rescue-service)')
+          ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
         await new Promise((resolve) => setTimeout(resolve, 650));
         const details = document.querySelector('.district-details-panel');
         const buildingRevealed = Boolean(details && scrollY > 0 && details.getBoundingClientRect().top < innerHeight - 100);
-        return { startsCollapsed, nppvHidden, autoCollapsed, buildingRevealed, headerContained, caretVisible };
+        return { startsCollapsed, nppvHidden, autoCollapsed, buildingRevealed, headerContained, caretVisible, focusBorderless, commandContained };
       })()`);
       districtLegendStartsCollapsed = districtChecks.startsCollapsed;
       districtNppvStartsHidden = districtChecks.nppvHidden;
@@ -239,6 +272,8 @@ try {
       districtBuildingAutoReveal = districtChecks.buildingRevealed;
       districtLegendHeaderContained = districtChecks.headerContained;
       districtSearchCaretVisible = districtChecks.caretVisible;
+      searchFocusIsBorderless = districtChecks.focusBorderless;
+      unifiedDistrictCommandBar = districtChecks.commandContained;
       const districtShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
       writeFileSync(resolve('artifacts', 'mobile-district-map-390.png'), Buffer.from(districtShot.data, 'base64'));
       await evaluate(`document.querySelector('.district-emergency-button')?.click()`);
@@ -255,6 +290,15 @@ try {
           && actions.includes('Сохранить схему PDF')
           && actions.includes('Закрыть'));
       })()`);
+      mobileDispatchTouchActions = await evaluate(`(() => {
+        const sheet = document.querySelector('.fire-dispatch-ticket-sheet.mobile-map-only');
+        const map = sheet?.querySelector('.fire-dispatch-map');
+        return sheet && map ? { sheet: getComputedStyle(sheet).touchAction, map: getComputedStyle(map).touchAction } : null;
+      })()`);
+      const allowsPinchZoom = (value) => value === 'manipulation' || value.includes('pinch-zoom');
+      mobileDispatchPinchZoom = Boolean(mobileDispatchTouchActions
+        && allowsPinchZoom(mobileDispatchTouchActions.sheet)
+        && allowsPinchZoom(mobileDispatchTouchActions.map));
       const dispatchShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
       writeFileSync(resolve('artifacts', 'mobile-dispatch-map-390.png'), Buffer.from(dispatchShot.data, 'base64'));
       await evaluate(`document.querySelector('.fire-dispatch-screen-actions button:last-child')?.click()`);
@@ -279,7 +323,11 @@ try {
   if (!districtLegendHeaderContained) failures.push({ check: 'district-legend-header-contained' });
   if (!districtSearchCaretVisible) failures.push({ check: 'district-search-caret-visible' });
   if (!mobileDispatchMapOnly) failures.push({ check: 'mobile-dispatch-map-only' });
-  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, dangerousGoodsResetWorks, dangerousGoodsActionsHorizontal, calculationLegendAligned, expandedSourceCanScroll, updateModalProminent, districtLegendStartsCollapsed, districtNppvStartsHidden, districtLegendAutoCollapses, districtBuildingAutoReveal, districtLegendHeaderContained, districtSearchCaretVisible, mobileDispatchMapOnly, cases, failures };
+  if (!unifiedCalculationCommandBar) failures.push({ check: 'unified-calculation-command-bar' });
+  if (!unifiedDistrictCommandBar) failures.push({ check: 'unified-district-command-bar' });
+  if (!searchFocusIsBorderless) failures.push({ check: 'search-focus-is-borderless' });
+  if (!mobileDispatchPinchZoom) failures.push({ check: 'mobile-dispatch-pinch-zoom' });
+  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, dangerousGoodsResetWorks, dangerousGoodsActionsHorizontal, calculationLegendAligned, expandedSourceCanScroll, updateModalProminent, districtLegendStartsCollapsed, districtNppvStartsHidden, districtLegendAutoCollapses, districtBuildingAutoReveal, districtLegendHeaderContained, districtSearchCaretVisible, mobileDispatchMapOnly, unifiedCalculationCommandBar, unifiedDistrictCommandBar, searchFocusIsBorderless, mobileDispatchPinchZoom, mobileDispatchTouchActions, cases, failures };
   writeFileSync(resolve('artifacts', 'mobile-layout-audit.json'), JSON.stringify(report, null, 2));
   if (failures.length) throw new Error(`Мобильная компоновка не прошла проверку: ${JSON.stringify(failures)}`);
   console.log(`Мобильная компоновка проверена на ${cases.map((item) => `${item.width}×${item.height}`).join(', ')}: горизонтального сдвига нет; найденный опасный груз открывается автоматически; после ввода следуют результаты, карта и контрольные точки.`);

@@ -78,18 +78,21 @@ function buildingFootprint(object: DistrictBuilding): number {
 
 export function twoTierBuildingMarkerScales(
   objects: readonly DistrictMapObject[],
-  baseScale: number,
+  project: (point: GeoPoint) => Readonly<{ x: number; y: number }>,
 ): ReadonlyMap<string, number> {
   const buildings = objects.filter((object): object is DistrictBuilding => object.kind === 'building' && hasDistrictMarker(object));
   if (buildings.length === 0) return new Map();
   const footprints = buildings.map((object) => buildingFootprint(object)).sort((left, right) => left - right);
   const threshold = footprints[Math.floor((footprints.length - 1) / 3)] ?? 0;
-  const smallScale = Math.max(0.28, baseScale * 0.72);
-  const largeScale = Math.max(0.42, baseScale);
-  return new Map(buildings.map((object) => [
-    object.id,
-    buildingFootprint(object) <= threshold ? smallScale : largeScale,
-  ]));
+  const smallScale = 0.58;
+  const largeScale = 0.82;
+  return new Map(buildings.flatMap((object) => {
+    const fittedScale = fittedBuildingMarkerScale(object, Number.POSITIVE_INFINITY, project);
+    const preferredScale = buildingFootprint(object) <= threshold ? smallScale : largeScale;
+    if (fittedScale >= preferredScale) return [[object.id, preferredScale] as const];
+    if (fittedScale >= smallScale) return [[object.id, smallScale] as const];
+    return [];
+  }));
 }
 
 export function isBuildingWithContour(object: DistrictMapObject): object is DistrictBuilding {

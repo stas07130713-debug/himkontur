@@ -42,9 +42,11 @@ try {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value);
       input.dispatchEvent(new Event('input', { bubbles: true }));
     };
-    const basemapButtons = [...document.querySelectorAll('.map-tool-group .segmented button')];
+    const basemapButtons = [...document.querySelectorAll('.calculation-map-toolbar .mobile-map-command-bar .segmented button')];
+    basemapButtons.find((button) => button.textContent.includes('Карта'))?.click();
+    await wait(100);
     basemapButtons.find((button) => button.textContent.includes('Спутник'))?.click();
-    await wait(80);
+    await wait(120);
     const switchedToSatellite = basemapButtons.some((button) => button.classList.contains('active') && button.textContent.includes('Спутник'));
     const historyButtons = [...document.querySelectorAll('.history-action')];
     historyButtons[0]?.click();
@@ -77,7 +79,8 @@ try {
       ? (clearButtonRect.top + clearButtonRect.height / 2) - (searchInputRect.top + searchInputRect.height / 2)
       : null;
     const windLockedToToolbarTop = Boolean(mapToolbarRect && windRect
-      && Math.abs(windRect.top - mapToolbarRect.top) <= 1
+      && windRect.top >= mapToolbarRect.top
+      && windRect.bottom <= mapToolbarRect.bottom
       && windRect.height <= 40);
     document.querySelector('.district-object-search-row.nppv .district-search-results button')?.click();
     await wait(80);

@@ -4090,3 +4090,190 @@ button.wide { width: 100%; margin-top: 10px; }
 
   .district-emergency-button { display: block !important; }
 }
+
+/* 0.3.35: one command plaque on both mobile maps and contour-aware plates. */
+.mobile-map-command-bar {
+  min-width: 0;
+  min-height: 38px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #426c78;
+  border-radius: 8px;
+  background: #062f40e8;
+  box-shadow: 0 2px 8px #001c2c55;
+}
+.mobile-map-command-bar .segmented button:not(.active) {
+  background: #f8fcfc;
+  color: #173b45;
+}
+.mobile-map-command-bar .segmented button.active {
+  background: #078c98;
+  color: #fff;
+}
+.mobile-map-command-bar .toolbar-wind-summary {
+  min-width: 142px;
+  margin: 0;
+}
+.district-map-primary-tools { width: max-content; }
+.district-map-topbar > .district-object-toolbar { grid-column: 2; }
+
+.district-legend-row > i,
+.district-legend-row > svg,
+.district-legend-row > .building-icon {
+  justify-self: center;
+  align-self: center;
+}
+.calculation-map-legend .district-legend-row,
+.district-map-legend .district-legend-row,
+.district-map-legend .district-legend-building-list label {
+  grid-template-columns: 15px 42px minmax(0, 1fr);
+}
+.calculation-map-legend .district-legend-building {
+  width: 42px;
+  height: 26px;
+  border-width: 2px;
+  font-size: 12px;
+}
+.calculation-map-legend .district-legend-ass {
+  width: 42px;
+  height: 26px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-family: Arial, "Segoe UI", sans-serif;
+  font-size: 9px;
+  line-height: 1;
+  text-align: center;
+}
+.calculation-map-legend .legend-source-marker,
+.calculation-map-legend .legend-sector,
+.calculation-map-legend .district-legend-hydrant,
+.calculation-map-legend .district-legend-boundary,
+.calculation-map-legend .building-icon.compact {
+  justify-self: center;
+}
+
+.district-search input:focus {
+  outline: none;
+  border-color: inherit;
+  box-shadow: none;
+}
+
+@media (max-width: 720px), (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
+  .calculation-map-toolbar {
+    display: flex;
+    padding: 4px 5px;
+  }
+  .calculation-map-toolbar > .map-tool-stack {
+    width: 100%;
+    display: grid;
+    gap: 4px;
+  }
+  .calculation-map-toolbar > .map-tool-stack > .mobile-map-command-bar {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(102px, max-content) minmax(0, 1fr) 30px;
+    align-items: center;
+    gap: 4px;
+  }
+  .calculation-map-toolbar .mobile-map-command-bar > .segmented {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+  }
+  .calculation-map-toolbar .mobile-map-command-bar > .segmented button {
+    min-width: 0;
+    padding-inline: 6px;
+    font-size: 9px;
+  }
+  .calculation-map-toolbar .mobile-map-command-bar > .toolbar-wind-summary {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    height: 29px;
+    min-height: 29px;
+    padding: 2px 4px;
+    overflow: hidden;
+  }
+  .calculation-map-toolbar .mobile-map-command-bar > .toolbar-wind-summary div {
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+    overflow: hidden;
+  }
+  .calculation-map-toolbar .mobile-map-command-bar > .toolbar-wind-summary strong,
+  .calculation-map-toolbar .mobile-map-command-bar > .toolbar-wind-summary span {
+    overflow: hidden;
+    font-size: 8px;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .calculation-map-toolbar .mobile-map-command-bar > .toolbar-wind-summary svg {
+    width: 20px;
+    height: 20px;
+    flex-basis: 20px;
+  }
+  .calculation-map-toolbar .mobile-map-command-bar > .district-tools-toggle {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .calculation-map-toolbar .district-object-toolbar {
+    width: 100%;
+    display: grid;
+  }
+
+  .district-map-topbar {
+    right: 70px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .district-map-primary-tools {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 30px;
+  }
+  .district-map-primary-tools .district-basemap-switch {
+    width: 100%;
+  }
+  .district-map-primary-tools .district-basemap-switch button {
+    flex: 1 1 50%;
+    min-width: 0;
+    color: #173b45;
+  }
+  .district-map-primary-tools .district-basemap-switch button.active { color: #fff; }
+  .district-map-topbar > .district-object-toolbar {
+    grid-column: 1;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .map-toolbar .district-object-search-row,
+  .map-toolbar .map-tool-stack .district-object-search-row,
+  .district-map-topbar .district-object-search-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+  }
+  .map-toolbar .district-layer-toggle,
+  .district-map-topbar .district-layer-toggle {
+    width: 100%;
+    min-height: 28px;
+    justify-content: flex-start;
+    box-sizing: border-box;
+  }
+  .map-toolbar .district-search-results,
+  .district-map-topbar .district-search-results { grid-column: 1; }
+
+  .fire-dispatch-backdrop,
+  .fire-dispatch-ticket-dialog,
+  .fire-dispatch-ticket-sheet.mobile-map-only,
+  .fire-dispatch-ticket-sheet.mobile-map-only .fire-dispatch-map {
+    touch-action: pan-x pan-y pinch-zoom;
+  }
+}

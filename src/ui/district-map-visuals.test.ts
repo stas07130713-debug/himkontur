@@ -51,10 +51,16 @@ describe('district map visual helpers', () => {
   it('uses exactly two readable marker sizes for small and large buildings', () => {
     const smaller = { ...building, id: 'building-2', contour: building.contour.map((point) => ({ latitude: point.latitude / 2, longitude: point.longitude / 2 })) };
     const largest = { ...building, id: 'building-3', contour: building.contour.map((point) => ({ latitude: point.latitude * 2, longitude: point.longitude * 2 })) };
-    const scales = twoTierBuildingMarkerScales([building, smaller, largest], 1);
+    const scales = twoTierBuildingMarkerScales([building, smaller, largest], (point) => ({ x: point.longitude * 40, y: point.latitude * 40 }));
     expect(new Set(scales.values()).size).toBe(2);
     expect(scales.get(smaller.id)).toBeLessThan(scales.get(largest.id) ?? 0);
-    expect(scales.get(smaller.id)).toBeGreaterThanOrEqual(0.28);
+    expect(scales.get(smaller.id)).toBe(0.58);
+    expect(scales.get(largest.id)).toBe(0.82);
+  });
+
+  it('hides a number plate until one of the two standard sizes fits its contour', () => {
+    const scales = twoTierBuildingMarkerScales([building], (point) => ({ x: point.longitude, y: point.latitude }));
+    expect(scales.has(building.id)).toBe(false);
   });
 
   it('centers a newly opened map on the response boundary', () => {

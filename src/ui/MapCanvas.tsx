@@ -843,7 +843,7 @@ export function MapCanvas(props: Props) {
   };
   const districtMarkerDetailLevel = zoom >= 4.2 ? "full" : "compact";
   const districtMarkerScale = Math.max(0.2, Math.min(1, zoom / 4.8));
-  const buildingMarkerScales = twoTierBuildingMarkerScales(visibleDistrictObjects, districtMarkerScale);
+  const buildingMarkerScales = twoTierBuildingMarkerScales(visibleDistrictObjects, projection.project);
   const districtRawPlacements = visibleDistrictObjects
     .filter(hasDistrictMarker)
     .map((object) => ({ object, ...projection.project(object.point) }));
@@ -865,9 +865,9 @@ export function MapCanvas(props: Props) {
   };
   return (
     <main className="map-column">
-      <div className="map-toolbar">
+      <div className="map-toolbar calculation-map-toolbar">
         <div className="map-tool-stack">
-          <div className="map-tool-group">
+          <div className="map-tool-group mobile-map-command-bar">
             <div className="segmented">
               <button
                 className={props.basemap === "standard" ? "active" : ""}
@@ -882,6 +882,16 @@ export function MapCanvas(props: Props) {
                 Спутник
               </button>
             </div>
+            {props.sourcePlaced && (
+              <div className="toolbar-wind-summary">
+                <svg viewBox="0 0 44 44" aria-hidden="true">
+                  <g transform={`rotate(${((props.windFromDegrees + 180) % 360) + rotation} 22 22)`}>
+                    <path d="M22 39V8M22 8 13 20M22 8l9 12" />
+                  </g>
+                </svg>
+                <div><strong>{windName(props.windFromDegrees)} ветер</strong><span>{round(props.windSpeedMps, 1)} м/с</span></div>
+              </div>
+            )}
             <button type="button" className={`district-tools-toggle${districtToolsOpen ? ' active' : ''}`} aria-expanded={districtToolsOpen} title="Поиск и отображение объектов района выезда" aria-label="Показать поиск зданий и элементов НППВ" onClick={() => setDistrictToolsOpen((current) => !current)}><UiIcon name="chevronDown" /></button>
           </div>
           {districtToolsOpen && <>
@@ -898,21 +908,6 @@ export function MapCanvas(props: Props) {
             />
           </>}
         </div>
-        {props.sourcePlaced && (
-          <div className="toolbar-wind-summary">
-            <svg viewBox="0 0 44 44" aria-hidden="true">
-              <g
-                transform={`rotate(${((props.windFromDegrees + 180) % 360) + rotation} 22 22)`}
-              >
-                <path d="M22 39V8M22 8 13 20M22 8l9 12" />
-              </g>
-            </svg>
-            <div>
-              <strong>{windName(props.windFromDegrees)} ветер</strong>
-              <span>{round(props.windSpeedMps, 1)} м/с</span>
-            </div>
-          </div>
-        )}
       </div>
         <div className="zoom">
           <button
@@ -1302,6 +1297,8 @@ export function MapCanvas(props: Props) {
               })}
               {districtMarkerPlacements.map(({ object, x, y }) => {
                 const contourSearch = searchDistrictId === object.id && isBuildingWithContour(object);
+                const buildingScale = object.kind === 'building' ? buildingMarkerScales.get(object.id) : undefined;
+                if (object.kind === 'building' && buildingScale === undefined) return null;
                 return (
                   <DistrictMapMarker
                     key={object.id}
@@ -1312,7 +1309,7 @@ export function MapCanvas(props: Props) {
                     highlighted={searchDistrictId === object.id && !contourSearch}
                     interactionDisabled={rulerActive}
                     detailLevel={districtMarkerDetailLevel}
-                    scale={object.kind === 'building' ? buildingMarkerScales.get(object.id) ?? districtMarkerScale : districtMarkerScale}
+                    scale={buildingScale ?? districtMarkerScale}
                     onSelect={() => setSelectedDistrictId(object.id)}
                     onHoverChange={(hovered) => setHoveredDistrictId(hovered ? object.id : null)}
                   />

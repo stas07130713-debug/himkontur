@@ -602,6 +602,7 @@ export function DistrictMapPage(props: Props) {
     return layers;
   });
   const [legendCollapsed, setLegendCollapsed] = useState(compactViewport);
+  const [districtToolsOpen, setDistrictToolsOpen] = useState(() => !compactViewport());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [searchHighlightedId, setSearchHighlightedId] = useState<string | null>(null);
@@ -707,7 +708,7 @@ export function DistrictMapPage(props: Props) {
   });
   const visibleObjects = props.objects.filter((object) => object.id === searchHighlightedId
     || visibleLayers.has(districtLayerKey(object)));
-  const buildingMarkerScales = twoTierBuildingMarkerScales(visibleObjects, markerScale);
+  const buildingMarkerScales = twoTierBuildingMarkerScales(visibleObjects, projection.project);
   const markerPlacements = useMemo(() => {
     const raw = visibleObjects
       .filter(hasDistrictMarker)
@@ -1248,11 +1249,14 @@ export function DistrictMapPage(props: Props) {
     <div className={`district-workspace${selected === null ? '' : ' details-open'}`}>
       <main className="district-map-column">
         <div className="district-map-topbar">
-          <div className="segmented district-basemap-switch">
-            <button className={props.basemap === 'standard' ? 'active' : ''} onClick={() => props.onBasemapChange('standard')}>Карта</button>
-            <button className={props.basemap === 'satellite' ? 'active' : ''} onClick={() => props.onBasemapChange('satellite')}>Спутник</button>
+          <div className="district-map-primary-tools mobile-map-command-bar">
+            <div className="segmented district-basemap-switch">
+              <button className={props.basemap === 'standard' ? 'active' : ''} onClick={() => props.onBasemapChange('standard')}>Карта</button>
+              <button className={props.basemap === 'satellite' ? 'active' : ''} onClick={() => props.onBasemapChange('satellite')}>Спутник</button>
+            </div>
+            <button type="button" className={`district-tools-toggle${districtToolsOpen ? ' active' : ''}`} aria-expanded={districtToolsOpen} title="Поиск и отображение объектов района выезда" aria-label="Показать поиск зданий и элементов НППВ" onClick={() => setDistrictToolsOpen((current) => !current)}><UiIcon name="chevronDown" /></button>
           </div>
-          <DistrictObjectToolbar
+          {districtToolsOpen && <DistrictObjectToolbar
             objects={props.objects}
             showBuildings={showBuildings}
             showHydrants={showHydrants}
@@ -1262,7 +1266,7 @@ export function DistrictMapPage(props: Props) {
             onSearchSelectionChange={(object) => setSearchHighlightedId(object?.id ?? null)}
             resetSignal={searchResetSignal}
             compact
-          />
+          />}
         </div>
         <div className={`district-map-surface ${props.basemap}`} ref={stageRef}>
           <OfflineBasemap center={center} zoom={mapLibreZoom} basemap={props.basemap} onBuildingContourResolver={(resolver) => { buildingContourResolverRef.current = resolver; }} />
@@ -1403,7 +1407,9 @@ export function DistrictMapPage(props: Props) {
                 },
               } : {};
               const contourSearch = searchHighlightedId === object.id && isBuildingWithContour(object);
-              return <DistrictMapMarker key={object.id} object={object} x={x} y={y} selected={selectedId === object.id && !contourSearch} highlighted={searchHighlightedId === object.id && !contourSearch} editing={props.adminMode} detailLevel={markerDetailLevel} scale={object.kind === 'building' ? buildingMarkerScales.get(object.id) ?? markerScale : markerScale} interactionDisabled={rulerActive || contourDraft !== null} onSelect={() => selectObject(object.id)} onHoverChange={(hovered) => setHoveredId(hovered ? object.id : null)} {...dragProps} />;
+              const buildingScale = object.kind === 'building' ? buildingMarkerScales.get(object.id) : undefined;
+              if (object.kind === 'building' && buildingScale === undefined) return null;
+              return <DistrictMapMarker key={object.id} object={object} x={x} y={y} selected={selectedId === object.id && !contourSearch} highlighted={searchHighlightedId === object.id && !contourSearch} editing={props.adminMode} detailLevel={markerDetailLevel} scale={buildingScale ?? markerScale} interactionDisabled={rulerActive || contourDraft !== null} onSelect={() => selectObject(object.id)} onHoverChange={(hovered) => setHoveredId(hovered ? object.id : null)} {...dragProps} />;
             })}
             <MapRulerOverlay points={rulerPoints} project={projection.project} />
           </svg>
