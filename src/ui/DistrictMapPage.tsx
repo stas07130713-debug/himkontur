@@ -49,6 +49,7 @@ import {
   NPPV_LAYER_KEYS,
   districtLayerKey,
   districtObjectFocusPoint,
+  districtObjectMarkerPoint,
   districtResponseBoundaryCenter,
   hasDistrictMarker,
   isBuildingWithContour,
@@ -713,7 +714,7 @@ export function DistrictMapPage(props: Props) {
   const markerPlacements = useMemo(() => {
     const raw = visibleObjects
       .filter(hasDistrictMarker)
-      .map((object) => ({ object, ...projection.project(isBuildingWithContour(object) ? districtObjectFocusPoint(object) : object.point) }));
+      .map((object) => ({ object, ...projection.project(isBuildingWithContour(object) ? districtObjectMarkerPoint(object) : object.point) }));
     const anchored = raw.filter(({ object }) => isBuildingWithContour(object));
     const floating = raw.filter(({ object }) => !isBuildingWithContour(object));
     return [...anchored, ...declutterDistrictMarkers(floating, viewSize.width, viewSize.height)];

@@ -72,7 +72,9 @@ try {
       && resultsRect.left >= toolbarRectWithResults.left - 1
       && resultsRect.right <= toolbarRectWithResults.right + 1
       && resultsRect.bottom <= toolbarRectWithResults.bottom + 1);
-    const compactSearchWidth = Boolean(toolbarRectWithResults && searchRect && searchRect.width <= toolbarRectWithResults.width * .7);
+    const compactSearchWidth = Boolean(toolbarRectWithResults && searchRect
+      && searchRect.width <= toolbarRectWithResults.width - 28
+      && searchRect.width >= toolbarRectWithResults.width * .75);
     const clearButtonCentered = Boolean(searchInputRect && clearButtonRect
       && Math.abs((clearButtonRect.top + clearButtonRect.height / 2) - (searchInputRect.top + searchInputRect.height / 2)) <= 1);
     const clearButtonOffset = searchInputRect && clearButtonRect

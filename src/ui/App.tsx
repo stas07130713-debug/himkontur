@@ -51,6 +51,7 @@ import {
   checkMapSynchronization,
   disabledMapSyncStatus,
   loadMapSyncConfig,
+  withRenewedMapAdminSession,
   type MapAdminCredential,
   type MapSyncStatus,
 } from "./map-sync-service";
@@ -524,7 +525,18 @@ export function App() {
         const pending = pendingDistrictOperationsRef.current[0];
         if (pending === undefined) break;
         setDistrictSyncState("publishing");
-        const synchronized = await publishDistrictMapOperation(pending, adminCredentialRef.current);
+        const activeCredential: MapAdminCredential = adminCredentialRef.current;
+        const publishResult: Readonly<{
+          value: DistrictMapProject;
+          credential: MapAdminCredential;
+          status: MapSyncStatus | null;
+        }> = await withRenewedMapAdminSession(
+          activeCredential,
+          (credential) => publishDistrictMapOperation(pending, credential),
+        );
+        adminCredentialRef.current = publishResult.credential;
+        if (publishResult.status !== null) setMapSyncStatus(publishResult.status);
+        const synchronized = publishResult.value;
         if (pendingDistrictOperationsRef.current[0]?.operationId === pending.operationId) {
           pendingDistrictOperationsRef.current = pendingDistrictOperationsRef.current.slice(1);
           savePendingDistrictMapOperations(pendingDistrictOperationsRef.current);

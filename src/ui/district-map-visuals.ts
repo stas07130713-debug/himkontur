@@ -42,6 +42,66 @@ export function districtObjectFocusPoint(object: DistrictMapObject): GeoPoint {
   };
 }
 
+function pointInsideContour(point: GeoPoint, contour: readonly GeoPoint[]): boolean {
+  let inside = false;
+  for (let index = 0, previous = contour.length - 1; index < contour.length; previous = index++) {
+    const currentPoint = contour[index];
+    const previousPoint = contour[previous];
+    if (currentPoint === undefined || previousPoint === undefined) continue;
+    const crosses = (currentPoint.latitude > point.latitude) !== (previousPoint.latitude > point.latitude)
+      && point.longitude < ((previousPoint.longitude - currentPoint.longitude) * (point.latitude - currentPoint.latitude))
+        / (previousPoint.latitude - currentPoint.latitude) + currentPoint.longitude;
+    if (crosses) inside = !inside;
+  }
+  return inside;
+}
+
+function squaredDistanceToSegment(point: GeoPoint, start: GeoPoint, end: GeoPoint): number {
+  const dx = end.longitude - start.longitude;
+  const dy = end.latitude - start.latitude;
+  const lengthSquared = dx * dx + dy * dy;
+  const ratio = lengthSquared === 0 ? 0 : Math.max(0, Math.min(1,
+    ((point.longitude - start.longitude) * dx + (point.latitude - start.latitude) * dy) / lengthSquared,
+  ));
+  const x = start.longitude + ratio * dx;
+  const y = start.latitude + ratio * dy;
+  return (point.longitude - x) ** 2 + (point.latitude - y) ** 2;
+}
+
+/** Chooses a stable interior anchor, even when an old movable label was saved outside its building. */
+export function districtObjectMarkerPoint(object: DistrictMapObject): GeoPoint {
+  if (object.kind !== 'building' || object.contour.length < 3) return object.point;
+  const contour = object.contour;
+  const latitudes = contour.map((point) => point.latitude);
+  const longitudes = contour.map((point) => point.longitude);
+  const south = Math.min(...latitudes);
+  const north = Math.max(...latitudes);
+  const west = Math.min(...longitudes);
+  const east = Math.max(...longitudes);
+  const candidates: GeoPoint[] = [object.point, districtObjectFocusPoint(object)];
+  for (let row = 1; row < 12; row += 1) {
+    for (let column = 1; column < 12; column += 1) {
+      candidates.push({
+        latitude: south + (north - south) * row / 12,
+        longitude: west + (east - west) * column / 12,
+      });
+    }
+  }
+  const inside = candidates.filter((point) => pointInsideContour(point, contour));
+  if (inside.length === 0) return districtObjectFocusPoint(object);
+  return inside.reduce((best, candidate) => {
+    const clearance = contour.reduce((minimum, start, index) => {
+      const end = contour[(index + 1) % contour.length] ?? start;
+      return Math.min(minimum, squaredDistanceToSegment(candidate, start, end));
+    }, Number.POSITIVE_INFINITY);
+    const bestClearance = contour.reduce((minimum, start, index) => {
+      const end = contour[(index + 1) % contour.length] ?? start;
+      return Math.min(minimum, squaredDistanceToSegment(best, start, end));
+    }, Number.POSITIVE_INFINITY);
+    return clearance > bestClearance ? candidate : best;
+  });
+}
+
 export function districtResponseBoundaryCenter(objects: readonly DistrictMapObject[]): GeoPoint | null {
   const points = objects
     .filter((object): object is DistrictBuilding => object.kind === 'building' && object.mapRole === 'response-boundary')
@@ -62,7 +122,7 @@ export function fittedBuildingMarkerScale(
 ): number {
   if (object.kind !== 'building' || object.contour.length < 3) return baseScale;
   const polygon = object.contour.map(project);
-  const center = project(districtObjectFocusPoint(object));
+  const center = project(districtObjectMarkerPoint(object));
   const pointInsidePolygon = (x: number, y: number): boolean => {
     let inside = false;
     for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
@@ -122,7 +182,9 @@ export function twoTierBuildingMarkerScales(
     const preferredScale = buildingFootprint(object) <= threshold ? smallScale : largeScale;
     if (fittedScale >= preferredScale) return [[object.id, preferredScale] as const];
     if (fittedScale >= smallScale) return [[object.id, smallScale] as const];
-    return [];
+    // At a distant zoom the plate may become very small, but it remains visible
+    // and never crosses the actual contour of its building.
+    return fittedScale > 0 ? [[object.id, fittedScale] as const] : [];
   }));
 }
 

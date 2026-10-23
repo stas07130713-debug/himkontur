@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DistrictBuilding, DistrictHydrant } from './district-map-model';
-import { districtLayerKey, districtObjectFocusPoint, districtResponseBoundaryCenter, fittedBuildingMarkerScale, hasDistrictMarker, isBuildingWithContour, twoTierBuildingMarkerScales } from './district-map-visuals';
+import { districtLayerKey, districtObjectFocusPoint, districtObjectMarkerPoint, districtResponseBoundaryCenter, fittedBuildingMarkerScale, hasDistrictMarker, isBuildingWithContour, twoTierBuildingMarkerScales } from './district-map-visuals';
 
 const building: DistrictBuilding = {
   id: 'building-1',
@@ -58,9 +58,10 @@ describe('district map visual helpers', () => {
     expect(scales.get(largest.id)).toBe(0.82);
   });
 
-  it('hides a number plate until one of the two standard sizes fits its contour', () => {
+  it('keeps a tiny number plate visible when neither standard size fits its contour', () => {
     const scales = twoTierBuildingMarkerScales([building], (point) => ({ x: point.longitude, y: point.latitude }));
-    expect(scales.has(building.id)).toBe(false);
+    expect(scales.get(building.id)).toBeGreaterThan(0);
+    expect(scales.get(building.id)).toBeLessThan(0.58);
   });
 
   it('keeps the complete plate inside a rotated building instead of using its bounding box', () => {
@@ -77,6 +78,22 @@ describe('district map visual helpers', () => {
     const scale = fittedBuildingMarkerScale(rotated, 1, (point) => ({ x: point.longitude * 30, y: point.latitude * 30 }));
     expect(scale).toBeLessThan(0.82);
     expect(scale).toBeGreaterThan(0.58);
+  });
+
+  it('moves an old external label anchor back inside a concave building', () => {
+    const concave: DistrictBuilding = {
+      ...building,
+      point: { latitude: 10, longitude: 10 },
+      contour: [
+        { latitude: 0, longitude: 0 }, { latitude: 0, longitude: 4 },
+        { latitude: 1, longitude: 4 }, { latitude: 1, longitude: 1 },
+        { latitude: 4, longitude: 1 }, { latitude: 4, longitude: 0 },
+      ],
+    };
+    const anchor = districtObjectMarkerPoint(concave);
+    expect(anchor.latitude).toBeLessThan(4);
+    expect(anchor.longitude).toBeLessThan(4);
+    expect(anchor).not.toEqual(concave.point);
   });
 
   it('centers a newly opened map on the response boundary', () => {

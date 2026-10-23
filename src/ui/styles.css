@@ -4385,3 +4385,140 @@ svg.district-legend-building text {
     height: 26px;
   }
 }
+
+/* Final command-bar layout: one compact window that never displaces the compass. */
+.calculation-map-toolbar { left: 9px; right: auto; width: min(430px, calc(100% - 120px)); }
+.calculation-map-toolbar > .map-tool-stack { width: 100%; max-width: none; }
+.district-map-topbar { width: min(430px, calc(100% - 120px)); max-width: none; }
+.calculation-map-toolbar > .map-tool-stack,
+.district-map-topbar { display: grid; gap: 0; }
+.calculation-map-toolbar > .map-tool-stack > .mobile-map-command-bar,
+.district-map-primary-tools {
+  width: 100%;
+  height: 48px;
+  min-height: 48px;
+  box-sizing: border-box;
+  padding: 4px;
+  display: grid;
+  grid-template-columns: 156px minmax(0, 214px) 40px;
+  align-items: center;
+  gap: 5px;
+}
+.calculation-map-toolbar .mobile-map-command-bar > .segmented,
+.district-map-primary-tools > .district-basemap-switch {
+  grid-column: 1;
+  grid-row: 1;
+  width: 156px;
+  height: 38px;
+  min-height: 38px;
+  box-sizing: border-box;
+  padding: 0;
+  display: flex;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+  overflow: hidden;
+}
+.calculation-map-toolbar .mobile-map-command-bar > .segmented button,
+.district-map-primary-tools > .district-basemap-switch button {
+  width: 78px;
+  min-width: 78px;
+  height: 38px;
+  min-height: 38px;
+  box-sizing: border-box;
+  padding: 4px 7px;
+  border-radius: 0;
+  font-size: 11px;
+}
+.calculation-map-toolbar .mobile-map-command-bar > .toolbar-wind-summary {
+  grid-column: 2;
+  grid-row: 1;
+  width: 214px;
+  min-width: 0;
+  max-width: none;
+  height: 38px;
+  min-height: 38px;
+  box-sizing: border-box;
+  margin: 0;
+  overflow: hidden;
+}
+.calculation-map-toolbar .mobile-map-command-bar > .district-tools-toggle,
+.district-map-primary-tools > .district-tools-toggle {
+  grid-column: 3;
+  grid-row: 1;
+  width: 40px;
+  min-width: 40px;
+  height: 38px;
+  min-height: 38px !important;
+}
+.calculation-map-toolbar .district-object-toolbar,
+.district-map-topbar > .district-object-toolbar {
+  grid-column: 1;
+  grid-row: 2;
+  width: 100%;
+  min-width: 0;
+  min-height: 67px;
+  box-sizing: border-box;
+  padding: 4px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  margin-top: -1px;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 10px #001c2c66;
+}
+.calculation-map-toolbar:has(.district-object-toolbar) .mobile-map-command-bar,
+.district-map-topbar:has(> .district-object-toolbar) .district-map-primary-tools {
+  border-radius: 8px 8px 0 0;
+  box-shadow: none;
+}
+.calculation-map-toolbar .district-object-search-row,
+.district-map-topbar .district-object-search-row {
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 5px;
+}
+.calculation-map-toolbar .district-layer-toggle,
+.district-map-topbar .district-layer-toggle {
+  width: 32px;
+  min-width: 32px;
+  padding: 0;
+  justify-content: center;
+  gap: 0;
+  overflow: hidden;
+  font-size: 0;
+}
+.calculation-map-toolbar .district-layer-toggle input,
+.district-map-topbar .district-layer-toggle input { margin: 0; }
+.calculation-map-toolbar .district-search-results,
+.district-map-topbar .district-search-results { grid-column: 1 / -1; }
+
+@media (max-width: 720px), (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
+  .calculation-map-toolbar,
+  .district-map-topbar { left: 5px; right: auto; width: min(430px, calc(100% - 77px)); }
+  .calculation-map-toolbar > .map-tool-stack { width: 100%; max-width: none; }
+  .calculation-map-toolbar > .map-tool-stack > .mobile-map-command-bar,
+  .district-map-primary-tools { width: 100%; grid-template-columns: 112px minmax(0, 1fr) 34px; gap: 4px; }
+  .calculation-map-toolbar .mobile-map-command-bar > .segmented,
+  .district-map-primary-tools > .district-basemap-switch { width: 112px; }
+  .calculation-map-toolbar .mobile-map-command-bar > .segmented button,
+  .district-map-primary-tools > .district-basemap-switch button { width: 56px; min-width: 56px; padding-inline: 2px; font-size: 9px; }
+  .calculation-map-toolbar .mobile-map-command-bar > .toolbar-wind-summary { width: 100%; min-width: 0; padding-inline: 4px; }
+  .calculation-map-toolbar .mobile-map-command-bar > .district-tools-toggle,
+  .district-map-primary-tools > .district-tools-toggle { width: 34px; min-width: 34px; }
+  .calculation-map-toolbar .district-object-toolbar,
+  .district-map-topbar > .district-object-toolbar { width: 100%; min-height: 67px; }
+  .calculation-map-toolbar .district-object-search-row,
+  .calculation-map-toolbar .map-tool-stack .district-object-search-row,
+  .district-map-topbar .district-object-search-row { grid-template-columns: minmax(0, 1fr) 32px; gap: 4px; }
+  .map-surface .compass-rose,
+  .district-map-surface > .district-compass { top: 6px; right: 6px; width: 58px; height: 58px; }
+  .map-column > .zoom { top: 72px; }
+  .district-map-surface > .district-zoom { top: 72px; right: 10px; }
+  .map-column > .source-focus { top: 148px; }
+  .map-column > .source-lock { top: 196px; }
+  .calculation-ruler-control { top: 240px; }
+  .district-ruler-control { top: 148px; right: 14px; }
+}

@@ -52,6 +52,10 @@ try {
   let mobileDispatchMapOnly = false;
   let unifiedCalculationCommandBar = false;
   let unifiedDistrictCommandBar = false;
+  let calculationSearchRowsInline = false;
+  let districtSearchRowsInline = false;
+  let districtOverlayControlsDoNotOverlap = false;
+  let districtBuildingPlatesVisible = false;
   let searchFocusIsBorderless = false;
   let mobileDispatchPinchZoom = false;
   let mobileDispatchTouchActions = null;
@@ -187,6 +191,39 @@ try {
           && elements.every((node) => getComputedStyle(node).visibility !== 'hidden')
           && rects.every((rect, index) => rects.slice(index + 1).every((other) => !overlaps(rect, other))));
       })()`);
+      const calculationToolsCheck = await evaluate(`(async () => {
+        const toggle = document.querySelector('.calculation-map-toolbar .district-tools-toggle');
+        if (toggle?.getAttribute('aria-expanded') !== 'true') toggle?.click();
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const rows = [...document.querySelectorAll('.calculation-map-toolbar .district-object-search-row')];
+        const inline = rows.length === 2 && rows.every((row) => {
+          const input = row.querySelector('.district-search')?.getBoundingClientRect();
+          const layer = row.querySelector('.district-layer-toggle')?.getBoundingClientRect();
+          return Boolean(input && layer
+            && Math.max(input.top, layer.top) < Math.min(input.bottom, layer.bottom) - 3
+            && input.right <= layer.left - 2);
+        });
+        const upper = document.querySelector('.calculation-map-toolbar .mobile-map-command-bar')?.getBoundingClientRect();
+        const lower = document.querySelector('.calculation-map-toolbar .district-object-toolbar')?.getBoundingClientRect();
+        const compass = document.querySelector('.map-surface .compass-rose')?.getBoundingClientRect();
+        const mapSurface = document.querySelector('.map-surface')?.getBoundingClientRect();
+        const overlaps = (a, b) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+        const windowAligned = Boolean(upper && lower
+          && Math.abs(upper.left - lower.left) <= 1
+          && Math.abs(upper.right - lower.right) <= 1
+          && Math.abs(upper.bottom - lower.top) <= 2
+          && compass && mapSurface
+          && Math.abs(compass.top - mapSurface.top - 6) <= 2
+          && !overlaps(compass, upper)
+          && !overlaps(compass, lower));
+        document.querySelector('.map-column')?.scrollIntoView({ block: 'start' });
+        return { inline, windowAligned };
+      })()`);
+      calculationSearchRowsInline = calculationToolsCheck.inline && calculationToolsCheck.windowAligned;
+      await delay(120);
+      const toolsShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+      writeFileSync(resolve('artifacts', 'mobile-calculation-tools-390.png'), Buffer.from(toolsShot.data, 'base64'));
+      await evaluate(`document.querySelector('.calculation-map-toolbar .district-tools-toggle[aria-expanded="true"]')?.click()`);
       await evaluate(`document.querySelector('.calculation-map-legend')?.scrollIntoView({ block: 'center' })`);
       await delay(120);
       const legendShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
@@ -254,6 +291,30 @@ try {
         const commandRects = commandItems.map((node) => node?.getBoundingClientRect());
         const commandContained = Boolean(commandRect && commandItems.every(Boolean)
           && commandRects.every((rect) => rect && rect.width > 0 && rect.left >= commandRect.left && rect.right <= commandRect.right));
+        const lowerToolbarRect = document.querySelector('.district-map-topbar > .district-object-toolbar')?.getBoundingClientRect();
+        const commandWindowAligned = Boolean(commandRect && lowerToolbarRect
+          && Math.abs(commandRect.left - lowerToolbarRect.left) <= 1
+          && Math.abs(commandRect.right - lowerToolbarRect.right) <= 1
+          && Math.abs(commandRect.bottom - lowerToolbarRect.top) <= 2);
+        const searchRows = [...document.querySelectorAll('.district-map-topbar .district-object-search-row')];
+        const searchRowsInline = searchRows.length === 2 && searchRows.every((row) => {
+          const input = row.querySelector('.district-search')?.getBoundingClientRect();
+          const layer = row.querySelector('.district-layer-toggle')?.getBoundingClientRect();
+          return Boolean(input && layer
+            && Math.max(input.top, layer.top) < Math.min(input.bottom, layer.bottom) - 3
+            && input.right <= layer.left - 2);
+        });
+        const topbarRect = document.querySelector('.district-map-topbar')?.getBoundingClientRect();
+        const overlayRects = [...document.querySelectorAll('.district-map-surface > .district-compass, .district-map-surface > .district-zoom, .district-map-surface > .district-ruler-control')]
+          .map((node) => node.getBoundingClientRect());
+        const overlaps = (a, b) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
+        const overlayControlsDoNotOverlap = Boolean(topbarRect && overlayRects.length === 3
+          && overlayRects.every((rect) => !overlaps(rect, topbarRect))
+          && overlayRects.every((rect, index) => overlayRects.slice(index + 1).every((other) => !overlaps(rect, other))));
+        const buildingPlateRects = [...document.querySelectorAll('.building-number-marker g > path')]
+          .map((node) => node.getBoundingClientRect());
+        const buildingPlatesVisible = buildingPlateRects.length > 0
+          && buildingPlateRects.every((rect) => rect.width > 0 && rect.height > 0);
         const nppvInputs = [...(legend?.querySelectorAll('.district-legend-row') ?? [])]
           .filter((row) => row.textContent?.includes('Пожарные гидранты') || row.textContent?.includes('Пожарные водоёмы'))
           .map((row) => row.querySelector('input'))
@@ -270,7 +331,7 @@ try {
         await new Promise((resolve) => setTimeout(resolve, 650));
         const details = document.querySelector('.district-details-panel');
         const buildingRevealed = Boolean(details && scrollY > 0 && details.getBoundingClientRect().top < innerHeight - 100);
-        return { startsCollapsed, nppvHidden, territoriesHidden, autoCollapsed, buildingRevealed, headerContained, caretVisible, focusBorderless, commandContained };
+        return { startsCollapsed, nppvHidden, territoriesHidden, autoCollapsed, buildingRevealed, headerContained, caretVisible, focusBorderless, commandContained: commandContained && commandWindowAligned, searchRowsInline, overlayControlsDoNotOverlap, buildingPlatesVisible };
       })()`);
       districtLegendStartsCollapsed = districtChecks.startsCollapsed;
       districtNppvStartsHidden = districtChecks.nppvHidden;
@@ -281,6 +342,9 @@ try {
       districtSearchCaretVisible = districtChecks.caretVisible;
       searchFocusIsBorderless = districtChecks.focusBorderless;
       unifiedDistrictCommandBar = districtChecks.commandContained;
+      districtSearchRowsInline = districtChecks.searchRowsInline;
+      districtOverlayControlsDoNotOverlap = districtChecks.overlayControlsDoNotOverlap;
+      districtBuildingPlatesVisible = districtChecks.buildingPlatesVisible;
       const districtShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
       writeFileSync(resolve('artifacts', 'mobile-district-map-390.png'), Buffer.from(districtShot.data, 'base64'));
       await evaluate(`document.querySelector('.district-emergency-button')?.click()`);
@@ -350,10 +414,14 @@ try {
   if (!mobileDispatchMapOnly) failures.push({ check: 'mobile-dispatch-map-only' });
   if (!unifiedCalculationCommandBar) failures.push({ check: 'unified-calculation-command-bar' });
   if (!unifiedDistrictCommandBar) failures.push({ check: 'unified-district-command-bar' });
+  if (!calculationSearchRowsInline) failures.push({ check: 'calculation-search-rows-inline' });
+  if (!districtSearchRowsInline) failures.push({ check: 'district-search-rows-inline' });
+  if (!districtOverlayControlsDoNotOverlap) failures.push({ check: 'district-overlay-controls-do-not-overlap' });
+  if (!districtBuildingPlatesVisible) failures.push({ check: 'district-building-plates-visible' });
   if (!searchFocusIsBorderless) failures.push({ check: 'search-focus-is-borderless' });
   if (!mobileDispatchPinchZoom) failures.push({ check: 'mobile-dispatch-pinch-zoom' });
   if (!adminLoginWorksOffline) failures.push({ check: 'admin-login-works-without-cloud' });
-  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, dangerousGoodsResetWorks, dangerousGoodsActionsHorizontal, calculationLegendAligned, expandedSourceCanScroll, updateModalProminent, districtLegendStartsCollapsed, districtNppvStartsHidden, districtTerritoriesStartHidden, districtLegendAutoCollapses, districtBuildingAutoReveal, districtLegendHeaderContained, districtSearchCaretVisible, mobileDispatchMapOnly, unifiedCalculationCommandBar, unifiedDistrictCommandBar, searchFocusIsBorderless, mobileDispatchPinchZoom, mobileDispatchTouchActions, adminLoginWorksOffline, cases, failures };
+  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, dangerousGoodsResetWorks, dangerousGoodsActionsHorizontal, calculationLegendAligned, expandedSourceCanScroll, updateModalProminent, districtLegendStartsCollapsed, districtNppvStartsHidden, districtTerritoriesStartHidden, districtLegendAutoCollapses, districtBuildingAutoReveal, districtLegendHeaderContained, districtSearchCaretVisible, mobileDispatchMapOnly, unifiedCalculationCommandBar, unifiedDistrictCommandBar, calculationSearchRowsInline, districtSearchRowsInline, districtOverlayControlsDoNotOverlap, districtBuildingPlatesVisible, searchFocusIsBorderless, mobileDispatchPinchZoom, mobileDispatchTouchActions, adminLoginWorksOffline, cases, failures };
   writeFileSync(resolve('artifacts', 'mobile-layout-audit.json'), JSON.stringify(report, null, 2));
   if (failures.length) throw new Error(`Мобильная компоновка не прошла проверку: ${JSON.stringify(failures)}`);
   console.log(`Мобильная компоновка проверена на ${cases.map((item) => `${item.width}×${item.height}`).join(', ')}: горизонтального сдвига нет; найденный опасный груз открывается автоматически; после ввода следуют результаты, карта и контрольные точки.`);

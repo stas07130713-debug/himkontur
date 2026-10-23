@@ -197,9 +197,29 @@ export async function authenticateMapAdmin(password: string): Promise<Readonly<{
   }, 12_000);
   if (!isObject(payload) || stringValue(payload.sessionToken) === '') throw new MapSyncRequestError('Сервис не выдал административную сессию.', 502, 'invalid');
   return {
-    credential: { password: '', sessionToken: stringValue(payload.sessionToken) },
+    // Keep the password only in this in-memory credential so an expired
+    // eight-hour session can be renewed without losing queued map edits.
+    credential: { password, sessionToken: stringValue(payload.sessionToken) },
     status: normalizeStatus(payload.status),
   };
+}
+
+/** Retries one authorized operation with a fresh session when the eight-hour token has expired. */
+export async function withRenewedMapAdminSession<T>(
+  credential: MapAdminCredential,
+  operation: (activeCredential: MapAdminCredential) => Promise<T>,
+): Promise<Readonly<{ value: T; credential: MapAdminCredential; status: MapSyncStatus | null }>> {
+  try {
+    return { value: await operation(credential), credential, status: null };
+  } catch (error) {
+    if (!(error instanceof MapSyncRequestError) || error.kind !== 'authorization' || credential.password === '') throw error;
+    const authenticated = await authenticateMapAdmin(credential.password);
+    return {
+      value: await operation(authenticated.credential),
+      credential: authenticated.credential,
+      status: authenticated.status,
+    };
+  }
 }
 
 export async function publishCoordinatedMap(request: CoordinatedPublishRequest): Promise<CoordinatedMapResponse> {

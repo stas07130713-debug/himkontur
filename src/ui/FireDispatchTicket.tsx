@@ -5,7 +5,7 @@ import type { Basemap } from './MapCanvas';
 import type { DistrictBuilding, DistrictFireReservoir, DistrictHydrant, DistrictMapObject, DistrictPlanningDocument } from './district-map-model';
 import { hydrantNetworkCode } from './district-map-model';
 import { buildingPrefix } from './district-map-model';
-import { districtObjectFocusPoint, fittedBuildingMarkerScale } from './district-map-visuals';
+import { districtObjectMarkerPoint, fittedBuildingMarkerScale } from './district-map-visuals';
 import { OfflineBasemap } from './OfflineBasemap';
 import { UiIcon } from './UiIcon';
 import { CompassRose } from './CompassRose';
@@ -417,7 +417,7 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
     const screen = project(point);
     return `${screen.x},${screen.y}`;
   }).join(' ');
-  const buildingPoint = project(districtObjectFocusPoint(building));
+  const buildingPoint = project(districtObjectMarkerPoint(building));
   const markerScale = fittedBuildingMarkerScale(building, 1, project);
   // The hydrant badge is wider than the symbol itself. Keep a generous safety
   // area around every visible source so a distance label can never sit on top
