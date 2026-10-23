@@ -44,6 +44,7 @@ try {
   let updateModalProminent = false;
   let districtLegendStartsCollapsed = false;
   let districtNppvStartsHidden = false;
+  let districtTerritoriesStartHidden = false;
   let districtLegendAutoCollapses = false;
   let districtBuildingAutoReveal = false;
   let districtLegendHeaderContained = false;
@@ -258,6 +259,9 @@ try {
           .map((row) => row.querySelector('input'))
           .filter(Boolean);
         const nppvHidden = nppvInputs.length >= 2 && nppvInputs.every((input) => !input.checked);
+        const territoryInput = [...(legend?.querySelectorAll('.district-legend-building-list label') ?? [])]
+          .find((row) => row.textContent?.includes('Территории'))?.querySelector('input');
+        const territoriesHidden = Boolean(territoryInput && !territoryInput.checked);
         document.querySelector('.district-map-surface svg')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1, clientX: 180, clientY: 420, button: 0 }));
         await new Promise((resolve) => requestAnimationFrame(resolve));
         const autoCollapsed = Boolean(legend?.classList.contains('collapsed'));
@@ -266,10 +270,11 @@ try {
         await new Promise((resolve) => setTimeout(resolve, 650));
         const details = document.querySelector('.district-details-panel');
         const buildingRevealed = Boolean(details && scrollY > 0 && details.getBoundingClientRect().top < innerHeight - 100);
-        return { startsCollapsed, nppvHidden, autoCollapsed, buildingRevealed, headerContained, caretVisible, focusBorderless, commandContained };
+        return { startsCollapsed, nppvHidden, territoriesHidden, autoCollapsed, buildingRevealed, headerContained, caretVisible, focusBorderless, commandContained };
       })()`);
       districtLegendStartsCollapsed = districtChecks.startsCollapsed;
       districtNppvStartsHidden = districtChecks.nppvHidden;
+      districtTerritoriesStartHidden = districtChecks.territoriesHidden;
       districtLegendAutoCollapses = districtChecks.autoCollapsed;
       districtBuildingAutoReveal = districtChecks.buildingRevealed;
       districtLegendHeaderContained = districtChecks.headerContained;
@@ -337,6 +342,7 @@ try {
   if (!updateModalProminent) failures.push({ check: 'android-update-modal-prominence' });
   if (!districtLegendStartsCollapsed) failures.push({ check: 'district-legend-starts-collapsed' });
   if (!districtNppvStartsHidden) failures.push({ check: 'district-nppv-starts-hidden' });
+  if (!districtTerritoriesStartHidden) failures.push({ check: 'district-territories-start-hidden' });
   if (!districtLegendAutoCollapses) failures.push({ check: 'district-legend-auto-collapses' });
   if (!districtBuildingAutoReveal) failures.push({ check: 'district-building-auto-reveal' });
   if (!districtLegendHeaderContained) failures.push({ check: 'district-legend-header-contained' });
@@ -347,7 +353,7 @@ try {
   if (!searchFocusIsBorderless) failures.push({ check: 'search-focus-is-borderless' });
   if (!mobileDispatchPinchZoom) failures.push({ check: 'mobile-dispatch-pinch-zoom' });
   if (!adminLoginWorksOffline) failures.push({ check: 'admin-login-works-without-cloud' });
-  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, dangerousGoodsResetWorks, dangerousGoodsActionsHorizontal, calculationLegendAligned, expandedSourceCanScroll, updateModalProminent, districtLegendStartsCollapsed, districtNppvStartsHidden, districtLegendAutoCollapses, districtBuildingAutoReveal, districtLegendHeaderContained, districtSearchCaretVisible, mobileDispatchMapOnly, unifiedCalculationCommandBar, unifiedDistrictCommandBar, searchFocusIsBorderless, mobileDispatchPinchZoom, mobileDispatchTouchActions, adminLoginWorksOffline, cases, failures };
+  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, dangerousGoodsResetWorks, dangerousGoodsActionsHorizontal, calculationLegendAligned, expandedSourceCanScroll, updateModalProminent, districtLegendStartsCollapsed, districtNppvStartsHidden, districtTerritoriesStartHidden, districtLegendAutoCollapses, districtBuildingAutoReveal, districtLegendHeaderContained, districtSearchCaretVisible, mobileDispatchMapOnly, unifiedCalculationCommandBar, unifiedDistrictCommandBar, searchFocusIsBorderless, mobileDispatchPinchZoom, mobileDispatchTouchActions, adminLoginWorksOffline, cases, failures };
   writeFileSync(resolve('artifacts', 'mobile-layout-audit.json'), JSON.stringify(report, null, 2));
   if (failures.length) throw new Error(`Мобильная компоновка не прошла проверку: ${JSON.stringify(failures)}`);
   console.log(`Мобильная компоновка проверена на ${cases.map((item) => `${item.width}×${item.height}`).join(', ')}: горизонтального сдвига нет; найденный опасный груз открывается автоматически; после ввода следуют результаты, карта и контрольные точки.`);

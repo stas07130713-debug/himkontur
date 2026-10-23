@@ -61,11 +61,42 @@ export function fittedBuildingMarkerScale(
   project: (point: GeoPoint) => Readonly<{ x: number; y: number }>,
 ): number {
   if (object.kind !== 'building' || object.contour.length < 3) return baseScale;
-  const points = object.contour.map(project);
-  const width = Math.max(...points.map((point) => point.x)) - Math.min(...points.map((point) => point.x));
-  const height = Math.max(...points.map((point) => point.y)) - Math.min(...points.map((point) => point.y));
-  const fitted = Math.min((width * 0.72) / 42, (height * 0.72) / 26, 1);
-  return Math.min(baseScale, Math.max(0.08, fitted));
+  const polygon = object.contour.map(project);
+  const center = project(districtObjectFocusPoint(object));
+  const pointInsidePolygon = (x: number, y: number): boolean => {
+    let inside = false;
+    for (let index = 0, previous = polygon.length - 1; index < polygon.length; previous = index++) {
+      const currentPoint = polygon[index];
+      const previousPoint = polygon[previous];
+      if (currentPoint === undefined || previousPoint === undefined) continue;
+      const crosses = (currentPoint.y > y) !== (previousPoint.y > y)
+        && x < ((previousPoint.x - currentPoint.x) * (y - currentPoint.y)) / (previousPoint.y - currentPoint.y) + currentPoint.x;
+      if (crosses) inside = !inside;
+    }
+    return inside;
+  };
+  const fits = (scale: number): boolean => {
+    // Includes the white stroke around the 42 × 26 plate, so the visible plate
+    // cannot cross even a rotated or concave building contour.
+    const halfWidth = 22.5 * scale;
+    const halfHeight = 14.5 * scale;
+    return [
+      { x: center.x - halfWidth, y: center.y - halfHeight },
+      { x: center.x + halfWidth, y: center.y - halfHeight },
+      { x: center.x + halfWidth, y: center.y + halfHeight },
+      { x: center.x - halfWidth, y: center.y + halfHeight },
+    ].every((corner) => pointInsidePolygon(corner.x, corner.y));
+  };
+  const upperBound = Math.min(baseScale, 1);
+  if (upperBound <= 0 || !pointInsidePolygon(center.x, center.y)) return 0;
+  if (fits(upperBound)) return upperBound;
+  let lower = 0;
+  let upper = upperBound;
+  for (let iteration = 0; iteration < 16; iteration += 1) {
+    const candidate = (lower + upper) / 2;
+    if (fits(candidate)) lower = candidate; else upper = candidate;
+  }
+  return lower;
 }
 
 function buildingFootprint(object: DistrictBuilding): number {

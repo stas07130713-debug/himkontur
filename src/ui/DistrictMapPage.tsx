@@ -598,6 +598,7 @@ export function DistrictMapPage(props: Props) {
   const [viewSize, setViewSize] = useState({ width: 1000, height: 700 });
   const [visibleLayers, setVisibleLayers] = useState<ReadonlySet<DistrictLayerKey>>(() => {
     const layers = new Set<DistrictLayerKey>(DISTRICT_LAYER_KEYS);
+    layers.delete('building-0');
     if (compactViewport()) for (const key of NPPV_LAYER_KEYS) layers.delete(key);
     return layers;
   });
@@ -712,7 +713,7 @@ export function DistrictMapPage(props: Props) {
   const markerPlacements = useMemo(() => {
     const raw = visibleObjects
       .filter(hasDistrictMarker)
-      .map((object) => ({ object, ...projection.project(object.point) }));
+      .map((object) => ({ object, ...projection.project(isBuildingWithContour(object) ? districtObjectFocusPoint(object) : object.point) }));
     const anchored = raw.filter(({ object }) => isBuildingWithContour(object));
     const floating = raw.filter(({ object }) => !isBuildingWithContour(object));
     return [...anchored, ...declutterDistrictMarkers(floating, viewSize.width, viewSize.height)];

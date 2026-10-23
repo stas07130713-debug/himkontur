@@ -1,4 +1,5 @@
 import type { Basemap } from './MapCanvas';
+import { BuildingNumberPlate } from './BuildingNumberPlate';
 import { DISTRICT_LAYER_KEYS, type DistrictLayerKey } from './district-map-visuals';
 
 const BUILDING_LEGEND: readonly Readonly<{ key: DistrictLayerKey; number: string; label: string }>[] = [
@@ -35,7 +36,7 @@ export function DistrictMapLegend({ basemap, visibleLayers, collapsed, onCollaps
       <div className="district-legend-building-list">
         {BUILDING_LEGEND.map((item) => <label key={item.key}>
           <input type="checkbox" checked={visibleLayers.has(item.key)} onChange={(event) => onLayerChange(item.key, event.currentTarget.checked)} />
-          <i className={`district-legend-building prefix-${item.number}`}>{item.number}</i>
+          <BuildingNumberPlate number={item.number} prefix={item.number} />
           <span>{item.label}</span>
         </label>)}
       </div>

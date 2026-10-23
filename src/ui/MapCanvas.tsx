@@ -846,7 +846,7 @@ export function MapCanvas(props: Props) {
   const buildingMarkerScales = twoTierBuildingMarkerScales(visibleDistrictObjects, projection.project);
   const districtRawPlacements = visibleDistrictObjects
     .filter(hasDistrictMarker)
-    .map((object) => ({ object, ...projection.project(object.point) }));
+    .map((object) => ({ object, ...projection.project(isBuildingWithContour(object) ? districtObjectFocusPoint(object) : object.point) }));
   const districtMarkerPlacements = [
     ...districtRawPlacements.filter(({ object }) => isBuildingWithContour(object)),
     ...declutterDistrictMarkers(

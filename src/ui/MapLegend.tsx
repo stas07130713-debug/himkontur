@@ -1,4 +1,5 @@
 import { BuildingIcon } from './BuildingIcon';
+import { BuildingNumberPlate } from './BuildingNumberPlate';
 import type { ReactNode } from 'react';
 import type { Basemap } from './MapCanvas';
 
@@ -43,7 +44,7 @@ export function MapLegend({ basemap, available, visible, collapsed, onCollapsedC
       {row('secondary', <SectorIcon kind="secondary" />, 'Г2 — вторичное облако')}
       {row('combined', <SectorIcon kind="final" />, 'Полная расчётная зона')}
       {row('controls', <BuildingIcon kind="administrative" compact />, 'Контрольные точки')}
-      {row('buildings', <i className="district-legend-building prefix-1">1.7</i>, 'Нумерация зданий')}
+      {row('buildings', <BuildingNumberPlate number="1.7" prefix="1" />, 'Нумерация зданий')}
       {row('nppv', <i className="district-legend-hydrant" />, 'Источники НППВ')}
       {row('boundary', <i className="district-legend-boundary" aria-hidden="true" />, 'Граница района выезда')}
       {row('rescue', <i className="district-legend-ass">АСС</i>, 'Аварийно-спасательная служба')}

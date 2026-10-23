@@ -63,6 +63,22 @@ describe('district map visual helpers', () => {
     expect(scales.has(building.id)).toBe(false);
   });
 
+  it('keeps the complete plate inside a rotated building instead of using its bounding box', () => {
+    const rotated: DistrictBuilding = {
+      ...building,
+      point: { latitude: 0, longitude: 0 },
+      contour: [
+        { latitude: -1, longitude: 0 },
+        { latitude: 0, longitude: 1 },
+        { latitude: 1, longitude: 0 },
+        { latitude: 0, longitude: -1 },
+      ],
+    };
+    const scale = fittedBuildingMarkerScale(rotated, 1, (point) => ({ x: point.longitude * 30, y: point.latitude * 30 }));
+    expect(scale).toBeLessThan(0.82);
+    expect(scale).toBeGreaterThan(0.58);
+  });
+
   it('centers a newly opened map on the response boundary', () => {
     const boundary: DistrictBuilding = {
       ...building,

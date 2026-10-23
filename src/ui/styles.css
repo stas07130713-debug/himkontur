@@ -4277,3 +4277,111 @@ button.wide { width: 100%; margin-top: 10px; }
     touch-action: pan-x pan-y pinch-zoom;
   }
 }
+
+/* 0.3.37: одинаковые панели карт, стабильные цвета легенд и чёткий мобильный экспорт. */
+.district-map-topbar {
+  right: auto;
+  width: min(430px, calc(100% - 104px));
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+.district-map-primary-tools {
+  width: 100%;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 30px;
+}
+.district-map-primary-tools .district-basemap-switch {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.district-map-primary-tools .district-basemap-switch button {
+  flex: 1 1 50%;
+  min-width: 0;
+}
+.district-map-topbar > .district-object-toolbar {
+  grid-column: 1;
+  grid-row: 2;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.district-map-legend.basemap-standard,
+.district-map-legend.basemap-standard .district-legend-heading strong,
+.district-map-legend.basemap-standard .district-legend-heading button,
+.district-map-legend.basemap-standard .district-legend-row,
+.district-map-legend.basemap-standard .district-legend-row > span,
+.district-map-legend.basemap-standard .district-legend-building-list label,
+.district-map-legend.basemap-standard .district-legend-building-list label > span {
+  color: #16363d !important;
+  text-shadow: 0 1px 2px #fff, 0 0 3px #fff !important;
+}
+.district-map-legend.basemap-satellite,
+.district-map-legend.basemap-satellite .district-legend-heading strong,
+.district-map-legend.basemap-satellite .district-legend-heading button,
+.district-map-legend.basemap-satellite .district-legend-row,
+.district-map-legend.basemap-satellite .district-legend-row > span,
+.district-map-legend.basemap-satellite .district-legend-building-list label,
+.district-map-legend.basemap-satellite .district-legend-building-list label > span {
+  color: #fff !important;
+  text-shadow: 0 1px 4px #00151f, 0 0 3px #00151f !important;
+}
+svg.district-legend-building {
+  width: 42px;
+  height: 26px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+svg.district-legend-building path {
+  fill: var(--object-color);
+  stroke: #fff;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+svg.district-legend-building text {
+  fill: #fff;
+  font-family: Arial, "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+  text-shadow: none;
+}
+
+@media (max-width: 720px), (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
+  .calculation-map-toolbar,
+  .district-map-topbar {
+    left: 5px;
+    right: 5px;
+    width: auto;
+  }
+  .calculation-map-toolbar > .map-tool-stack > .mobile-map-command-bar {
+    box-sizing: border-box;
+    grid-template-columns: minmax(94px, max-content) minmax(0, 1fr) 30px;
+  }
+  .calculation-map-toolbar > .map-tool-stack > .mobile-map-command-bar:not(:has(.toolbar-wind-summary)) {
+    grid-template-columns: minmax(0, 1fr) 30px;
+  }
+  .calculation-map-toolbar .mobile-map-command-bar > .segmented button {
+    padding-inline: 5px;
+  }
+  .calculation-map-toolbar .mobile-map-command-bar > .toolbar-wind-summary {
+    padding-inline: 3px;
+    gap: 2px;
+  }
+  .calculation-map-toolbar .mobile-map-command-bar > .toolbar-wind-summary svg {
+    width: 18px;
+    height: 18px;
+    flex-basis: 18px;
+  }
+  .map-surface .compass-rose,
+  .district-map-surface > .district-compass {
+    top: 51px;
+  }
+  svg.district-legend-building {
+    width: 42px;
+    height: 26px;
+  }
+}

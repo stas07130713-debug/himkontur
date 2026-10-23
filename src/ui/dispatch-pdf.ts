@@ -170,9 +170,13 @@ export async function captureDispatchSnapshot(sheet: HTMLElement, options: Reado
   await document.fonts.ready;
   await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   const { default: html2canvas } = await import('html2canvas');
+  const sheetWidth = Math.max(1, sheet.getBoundingClientRect().width);
+  const defaultScale = sheet.classList.contains('mobile-map-only')
+    ? Math.min(8, Math.max(3, window.devicePixelRatio || 1, 2480 / sheetWidth))
+    : Math.min(2, Math.max(1.5, window.devicePixelRatio || 1));
   const canvas = await html2canvas(sheet, {
     backgroundColor: '#ffffff',
-    scale: options.scale ?? Math.min(2, Math.max(1.5, window.devicePixelRatio || 1)),
+    scale: options.scale ?? defaultScale,
     useCORS: true,
     allowTaint: false,
     logging: false,
