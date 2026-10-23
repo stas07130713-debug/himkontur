@@ -35,6 +35,7 @@ import { UpdateCenter } from "./UpdateCenter";
 import { DistrictMapPage } from "./DistrictMapPage";
 import {
   createPendingDistrictMapOperation,
+  fetchCoordinatedDistrictMapProject,
   fetchPublishedDistrictMapProject,
   isPublishedProjectNewer,
   loadDistrictMapProject,
@@ -47,10 +48,17 @@ import {
   type DistrictMapProject,
 } from "./district-map-model";
 import {
+  districtMapConflictArchiveCount,
+  mergeDistrictMapProjects,
+  saveDistrictMapConflictArchive,
+  serializeDistrictMapConflictArchives,
+} from "./district-map-merge";
+import {
   authenticateMapAdmin,
   checkMapSynchronization,
   disabledMapSyncStatus,
   loadMapSyncConfig,
+  MapSyncRequestError,
   withRenewedMapAdminSession,
   type MapAdminCredential,
   type MapSyncStatus,
@@ -107,6 +115,7 @@ export function App() {
   const initialPendingDistrictOperationsRef = useRef<PendingDistrictMapOperation[]>(loadPendingDistrictMapOperations());
   const [districtSyncState, setDistrictSyncState] = useState<DistrictSyncState>(() => initialPendingDistrictOperationsRef.current.length === 0 ? "ready" : "pending");
   const [mapSyncStatus, setMapSyncStatus] = useState<MapSyncStatus>(() => disabledMapSyncStatus());
+  const [districtConflictCount, setDistrictConflictCount] = useState(districtMapConflictArchiveCount);
   const [mapSyncCheckBusy, setMapSyncCheckBusy] = useState(false);
   const [districtAdmin, setDistrictAdmin] = useState(false);
   const [districtManagementOpen, setDistrictManagementOpen] = useState(false);
@@ -243,8 +252,13 @@ export function App() {
     setDistrictProject(restoredProject);
     saveDistrictMapProject(restoredProject);
     if (districtChanged) {
-      const operation = createPendingDistrictMapOperation(currentProject.revision, restoredProject);
-      pendingDistrictOperationsRef.current = [...pendingDistrictOperationsRef.current, operation];
+      const pendingBase = pendingDistrictOperationsRef.current[0];
+      const operation = createPendingDistrictMapOperation(
+        pendingBase?.baseRevision ?? currentProject.revision,
+        restoredProject,
+        pendingBase?.baseProject ?? currentProject,
+      );
+      pendingDistrictOperationsRef.current = [operation];
       savePendingDistrictMapOperations(pendingDistrictOperationsRef.current);
       setDistrictSyncState("pending");
       void publishPendingDistrictProject();
@@ -521,19 +535,55 @@ export function App() {
         adminCredentialRef.current = authenticated.credential;
         setMapSyncStatus(authenticated.status);
       }
+      let conflictRebases = 0;
       while (pendingDistrictOperationsRef.current.length > 0) {
         const pending = pendingDistrictOperationsRef.current[0];
         if (pending === undefined) break;
         setDistrictSyncState("publishing");
         const activeCredential: MapAdminCredential = adminCredentialRef.current;
-        const publishResult: Readonly<{
+        let publishResult: Readonly<{
           value: DistrictMapProject;
           credential: MapAdminCredential;
           status: MapSyncStatus | null;
-        }> = await withRenewedMapAdminSession(
-          activeCredential,
-          (credential) => publishDistrictMapOperation(pending, credential),
-        );
+        }>;
+        try {
+          publishResult = await withRenewedMapAdminSession(
+            activeCredential,
+            (credential) => publishDistrictMapOperation(pending, credential),
+          );
+        } catch (error) {
+          if (!(error instanceof MapSyncRequestError) || error.kind !== 'conflict') throw error;
+          if (conflictRebases >= 2) throw new Error('Облачная база остаётся в конфликтном состоянии. Обе версии сохранены; повторите синхронизацию после проверки сервера.');
+          conflictRebases += 1;
+          const remote = await fetchCoordinatedDistrictMapProject();
+          const latestLocal = pendingDistrictOperationsRef.current.at(-1)?.project ?? pending.project;
+          if (remote === null) throw new Error('Не удалось получить актуальную облачную карту для безопасного объединения. Локальные изменения сохранены.');
+          const merged = mergeDistrictMapProjects(pending.baseProject ?? null, latestLocal, remote);
+          if (merged.conflicts.length > 0) {
+            const total = saveDistrictMapConflictArchive({
+              createdAtIso: new Date().toISOString(),
+              baseRevision: pending.baseProject?.revision ?? null,
+              localRevision: latestLocal.revision,
+              remoteRevision: remote.revision,
+              conflicts: merged.conflicts,
+            });
+            setDistrictConflictCount(total);
+          }
+          const rebased = createPendingDistrictMapOperation(remote.revision, merged.project, remote);
+          pendingDistrictOperationsRef.current = [rebased];
+          savePendingDistrictMapOperations(pendingDistrictOperationsRef.current);
+          districtProjectRef.current = merged.project;
+          setDistrictProject(merged.project);
+          saveDistrictMapProject(merged.project);
+          setMapSyncStatus((current) => ({
+            ...current,
+            mode: 'recovering',
+            message: merged.conflicts.length === 0
+              ? 'Изменения с двух устройств безопасно объединены и отправляются повторно.'
+              : `Карты объединены. ${merged.conflicts.length} спорн. объект(а) сохранены в журнале конфликтов; активна более свежая версия.`,
+          }));
+          continue;
+        }
         adminCredentialRef.current = publishResult.credential;
         if (publishResult.status !== null) setMapSyncStatus(publishResult.status);
         const synchronized = publishResult.value;
@@ -569,14 +619,28 @@ export function App() {
     // prevents an old browser cache with a numerically inflated revision from
     // rejecting a genuinely newer shared map.
     const published = { ...current, revision: Math.max(current.revision + 1, Date.now()), draft: objects, published: objects, draftSavedAtIso: now, publishedAtIso: now };
-    const operation = createPendingDistrictMapOperation(current.revision, published);
+    const pendingBase = pendingDistrictOperationsRef.current[0];
+    const operation = createPendingDistrictMapOperation(
+      pendingBase?.baseRevision ?? current.revision,
+      published,
+      pendingBase?.baseProject ?? current,
+    );
     districtProjectRef.current = published;
-    pendingDistrictOperationsRef.current = [...pendingDistrictOperationsRef.current, operation];
+    pendingDistrictOperationsRef.current = [operation];
     savePendingDistrictMapOperations(pendingDistrictOperationsRef.current);
     setDistrictProject(published);
     saveDistrictMapProject(published);
     setDistrictSyncState("pending");
     void publishPendingDistrictProject();
+  };
+  const downloadDistrictConflictArchive = () => {
+    const blob = new Blob([serializeDistrictMapConflictArchives()], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `HIMKONTUR-map-conflicts-${new Date().toISOString().slice(0, 10)}.json`;
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   return (
@@ -730,6 +794,8 @@ export function App() {
           syncStatus={{ ...mapSyncStatus, pendingOperations: pendingDistrictOperationsRef.current.length + mapSyncStatus.pendingOperations }}
           syncCheckBusy={mapSyncCheckBusy}
           onCheckSynchronization={() => void refreshMapSyncStatus()}
+          conflictBackupCount={districtConflictCount}
+          onDownloadConflictBackup={downloadDistrictConflictArchive}
         />
       ) : (
         <>

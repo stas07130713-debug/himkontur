@@ -37,11 +37,12 @@ export type DistrictPlanningDocument = Readonly<{
 
 export type DistrictBuilding = DistrictObjectBase & Readonly<{
   kind: 'building';
-  objectType: 'building' | 'territory';
+  objectType: 'building' | 'territory' | 'installation';
   mapRole?: DistrictBuildingMapRole;
   contour: readonly GeoPoint[];
   territoryNames: readonly DistrictNamedUnit[];
   number: string;
+  installationName?: string;
   inventoryNumber?: string;
   planningDocuments: readonly DistrictPlanningDocument[];
   workshopFull: string;
@@ -104,6 +105,7 @@ export type DistrictMapBackup = Readonly<{
 export type PendingDistrictMapOperation = Readonly<{
   operationId: string;
   baseRevision: number;
+  baseProject?: DistrictMapProject;
   project: DistrictMapProject;
   createdAtIso: string;
 }>;
@@ -283,7 +285,11 @@ function normalizeDistrictObject(value: unknown): DistrictMapObject | null {
   };
   if (value.kind === 'building') {
     const legacy = value as unknown as Record<string, unknown>;
-    const objectType = value.objectType === 'territory' || buildingPrefix(text(value.number)) === '0' ? 'territory' : 'building';
+    const objectType = value.objectType === 'installation'
+      ? 'installation'
+      : value.objectType === 'territory' || buildingPrefix(text(value.number)) === '0'
+        ? 'territory'
+        : 'building';
     const normalizedTerritoryNames = namedUnits(value.territoryNames, legacy.territoryFull, legacy.territoryShort, `${value.id}-territory`);
     const migratedTerritoryNames = objectType === 'territory' && normalizedTerritoryNames.length === 0
       && (text(value.workshopFull).trim() !== '' || text(value.workshopShort).trim() !== '')
@@ -297,6 +303,7 @@ function normalizeDistrictObject(value: unknown): DistrictMapObject | null {
       contour: geoPoints(value.contour),
       territoryNames: migratedTerritoryNames,
       number: text(value.number),
+      installationName: text(value.installationName),
       inventoryNumber: text(value.inventoryNumber),
       planningDocuments: planningDocuments(value.planningDocuments, legacy, `${value.id}-document`),
       workshopFull: text(value.workshopFull),
@@ -364,10 +371,11 @@ export function loadPendingDistrictMapOperations(): PendingDistrictMapOperation[
     const raw = window.localStorage.getItem(PENDING_SYNC_STORAGE_KEY);
     if (raw === null) return [];
     const parsed: unknown = JSON.parse(raw);
-    if (isObject(parsed) && parsed.version === 2 && Array.isArray(parsed.operations)) {
-      return parsed.operations.flatMap((value) => {
+    if (isObject(parsed) && (parsed.version === 2 || parsed.version === 3) && Array.isArray(parsed.operations)) {
+      const operations = parsed.operations.flatMap((value) => {
         if (!isObject(value)) return [];
         const project = normalizeDistrictMapProject(value.project);
+        const baseProject = normalizeDistrictMapProject(value.baseProject);
         const operationId = text(value.operationId);
         if (project === null || operationId === '') return [];
         return [{
@@ -375,10 +383,23 @@ export function loadPendingDistrictMapOperations(): PendingDistrictMapOperation[
           baseRevision: typeof value.baseRevision === 'number' && Number.isSafeInteger(value.baseRevision)
             ? Math.max(0, value.baseRevision)
             : Math.max(0, project.revision - 1),
+          ...(baseProject === null ? {} : { baseProject }),
           project,
           createdAtIso: text(value.createdAtIso) || project.publishedAtIso,
         }];
       });
+      if (operations.length <= 1) return operations;
+      const first = operations[0];
+      const last = operations.at(-1);
+      if (first === undefined || last === undefined) return [];
+      // Older releases stored a complete map for every click. Keep the newest
+      // local result and the oldest common base instead of exhausting storage.
+      return [{
+        ...last,
+        baseRevision: first.baseRevision,
+        ...(first.baseProject === undefined ? {} : { baseProject: first.baseProject }),
+        createdAtIso: first.createdAtIso,
+      }];
     }
     // Migration from releases <= 0.3.31, which stored just the last project.
     const legacyProject = normalizeDistrictMapProject(parsed);
@@ -550,6 +571,11 @@ export async function fetchPublishedDistrictMapProject(): Promise<DistrictMapPro
     ), null);
 }
 
+export async function fetchCoordinatedDistrictMapProject(): Promise<DistrictMapProject | null> {
+  const coordinated = await fetchCoordinatedMap();
+  return normalizeDistrictMapProject(coordinated.project);
+}
+
 export async function publishDistrictMapOperation(operation: PendingDistrictMapOperation, credential: MapAdminCredential): Promise<DistrictMapProject> {
   const config = await loadMapSyncConfig();
   if (config === null) throw new Error('Облачная синхронизация ещё не настроена.');
@@ -605,13 +631,14 @@ export function saveDistrictMapProject(project: DistrictMapProject): void {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
 }
 
-export function createPendingDistrictMapOperation(baseRevision: number, project: DistrictMapProject): PendingDistrictMapOperation {
+export function createPendingDistrictMapOperation(baseRevision: number, project: DistrictMapProject, baseProject?: DistrictMapProject): PendingDistrictMapOperation {
   const randomPart = typeof crypto.randomUUID === 'function'
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return {
     operationId: `map-${randomPart}`,
     baseRevision,
+    ...(baseProject === undefined ? {} : { baseProject }),
     project,
     createdAtIso: new Date().toISOString(),
   };
@@ -622,7 +649,7 @@ export function savePendingDistrictMapOperations(operations: readonly PendingDis
     window.localStorage.removeItem(PENDING_SYNC_STORAGE_KEY);
     return;
   }
-  window.localStorage.setItem(PENDING_SYNC_STORAGE_KEY, JSON.stringify({ version: 2, operations }));
+  window.localStorage.setItem(PENDING_SYNC_STORAGE_KEY, JSON.stringify({ version: 3, operations }));
 }
 
 export function districtObjectTitle(object: DistrictMapObject): string {
@@ -630,6 +657,10 @@ export function districtObjectTitle(object: DistrictMapObject): string {
   if (object.kind === 'reservoir') return `Пожарный водоём ${object.number}`;
   if (object.mapRole === 'response-boundary') return 'Граница района выезда';
   if (object.mapRole === 'rescue-service') return 'Аварийно-спасательная служба';
+  if (object.objectType === 'installation') {
+    const name = object.installationName?.trim() ?? '';
+    return name === '' ? 'Наружная установка' : name;
+  }
   if (object.objectType === 'territory') {
     const name = object.territoryNames.find((item) => item.shortName.trim() !== '' || item.fullName.trim() !== '');
     const suffix = name === undefined ? '' : (name.shortName.trim() || name.fullName.trim());
@@ -647,6 +678,7 @@ export function districtObjectSearchDescription(object: DistrictMapObject): stri
   if (object.kind === 'reservoir') return [object.owner, object.faultDescription].filter(Boolean).join(' · ') || 'Пожарный водоём';
   if (object.mapRole === 'response-boundary') return 'Постоянная граница района выезда';
   if (object.mapRole === 'rescue-service') return ['Аварийно-спасательная служба', object.workshopFull, object.workshopShort].filter(Boolean).join(' · ');
+  if (object.objectType === 'installation') return [object.installationName, object.workshopFull, object.workshopShort].filter(Boolean).join(' · ');
   if (object.objectType === 'territory') return object.territoryNames.flatMap((unit) => [unit.fullName, unit.shortName]).map((item) => item.trim()).filter(Boolean).join(' · ');
   const parts = [
     object.workshopFull,
@@ -676,6 +708,7 @@ export function districtObjectSearchText(object: DistrictMapObject): string {
     object.number,
     object.mapRole === 'response-boundary' ? 'граница района выезда периметр' : '',
     object.mapRole === 'rescue-service' ? 'аварийно-спасательная служба АСС' : '',
+    object.objectType === 'installation' ? `наружная установка ${object.installationName ?? ''}` : '',
     ...object.territoryNames.flatMap((unit) => [unit.fullName, unit.shortName]),
     object.inventoryNumber ?? '',
     ...object.planningDocuments.flatMap((document) => [document.kind, document.number, planningDocumentLabel(document)]),

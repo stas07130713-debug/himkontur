@@ -29,6 +29,35 @@ afterEach(() => {
 });
 
 describe('map synchronization sessions', () => {
+  it('retries loading synchronization settings after a temporary fetch failure', async () => {
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new TypeError('temporary network failure'))
+      .mockResolvedValueOnce(jsonResponse(configResponse))
+      .mockResolvedValueOnce(jsonResponse({ sessionToken: 'recovered-session', status: { mode: 'backup', activeProvider: 'cloudflare' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('window', { setTimeout, clearTimeout });
+
+    await expect(authenticateMapAdmin('administrator-password')).rejects.toMatchObject({ kind: 'unavailable' });
+    await expect(authenticateMapAdmin('administrator-password')).resolves.toMatchObject({
+      credential: { sessionToken: 'recovered-session' },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('repeats one unavailable coordinator request before keeping it in the local queue', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(configResponse))
+      .mockResolvedValueOnce(jsonResponse({ error: 'temporary outage' }, 503))
+      .mockResolvedValueOnce(jsonResponse({ sessionToken: 'retry-session', status: { mode: 'backup', activeProvider: 'cloudflare' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('window', { setTimeout, clearTimeout });
+
+    await expect(authenticateMapAdmin('administrator-password')).resolves.toMatchObject({
+      credential: { sessionToken: 'retry-session' },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it('retains the entered password in memory so an expired session can be renewed', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse(configResponse))

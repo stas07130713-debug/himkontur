@@ -13,6 +13,18 @@ function jsonResponse(request, env, status, body) {
   return new Response(status === 204 ? null : JSON.stringify(body), { status, headers });
 }
 
+export function isAllowedOrigin(origin, configuredOrigins) {
+  const allowed = String(configuredOrigins ?? '').split(',').map((value) => value.trim()).filter(Boolean);
+  if (allowed.includes(origin)) return true;
+  try {
+    const url = new URL(origin);
+    const localHost = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '[::1]';
+    return localHost && (url.protocol === 'http:' || url.protocol === 'https:' || url.protocol === 'capacitor:');
+  } catch {
+    return false;
+  }
+}
+
 function corsHeaders(request, env) {
   const headers = new Headers({
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -20,8 +32,7 @@ function corsHeaders(request, env) {
     Vary: 'Origin',
   });
   const origin = request.headers.get('Origin') ?? 'null';
-  const allowed = String(env.ALLOWED_ORIGINS ?? '').split(',').map((value) => value.trim()).filter(Boolean);
-  if (allowed.includes(origin)) headers.set('Access-Control-Allow-Origin', origin);
+  if (isAllowedOrigin(origin, env.ALLOWED_ORIGINS)) headers.set('Access-Control-Allow-Origin', origin);
   return headers;
 }
 

@@ -1,6 +1,24 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { canRebaseLegacyOperation, hasUnresolvedConflict, validAuthoritativeRecovery } from './worker.js';
+import { canRebaseLegacyOperation, hasUnresolvedConflict, isAllowedOrigin, validAuthoritativeRecovery } from './worker.js';
+
+describe('application origin access', () => {
+  const configured = 'https://stas07130713-debug.github.io,null';
+
+  it('allows the published browser and packaged application origins', () => {
+    assert.equal(isAllowedOrigin('https://stas07130713-debug.github.io', configured), true);
+    assert.equal(isAllowedOrigin('null', configured), true);
+    assert.equal(isAllowedOrigin('http://localhost', configured), true);
+    assert.equal(isAllowedOrigin('http://localhost:5173', configured), true);
+    assert.equal(isAllowedOrigin('https://localhost', configured), true);
+    assert.equal(isAllowedOrigin('capacitor://localhost', configured), true);
+    assert.equal(isAllowedOrigin('http://127.0.0.1:4183', configured), true);
+  });
+
+  it('does not open the service to unrelated websites', () => {
+    assert.equal(isAllowedOrigin('https://example.com', configured), false);
+  });
+});
 
 describe('district sync conflict guard', () => {
   it('keeps reconciliation stopped while the state is marked as conflicted', () => {

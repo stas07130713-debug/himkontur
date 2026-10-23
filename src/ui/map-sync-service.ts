@@ -117,7 +117,7 @@ export function clearMapSyncConfigCache(): void {
 
 export async function loadMapSyncConfig(): Promise<MapSyncConfig | null> {
   if (cachedConfig !== null) return cachedConfig;
-  cachedConfig = (async () => {
+  const pending = (async () => {
     try {
       const response = await fetch(`${MAP_SYNC_CONFIG_URL}?ts=${Date.now()}`, { cache: 'no-store' });
       if (!response.ok) return null;
@@ -147,7 +147,12 @@ export async function loadMapSyncConfig(): Promise<MapSyncConfig | null> {
       return null;
     }
   })();
-  return cachedConfig;
+  cachedConfig = pending;
+  const result = await pending;
+  // A temporary failure must not disable synchronization until the next page
+  // reload. The following check or queued write will request the config again.
+  if (result === null && cachedConfig === pending) cachedConfig = null;
+  return result;
 }
 
 function requestError(status: number, payload: unknown, fallback: string): MapSyncRequestError {
@@ -162,25 +167,34 @@ function requestError(status: number, payload: unknown, fallback: string): MapSy
 async function coordinatorRequest(path: string, init: RequestInit, timeoutMs: number): Promise<unknown> {
   const config = await loadMapSyncConfig();
   if (!config?.coordinatorEnabled) throw new MapSyncRequestError('Резервный облачный сервис ещё не включён.', 0, 'unavailable');
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(`${config.coordinatorUrl}${path}`, {
-      ...init,
-      cache: 'no-store',
-      signal: controller.signal,
-    });
-    const payload: unknown = await response.json().catch(() => null);
-    if (!response.ok) throw requestError(response.status, payload, `Сервис синхронизации вернул ошибку ${response.status}.`);
-    return payload;
-  } catch (error) {
-    if (error instanceof MapSyncRequestError) throw error;
-    if (controller.signal.aborted) throw new MapSyncRequestError('Сервис синхронизации не ответил вовремя.');
-    if (error instanceof TypeError) throw new MapSyncRequestError('Не удалось связаться с сервером настройки карты. Проверьте интернет и повторите вход.');
-    throw new MapSyncRequestError(error instanceof Error ? error.message : 'Нет связи с сервисом синхронизации.');
-  } finally {
-    window.clearTimeout(timeout);
+  let lastError: MapSyncRequestError | null = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(`${config.coordinatorUrl}${path}`, {
+        ...init,
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      const payload: unknown = await response.json().catch(() => null);
+      if (!response.ok) throw requestError(response.status, payload, `Сервис синхронизации вернул ошибку ${response.status}.`);
+      return payload;
+    } catch (error) {
+      const normalized = error instanceof MapSyncRequestError
+        ? error
+        : controller.signal.aborted
+          ? new MapSyncRequestError('Сервис синхронизации не ответил вовремя.')
+          : error instanceof TypeError
+            ? new MapSyncRequestError('Не удалось связаться с сервером настройки карты. Проверьте интернет и повторите вход.')
+            : new MapSyncRequestError(error instanceof Error ? error.message : 'Нет связи с сервисом синхронизации.');
+      lastError = normalized;
+      if (normalized.kind !== 'unavailable' || attempt === 1) throw normalized;
+    } finally {
+      window.clearTimeout(timeout);
+    }
   }
+  throw lastError ?? new MapSyncRequestError('Нет связи с сервисом синхронизации.');
 }
 
 export async function fetchCoordinatedMap(): Promise<CoordinatedMapResponse> {

@@ -3,7 +3,7 @@ import { BuildingNumberPlate } from './BuildingNumberPlate';
 import { DISTRICT_LAYER_KEYS, type DistrictLayerKey } from './district-map-visuals';
 
 const BUILDING_LEGEND: readonly Readonly<{ key: DistrictLayerKey; number: string; label: string }>[] = [
-  { key: 'building-0', number: '0', label: 'Территории' },
+  { key: 'building-0', number: '0', label: 'Территории / наружные установки' },
   { key: 'building-1', number: '1', label: 'УХД / КАЦ / ДБ / НТЦ / ЦТК' },
   { key: 'building-2', number: '2', label: 'ЦЭН' },
   { key: 'building-3', number: '3', label: 'РЦ' },

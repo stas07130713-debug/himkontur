@@ -101,11 +101,16 @@ export function DistrictMapMarker({ object, x, y, selected, highlighted = false,
       </g>
     );
   }
+  const installation = object.objectType === 'installation';
   const hoverLines = [
-    ...(object.objectType === 'territory' ? object.territoryNames.map((unit) => namedLine(unit.fullName, unit.shortName)) : [namedLine(object.workshopFull, object.workshopShort)]),
-    ...object.departments.map((unit) => namedLine(unit.fullName, unit.shortName)),
-    ...object.sites.map((unit) => namedLine(unit.fullName, unit.shortName)),
-    (object.inventoryNumber ?? '').trim() === '' ? '' : `Инвентарный №: ${object.inventoryNumber}`,
+    ...(object.objectType === 'territory'
+      ? object.territoryNames.map((unit) => namedLine(unit.fullName, unit.shortName))
+      : installation
+        ? [object.installationName?.trim() ?? '', namedLine(object.workshopFull, object.workshopShort)]
+        : [namedLine(object.workshopFull, object.workshopShort)]),
+    ...(!installation ? object.departments.map((unit) => namedLine(unit.fullName, unit.shortName)) : []),
+    ...(!installation ? object.sites.map((unit) => namedLine(unit.fullName, unit.shortName)) : []),
+    !installation && (object.inventoryNumber ?? '').trim() !== '' ? `Инвентарный №: ${object.inventoryNumber}` : '',
     ...object.planningDocuments
       .filter((document) => document.number.trim() !== '')
       .map((document) => `${document.kind}: ${document.number}`),
@@ -122,10 +127,10 @@ export function DistrictMapMarker({ object, x, y, selected, highlighted = false,
     : hoverLines;
   const markerLabel = rescueService ? 'АСС' : object.number;
   return (
-    <g data-object-id={object.id} transform={`translate(${x} ${y})`} className={`district-map-marker building-number-marker prefix-${buildingPrefix(object.number)}${object.objectType === 'territory' ? ' territory' : ''}${rescueService ? ' rescue-service-marker' : ''}${selected ? ' selected' : ''}${highlighted ? ' search-highlight' : ''}${editing ? ' editable' : ''}${interactionDisabled ? ' interaction-disabled' : ''}`} onClick={(event) => { if (interactionDisabled) return; event.stopPropagation(); onSelect(); }} onPointerDown={pointerDown} onPointerEnter={() => { if (!interactionDisabled) onHoverChange?.(true); }} onPointerLeave={() => onHoverChange?.(false)}>
+    <g data-object-id={object.id} transform={`translate(${x} ${y})`} className={`district-map-marker building-number-marker prefix-${buildingPrefix(object.number)}${object.objectType === 'territory' ? ' territory' : ''}${installation ? ' installation' : ''}${rescueService ? ' rescue-service-marker' : ''}${selected ? ' selected' : ''}${highlighted ? ' search-highlight' : ''}${editing ? ' editable' : ''}${interactionDisabled ? ' interaction-disabled' : ''}`} onClick={(event) => { if (interactionDisabled) return; event.stopPropagation(); onSelect(); }} onPointerDown={pointerDown} onPointerEnter={() => { if (!interactionDisabled) onHoverChange?.(true); }} onPointerLeave={() => onHoverChange?.(false)}>
       <g transform={`scale(${scale})`}><circle className="marker-halo" r="25" /><path d="M-21-13h42v26h-42z" /><text x="0" y="6" textAnchor="middle">{markerLabel}</text></g>
       <foreignObject className="district-marker-hover-card" x="25" y={-18 - visibleHoverLines.length * 9} width="245" height={42 + visibleHoverLines.length * 19}>
-        <div><strong>{rescueService ? 'Аварийно-спасательная служба' : `${object.objectType === 'territory' ? 'Территория' : 'Здание'} ${object.number}`}</strong>{visibleHoverLines.map((line, index) => <span key={`${object.id}-hover-${index}`}>{line}</span>)}</div>
+        <div><strong>{rescueService ? 'Аварийно-спасательная служба' : installation ? 'Наружная установка' : `${object.objectType === 'territory' ? 'Территория' : 'Здание'} ${object.number}`}</strong>{visibleHoverLines.map((line, index) => <span key={`${object.id}-hover-${index}`}>{line}</span>)}</div>
       </foreignObject>
       <title>{rescueService ? `Аварийно-спасательная служба · ${visibleHoverLines.join(' · ')}` : `${object.number} · ${hoverLines.join(' · ')}`}</title>
     </g>

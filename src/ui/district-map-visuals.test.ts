@@ -96,6 +96,11 @@ describe('district map visual helpers', () => {
     expect(anchor).not.toEqual(concave.point);
   });
 
+  it('keeps the administrator-selected label position when it is inside the contour', () => {
+    const moved = { ...building, point: { latitude: 0.5, longitude: 3.25 } };
+    expect(districtObjectMarkerPoint(moved)).toEqual(moved.point);
+  });
+
   it('centers a newly opened map on the response boundary', () => {
     const boundary: DistrictBuilding = {
       ...building,
@@ -111,6 +116,7 @@ describe('district map visual helpers', () => {
     const territory: DistrictBuilding = { ...building, objectType: 'territory', number: '0.1' };
     expect(hasDistrictMarker(territory)).toBe(false);
     expect(hasDistrictMarker({ ...building, objectType: 'building', number: '0.2' })).toBe(false);
+    expect(hasDistrictMarker({ ...building, objectType: 'installation', number: '0', installationName: 'Насосная' })).toBe(true);
     expect(hasDistrictMarker({ ...territory, mapRole: 'rescue-service' })).toBe(true);
     expect(hasDistrictMarker(building)).toBe(true);
   });

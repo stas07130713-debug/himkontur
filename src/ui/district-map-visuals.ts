@@ -30,6 +30,7 @@ export function districtLayerKey(object: DistrictMapObject): DistrictLayerKey {
 export function hasDistrictMarker(object: DistrictMapObject): boolean {
   return object.kind !== 'building'
     || object.mapRole === 'rescue-service'
+    || object.objectType === 'installation'
     || (object.objectType !== 'territory' && buildingPrefix(object.number) !== '0');
 }
 
@@ -42,7 +43,7 @@ export function districtObjectFocusPoint(object: DistrictMapObject): GeoPoint {
   };
 }
 
-function pointInsideContour(point: GeoPoint, contour: readonly GeoPoint[]): boolean {
+export function pointInsideDistrictContour(point: GeoPoint, contour: readonly GeoPoint[]): boolean {
   let inside = false;
   for (let index = 0, previous = contour.length - 1; index < contour.length; previous = index++) {
     const currentPoint = contour[index];
@@ -72,6 +73,9 @@ function squaredDistanceToSegment(point: GeoPoint, start: GeoPoint, end: GeoPoin
 export function districtObjectMarkerPoint(object: DistrictMapObject): GeoPoint {
   if (object.kind !== 'building' || object.contour.length < 3) return object.point;
   const contour = object.contour;
+  // A label moved by the administrator keeps its exact position while it is
+  // inside the contour. Only legacy/outside positions are repaired.
+  if (pointInsideDistrictContour(object.point, contour)) return object.point;
   const latitudes = contour.map((point) => point.latitude);
   const longitudes = contour.map((point) => point.longitude);
   const south = Math.min(...latitudes);
@@ -87,7 +91,7 @@ export function districtObjectMarkerPoint(object: DistrictMapObject): GeoPoint {
       });
     }
   }
-  const inside = candidates.filter((point) => pointInsideContour(point, contour));
+  const inside = candidates.filter((point) => pointInsideDistrictContour(point, contour));
   if (inside.length === 0) return districtObjectFocusPoint(object);
   return inside.reduce((best, candidate) => {
     const clearance = contour.reduce((minimum, start, index) => {

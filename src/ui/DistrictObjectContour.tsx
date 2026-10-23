@@ -79,6 +79,7 @@ export function DistrictObjectContour({ object, project, selected = false, highl
       ? ' rescue-service'
       : '';
   return <g
+    data-object-id={object.id}
     className={`district-object-contour-group${interactionDisabled ? ' interaction-disabled' : ''}`}
     onPointerEnter={() => { if (!interactionDisabled) { setHovered(true); onHoverChange?.(true); } }}
     onPointerLeave={() => { setHovered(false); setHoveredWall(null); onHoverChange?.(false); }}

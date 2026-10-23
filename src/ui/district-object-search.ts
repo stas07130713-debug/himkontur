@@ -20,6 +20,13 @@ export function objectResultText(object: DistrictMapObject, query: string): Read
     const matched = names.find((name) => name.toLocaleLowerCase('ru-RU').includes(needle));
     return { title: matched ?? names[0] ?? 'Территория', description: names.filter((name) => name !== matched).slice(0, 2).join(' · ') };
   }
+  if (object.objectType === 'installation') {
+    const installationName = object.installationName?.trim() ?? '';
+    return {
+      title: installationName === '' ? 'Наружная установка' : installationName,
+      description: object.workshopShort.trim() || object.workshopFull.trim() || 'Цех не указан',
+    };
+  }
   const workshop = object.workshopShort.trim() || object.workshopFull.trim() || 'Цех не указан';
   const needle = query.trim().toLocaleLowerCase('ru-RU');
   const candidates = [

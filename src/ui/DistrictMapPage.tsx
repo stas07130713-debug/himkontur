@@ -53,6 +53,7 @@ import {
   districtResponseBoundaryCenter,
   hasDistrictMarker,
   isBuildingWithContour,
+  pointInsideDistrictContour,
   twoTierBuildingMarkerScales,
   type DistrictLayerKey,
 } from './district-map-visuals';
@@ -75,6 +76,8 @@ type Props = Readonly<{
   syncStatus: MapSyncStatus;
   syncCheckBusy: boolean;
   onCheckSynchronization: () => void;
+  conflictBackupCount: number;
+  onDownloadConflictBackup: () => void;
 }>;
 
 type ContourDragState =
@@ -98,7 +101,7 @@ type ContourDragState =
   };
 
 type ContourDraft = Readonly<{
-  objectType: 'building' | 'territory';
+  objectType: 'building' | 'territory' | 'installation';
   mapRole: DistrictBuildingMapRole;
   points: readonly GeoPoint[];
   source: 'automatic' | 'manual' | 'editing';
@@ -163,6 +166,7 @@ const PREFIX_ONE_WORKSHOPS = [
 ] as const;
 
 function buildingWithNumber(object: DistrictBuilding, number: string): DistrictBuilding {
+  if (object.objectType === 'installation') return { ...object, number: '0' };
   const prefix = buildingPrefix(number);
   const previousPrefix = buildingPrefix(object.number);
   const fixed = FIXED_WORKSHOPS[prefix];
@@ -176,7 +180,7 @@ function buildingWithNumber(object: DistrictBuilding, number: string): DistrictB
 
 function initialBuilding(
   point: GeoPoint,
-  objectType: 'building' | 'territory' = 'building',
+  objectType: 'building' | 'territory' | 'installation' = 'building',
   contour: readonly GeoPoint[] = [],
   mapRole: DistrictBuildingMapRole = 'ordinary',
 ): DistrictBuilding {
@@ -190,7 +194,8 @@ function initialBuilding(
     contour,
     territoryNames: objectType === 'territory' ? [{ id: crypto.randomUUID(), fullName: responseBoundary ? 'Граница района выезда' : '', shortName: '' }] : [],
     point,
-    number: responseBoundary ? '0.0' : objectType === 'territory' ? '0.' : '',
+    number: responseBoundary ? '0.0' : objectType === 'territory' ? '0.' : objectType === 'installation' ? '0' : '',
+    installationName: '',
     inventoryNumber: '',
     planningDocuments: [],
     workshopFull: rescueService ? 'Аварийно-спасательная служба' : '',
@@ -225,6 +230,7 @@ function changedObjectSections(previous: DistrictMapObject, next: DistrictMapObj
       ['Назначение контура на карте', previous.mapRole ?? 'ordinary', next.mapRole ?? 'ordinary'],
       ['Контур объекта', previous.contour, next.contour],
       ['Названия территории', previous.territoryNames, next.territoryNames],
+      ['Название наружной установки', previous.installationName ?? '', next.installationName ?? ''],
       ['Инвентарный номер', previous.inventoryNumber ?? '', next.inventoryNumber ?? ''],
       ['Документы предварительного планирования', previous.planningDocuments, next.planningDocuments],
       ['Цех', [previous.workshopFull, previous.workshopShort], [next.workshopFull, next.workshopShort]],
@@ -406,10 +412,10 @@ function ObjectEditor({ object, objects, onSave, onEditContour, onClose }: Reado
   const [error, setError] = useState('');
   const patch = (changes: Partial<DistrictMapObject>) => setValue((current) => ({ ...current, ...changes }) as DistrictMapObject);
   const save = () => {
-    const number = value.number.trim();
+    const number = value.kind === 'building' && value.objectType === 'installation' ? '0' : value.number.trim();
     if (number === '') { setError('Укажите номер объекта.'); return; }
-    if (value.kind === 'building' && !/^\d+\.\d+$/u.test(number)) { setError('Номер здания должен иметь формат 3.15'); return; }
-    if (objects.some((item) => item.id !== value.id && item.kind === value.kind && item.number.trim().toLocaleLowerCase('ru-RU') === number.toLocaleLowerCase('ru-RU'))) {
+    if (value.kind === 'building' && value.objectType !== 'installation' && !/^\d+\.\d+$/u.test(number)) { setError('Номер здания должен иметь формат 3.15'); return; }
+    if (!(value.kind === 'building' && value.objectType === 'installation') && objects.some((item) => item.id !== value.id && item.kind === value.kind && item.number.trim().toLocaleLowerCase('ru-RU') === number.toLocaleLowerCase('ru-RU'))) {
       setError('Объект с таким номером уже существует.');
       return;
     }
@@ -424,6 +430,14 @@ function ObjectEditor({ object, objects, onSave, onEditContour, onClose }: Reado
     }
     if (value.kind === 'building' && value.objectType === 'building' && value.workshopFull.trim() === '') {
       setError('Заполните полное название цеха.');
+      return;
+    }
+    if (value.kind === 'building' && value.objectType === 'installation' && (value.installationName?.trim() ?? '') === '') {
+      setError('Укажите название наружной установки.');
+      return;
+    }
+    if (value.kind === 'building' && value.objectType === 'installation' && value.workshopFull.trim() === '') {
+      setError('Укажите цех, к которому относится наружная установка.');
       return;
     }
     if (value.kind !== 'building' && value.owner.trim() === '') { setError('Укажите принадлежность элемента НППВ.'); return; }
@@ -454,14 +468,16 @@ function ObjectEditor({ object, objects, onSave, onEditContour, onClose }: Reado
               ? 'Граница района выезда'
               : value.mapRole === 'rescue-service'
                 ? 'Объект АСС'
-                : value.objectType === 'territory' ? 'Территория' : 'Здание'
+                : value.objectType === 'territory'
+                  ? 'Территория'
+                  : value.objectType === 'installation' ? 'Наружная установка' : 'Здание'
             : value.kind === 'hydrant' ? 'Пожарный гидрант' : 'Пожарный водоём'}</h2></div>
         </div>
         {value.kind === 'building' && value.mapRole === 'response-boundary' && <p className="district-special-role-banner">Постоянная граница района выезда. После сохранения она будет показана на обеих картах.</p>}
         {value.kind === 'building' && value.mapRole === 'rescue-service' && <p className="district-special-role-banner">Постоянно выделяемый объект аварийно-спасательной службы. После сохранения он будет показан на обеих картах.</p>}
         {value.kind === 'building' ? (
           <div className="district-editor-fields">
-            {value.mapRole !== 'rescue-service' && <label className="number-field">{value.objectType === 'territory' ? 'Номер территории' : 'Номер здания'}<input autoFocus value={value.number} placeholder={value.objectType === 'territory' ? 'Например, 0.1' : 'Например, 3.15'} onChange={(event) => {
+            {value.mapRole !== 'rescue-service' && value.objectType !== 'installation' && <label className="number-field">{value.objectType === 'territory' ? 'Номер территории' : 'Номер здания'}<input autoFocus value={value.number} placeholder={value.objectType === 'territory' ? 'Например, 0.1' : 'Например, 3.15'} onChange={(event) => {
               const number = event.currentTarget.value;
               setValue((current) => {
                 if (current.kind !== 'building') return current;
@@ -472,7 +488,12 @@ function ObjectEditor({ object, objects, onSave, onEditContour, onClose }: Reado
             }} /></label>}
             {value.objectType === 'territory' && value.mapRole !== 'rescue-service' ? (
               <NamedUnitsEditor label="Название территории" units={value.territoryNames} onChange={(territoryNames) => patch({ territoryNames })} />
-            ) : <>
+            ) : value.objectType === 'installation' ? <>
+              <div className="district-installation-index"><span>Индекс на карте</span><strong>0</strong></div>
+              <label>Название наружной установки<input autoFocus value={value.installationName ?? ''} placeholder="Например, открытая насосная установка" onChange={(event) => patch({ installationName: event.currentTarget.value })} /></label>
+              <div className="paired-field"><label>Цех — полное название<input value={value.workshopFull} placeholder="Укажите цех" onChange={(event) => patch({ workshopFull: event.currentTarget.value })} /></label><label>Сокращённое название цеха<input value={value.workshopShort} placeholder="Необязательно" onChange={(event) => patch({ workshopShort: event.currentTarget.value })} /></label></div>
+              <PlanningDocumentsEditor documents={value.planningDocuments} onChange={(planningDocuments) => patch({ planningDocuments })} />
+            </> : <>
             <div className="building-reference-fields">
               <label>Инвентарный номер здания<input value={value.inventoryNumber ?? ''} placeholder="Необязательно" onChange={(event) => patch({ inventoryNumber: event.currentTarget.value })} /></label>
             </div>
@@ -539,13 +560,24 @@ function ObjectDetails({ object, adminMode, onEdit, onDelete, onOpenDispatch }: 
             ? 'Граница района выезда'
             : object.mapRole === 'rescue-service'
               ? 'Объект АСС'
-              : object.objectType === 'territory' ? 'Территория' : 'Здание'
+              : object.objectType === 'territory'
+                ? 'Территория'
+                : object.objectType === 'installation' ? 'Наружная установка' : 'Здание'
           : object.kind === 'hydrant' ? 'Пожарный гидрант' : 'Пожарный водоём'}</small>{buildingHeaderLabels.length > 0
             ? <h2 className="district-details-department-title">{buildingHeaderLabels.map((unit, index) => <span className={unit.label.length > 18 ? 'long' : ''} title={unit.fullName || unit.label} key={`${unit.label}-${index}`}>{unit.label}</span>)}</h2>
             : <h2>{districtObjectTitle(object)}</h2>}</div>
       </div>
       {object.kind === 'building' && object.objectType === 'territory' && object.mapRole !== 'rescue-service' ? (
         <dl>{object.territoryNames.map((unit, index) => <div key={unit.id}><dt>Название{object.territoryNames.length > 1 ? ` ${index + 1}` : ''}</dt><dd>{unit.fullName || '—'}{unit.shortName.trim() !== '' && <small>{unit.shortName}</small>}</dd></div>)}</dl>
+      ) : object.kind === 'building' && object.objectType === 'installation' ? (
+        <dl>
+          <div><dt>Индекс</dt><dd>0</dd></div>
+          <div className="district-details-unit"><dt>Наружная установка</dt><dd>{(object.installationName?.trim() ?? '') !== '' ? object.installationName?.trim() : '—'}</dd></div>
+          <div className="district-details-unit"><dt>Цех</dt><dd>{object.workshopFull.trim() || '—'}<small>{object.workshopShort.trim() || 'Без сокращения'}</small></dd></div>
+          <div className="district-details-section-heading"><dt>Документы предварительного планирования</dt></div>
+          {object.planningDocuments.length === 0 && <div className="district-details-document empty"><dt>Документы</dt><dd>На объект не разработаны</dd></div>}
+          {object.planningDocuments.map((document) => <div className="district-details-document" key={document.id}><dt>{document.kind}</dt><dd>№ {document.number.replace(/^№\s*/u, '')}</dd></div>)}
+        </dl>
       ) : object.kind === 'building' ? (
         <dl>
           <div className="district-details-unit"><dt>{object.mapRole === 'rescue-service' ? 'Формирование' : 'Цех'}</dt><dd>{object.workshopFull.trim() || (object.mapRole === 'rescue-service' ? 'Аварийно-спасательная служба' : '—')}<small>{object.workshopShort.trim() || (object.mapRole === 'rescue-service' ? 'АСС' : '—')}</small></dd></div>
@@ -777,10 +809,10 @@ export function DistrictMapPage(props: Props) {
     setContourDraft(null);
     setContourStatus('');
   };
-  const startContour = (objectType: 'building' | 'territory', mapRole: DistrictBuildingMapRole = 'ordinary') => {
+  const startContour = (objectType: 'building' | 'territory' | 'installation', mapRole: DistrictBuildingMapRole = 'ordinary') => {
     if (contextMenu === null) return;
     props.onClearTransientHistory();
-    const automatic = objectType === 'building' ? buildingContourResolverRef.current?.(contextMenu.point) ?? null : null;
+    const automatic = objectType === 'territory' ? null : buildingContourResolverRef.current?.(contextMenu.point) ?? null;
     setContourDraft({ objectType, mapRole, points: automatic ?? [contextMenu.point], source: automatic === null ? 'manual' : 'automatic', editingObjectId: null });
     setContourStatus('');
     setContextMenu(null);
@@ -1165,6 +1197,7 @@ export function DistrictMapPage(props: Props) {
       if (point !== null) {
         const next = objectsRef.current.map((item) => {
           if (item.id !== dragRef.current?.objectId) return item;
+          if (item.kind === 'building' && item.contour.length >= 3 && !pointInsideDistrictContour(point, item.contour)) return item;
           return { ...item, point, updatedAtIso: new Date().toISOString() };
         });
         objectsRef.current = next;
@@ -1415,7 +1448,7 @@ export function DistrictMapPage(props: Props) {
             })}
             <MapRulerOverlay points={rulerPoints} project={projection.project} />
           </svg>
-          {contextMenu !== null && <div className="district-add-menu" style={{ left: contextMenu.x, top: contextMenu.y }}><strong>Добавить на карту</strong><button onClick={() => startContour('building')}>Здание с контуром</button><button onClick={() => startContour('territory')}>Территория с контуром</button><button onClick={() => { setEditorObject(initialHydrant(contextMenu.point)); setContextMenu(null); }}>Пожарный гидрант</button><button onClick={() => { setEditorObject(initialFireReservoir(contextMenu.point)); setContextMenu(null); }}>Пожарный водоём</button><button className="secondary" onClick={() => setContextMenu(null)}>Отмена</button></div>}
+          {contextMenu !== null && <div className="district-add-menu" style={{ left: contextMenu.x, top: contextMenu.y }}><strong>Добавить на карту</strong><button onClick={() => startContour('building')}>Здание с контуром</button><button onClick={() => startContour('installation')}>Наружная установка с контуром</button><button onClick={() => startContour('territory')}>Территория с контуром</button><button onClick={() => { setEditorObject(initialHydrant(contextMenu.point)); setContextMenu(null); }}>Пожарный гидрант</button><button onClick={() => { setEditorObject(initialFireReservoir(contextMenu.point)); setContextMenu(null); }}>Пожарный водоём</button><button className="secondary" onClick={() => setContextMenu(null)}>Отмена</button></div>}
           {contourDraft !== null && <div className="district-contour-panel">
             <strong>{contourDraft.mapRole === 'response-boundary' ? `Граница района выезда: ${pointCountLabel(contourDraft.points.length)}` : contourDraft.source === 'editing' ? 'Изменение границ объекта' : contourDraft.source === 'automatic' ? 'Контур найден автоматически' : `Ручная обводка: ${pointCountLabel(contourDraft.points.length)}`}</strong>
             <span>{contourDraft.mapRole === 'response-boundary' ? 'Ставьте точки вдоль границы. ПКМ по точке удаляет её; удерживайте ПКМ на карте и тяните для перемещения.' : 'Точки и стороны можно перетаскивать; «+» добавляет угол, ПКМ по точке удаляет его. Удерживайте ПКМ на свободном месте и тяните карту.'}</span>
@@ -1464,6 +1497,7 @@ export function DistrictMapPage(props: Props) {
               <span><small>Текущий режим</small><strong>{props.syncStatus.mode === 'primary' ? 'Основная база' : props.syncStatus.mode === 'backup' ? 'Резервный режим' : props.syncStatus.mode === 'recovering' ? 'Восстановление' : props.syncStatus.mode === 'conflict' ? 'Требуется проверка' : props.syncStatus.mode === 'disabled' ? 'Резерв выключен' : 'Автономно'}</strong></span>
               <span><small>Локальная очередь</small><strong>{props.syncStatus.pendingOperations} оп.</strong></span>
             </div>
+            {props.conflictBackupCount > 0 && <button type="button" className="secondary district-conflict-backup" onClick={props.onDownloadConflictBackup}>Скачать журнал сохранённых конфликтов ({props.conflictBackupCount})</button>}
           </section>
           {mapBackupStatus !== '' && <p className="district-act-status district-map-backup-status">{mapBackupStatus}</p>}
           {actImportStatus !== '' && <p className="district-act-status">{actImportStatus}</p>}

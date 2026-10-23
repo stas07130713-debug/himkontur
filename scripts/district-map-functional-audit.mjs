@@ -191,6 +191,89 @@ try {
     const hideAllSingleLine = hideAllButton === undefined || getComputedStyle(hideAllButton).whiteSpace === 'nowrap';
     const unknownHydrantHalf = document.querySelector('.hydrant-marker.status-unknown .hydrant-symbol-half');
     const unknownHydrantColor = unknownHydrantHalf === null ? '' : getComputedStyle(unknownHydrantHalf).fill;
+    document.querySelector('.map-settings-action')?.click();
+    await wait(100);
+    const passwordInput = document.querySelector('.admin-login-dialog input[type="password"]');
+    if (passwordInput) {
+      setInput(passwordInput, '1234');
+      passwordInput.closest('form')?.querySelector('button.primary')?.click();
+      await wait(300);
+    }
+    document.querySelector('.district-management-dialog .dialog-close')?.click();
+    await wait(80);
+    const currentDistrictMap = document.querySelector('.district-map-surface > svg');
+    const editableBuildingMarkers = [...document.querySelectorAll('.building-number-marker.editable')];
+    const contourPolygons = [...document.querySelectorAll('.district-object-contour-group[data-object-id] polygon')];
+    const largeContourCount = contourPolygons.filter((contour) => {
+      const bounds = contour.getBoundingClientRect();
+      return bounds.width >= 45 && bounds.height >= 35;
+    }).length;
+    const movableMarker = editableBuildingMarkers.find((marker) => {
+      const objectId = marker.getAttribute('data-object-id');
+      const contour = objectId === null ? null : document.querySelector('.district-object-contour-group[data-object-id="' + CSS.escape(objectId) + '"] polygon');
+      const bounds = contour?.getBoundingClientRect();
+      return bounds && bounds.width >= 45 && bounds.height >= 35;
+    });
+    let buildingPlateMovedInsideContour = false;
+    let buildingPlateTransformBefore = '';
+    let buildingPlateTransformAfter = '';
+    let buildingPlateInsideAfter = false;
+    if (movableMarker) {
+      const objectId = movableMarker.getAttribute('data-object-id');
+      const contour = document.querySelector('.district-object-contour-group[data-object-id="' + CSS.escape(objectId) + '"] polygon');
+      const contourBounds = contour.getBoundingClientRect();
+      const markerCenter = new DOMPoint(0, 0).matrixTransform(movableMarker.getScreenCTM());
+      const startX = markerCenter.x;
+      const startY = markerCenter.y;
+      const towardX = contourBounds.left + contourBounds.width / 2;
+      const towardY = contourBounds.top + contourBounds.height / 2;
+      const length = Math.hypot(towardX - startX, towardY - startY);
+      const endX = length < 10 ? startX + 9 : startX + (towardX - startX) / length * 12;
+      const endY = length < 10 ? startY : startY + (towardY - startY) / length * 12;
+      const beforeTransform = movableMarker.getAttribute('transform');
+      buildingPlateTransformBefore = beforeTransform ?? '';
+      movableMarker.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0, buttons: 1, pointerId: 501, clientX: startX, clientY: startY }));
+      currentDistrictMap.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, button: 0, buttons: 1, pointerId: 501, clientX: endX, clientY: endY }));
+      currentDistrictMap.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, button: 0, buttons: 0, pointerId: 501, clientX: endX, clientY: endY }));
+      await wait(120);
+      const movedMarker = document.querySelector('.building-number-marker[data-object-id="' + CSS.escape(objectId) + '"]');
+      const transform = movedMarker?.getAttribute('transform') ?? '';
+      buildingPlateTransformAfter = transform;
+      const match = /translate\\(([-\\d.]+)\\s+([-\\d.]+)\\)/u.exec(transform);
+      const polygonPoints = [...contour.points].map((point) => ({ x: point.x, y: point.y }));
+      const inside = match !== null && polygonPoints.reduce((state, point, index) => {
+        const previous = polygonPoints[(index + polygonPoints.length - 1) % polygonPoints.length];
+        const x = Number(match[1]);
+        const y = Number(match[2]);
+        const crossing = ((point.y > y) !== (previous.y > y))
+          && x < (previous.x - point.x) * (y - point.y) / (previous.y - point.y) + point.x;
+        return crossing ? !state : state;
+      }, false);
+      buildingPlateInsideAfter = inside;
+      buildingPlateMovedInsideContour = transform !== beforeTransform && inside;
+    }
+    const currentDistrictRect = currentDistrictMap.getBoundingClientRect();
+    const contextMarker = movableMarker?.getAttribute('data-object-id') === null
+      ? null
+      : document.querySelector('.building-number-marker[data-object-id="' + CSS.escape(movableMarker?.getAttribute('data-object-id') ?? '') + '"]');
+    const contextMarkerCenter = contextMarker === null
+      ? null
+      : new DOMPoint(0, 0).matrixTransform(contextMarker.getScreenCTM());
+    const contextX = contextMarkerCenter?.x ?? currentDistrictRect.left + currentDistrictRect.width * .55;
+    const contextY = contextMarkerCenter?.y ?? currentDistrictRect.top + currentDistrictRect.height * .55;
+    currentDistrictMap.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, button: 2, clientX: contextX, clientY: contextY }));
+    await wait(80);
+    const installationButton = [...document.querySelectorAll('.district-add-menu button')].find((button) => button.textContent.includes('Наружная установка с контуром'));
+    const installationCreationAvailable = installationButton !== undefined;
+    installationButton?.click();
+    await wait(120);
+    const installationContourStarted = document.querySelector('.district-contour-panel') !== null;
+    const automaticInstallationContour = document.querySelector('.district-contour-draft.automatic') !== null;
+    if (automaticInstallationContour) {
+      [...document.querySelectorAll('.district-contour-panel button')].find((button) => button.textContent.includes('Принять контур'))?.click();
+      await wait(80);
+    }
+    const installationEditorOpened = document.querySelector('#district-editor-title')?.textContent?.includes('Наружная установка') === true;
     return {
       firstResults,
       secondResults,
@@ -231,6 +314,19 @@ try {
       switchedToSatellite,
       undoRestoredMap,
       redoRestoredSatellite,
+      buildingPlateMovedInsideContour,
+      installationCreationAvailable,
+      installationContourStarted,
+      automaticInstallationContour,
+      installationEditorOpened,
+      adminLoginFound: passwordInput !== null,
+      adminEditableMarkers: editableBuildingMarkers.length,
+      contourPolygons: contourPolygons.length,
+      largeContourCount,
+      movableMarkerFound: movableMarker !== undefined,
+      buildingPlateTransformBefore,
+      buildingPlateTransformAfter,
+      buildingPlateInsideAfter,
     };
   })()`);
   const failures = [];
@@ -253,6 +349,9 @@ try {
   if (!result.boundaryLegend || !result.assLegend || !result.hideAllSingleLine) failures.push('переключатели границы района и АСС в условных обозначениях');
   if (!result.specialCreationRemoved) failures.push('разовые команды создания границы района и АСС не удалены');
   if (!result.switchedToSatellite || !result.undoRestoredMap || !result.redoRestoredSatellite) failures.push('кнопки назад и вперёд');
+  if (!result.buildingPlateMovedInsideContour) failures.push('перетаскивание таблички внутри контура здания');
+  if (!result.installationCreationAvailable) failures.push('создание наружной установки с контуром');
+  if (!result.installationContourStarted) failures.push('запуск контура наружной установки');
   const screenshot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
   writeFileSync('artifacts/district-map-functional-audit.png', Buffer.from(screenshot.data, 'base64'));
   console.log(JSON.stringify(result, null, 2));
