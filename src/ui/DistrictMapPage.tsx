@@ -41,7 +41,7 @@ import { appAssetUrl } from './app-url';
 import { CompassRose } from './CompassRose';
 import { parseHydrantActFile, type HydrantActParseResult } from './hydrant-act-import';
 import { MapRulerOverlay } from './MapRulerOverlay';
-import { DistrictObjectContour } from './DistrictObjectContour';
+import { DistrictContourHoverCard, DistrictObjectContour } from './DistrictObjectContour';
 import { DistrictMapLegend } from './DistrictMapLegend';
 import {
   BUILDING_LAYER_KEYS,
@@ -76,6 +76,8 @@ type Props = Readonly<{
   syncStatus: MapSyncStatus;
   syncCheckBusy: boolean;
   onCheckSynchronization: () => void;
+  publishBusy: boolean;
+  onPublishForAll: () => Promise<Readonly<{ success: boolean; message: string }>>;
   conflictBackupCount: number;
   onDownloadConflictBackup: () => void;
 }>;
@@ -646,6 +648,7 @@ export function DistrictMapPage(props: Props) {
   const [actImportStatus, setActImportStatus] = useState('');
   const [actImporting, setActImporting] = useState(false);
   const [mapBackupStatus, setMapBackupStatus] = useState('');
+  const [sharedPublishStatus, setSharedPublishStatus] = useState<Readonly<{ success: boolean; message: string }> | null>(null);
   const [contourStatus, setContourStatus] = useState('');
   const [pendingHydrantAct, setPendingHydrantAct] = useState<Readonly<{ fileName: string; result: HydrantActParseResult }> | null>(null);
   const [panning, setPanning] = useState(false);
@@ -668,6 +671,12 @@ export function DistrictMapPage(props: Props) {
   const pinchRef = useRef<{ distance: number } | null>(null);
   const dragRef = useRef<{ pointerId: number; objectId: string; clientX: number; clientY: number; active: boolean } | null>(null);
   const markerInteractionRef = useRef(false);
+
+  const publishForAllDevices = async () => {
+    setSharedPublishStatus(null);
+    const result = await props.onPublishForAll();
+    setSharedPublishStatus(result);
+  };
   const buildingContourResolverRef = useRef<((point: GeoPoint) => readonly GeoPoint[] | null) | null>(null);
   const contourDragRef = useRef<ContourDragState | null>(null);
   const contourDraftRef = useRef<ContourDraft | null>(null);
@@ -755,6 +764,9 @@ export function DistrictMapPage(props: Props) {
     const priority = (id: string) => id === hoveredId ? 2 : id === selectedId || id === searchHighlightedId ? 1 : 0;
     return priority(left.object.id) - priority(right.object.id);
   });
+  const hoveredContourObject = visibleObjects.find((object): object is DistrictBuilding => object.kind === 'building'
+    && object.id === hoveredId
+    && (object.objectType === 'territory' || object.objectType === 'installation')) ?? null;
 
   const locate = (clientX: number, clientY: number): GeoPoint | null => {
     const rect = stageRef.current?.getBoundingClientRect();
@@ -1447,6 +1459,7 @@ export function DistrictMapPage(props: Props) {
               return <DistrictMapMarker key={object.id} object={object} x={x} y={y} selected={selectedId === object.id && !contourSearch} highlighted={searchHighlightedId === object.id && !contourSearch} editing={props.adminMode} detailLevel={markerDetailLevel} scale={buildingScale ?? markerScale} interactionDisabled={rulerActive || contourDraft !== null} onSelect={() => selectObject(object.id)} onHoverChange={(hovered) => setHoveredId(hovered ? object.id : null)} {...dragProps} />;
             })}
             <MapRulerOverlay points={rulerPoints} project={projection.project} />
+            {hoveredContourObject !== null && <DistrictContourHoverCard object={hoveredContourObject} project={projection.project} viewSize={viewSize} />}
           </svg>
           {contextMenu !== null && <div className="district-add-menu" style={{ left: contextMenu.x, top: contextMenu.y }}><strong>Добавить на карту</strong><button onClick={() => startContour('building')}>Здание с контуром</button><button onClick={() => startContour('installation')}>Наружная установка с контуром</button><button onClick={() => startContour('territory')}>Территория с контуром</button><button onClick={() => { setEditorObject(initialHydrant(contextMenu.point)); setContextMenu(null); }}>Пожарный гидрант</button><button onClick={() => { setEditorObject(initialFireReservoir(contextMenu.point)); setContextMenu(null); }}>Пожарный водоём</button><button className="secondary" onClick={() => setContextMenu(null)}>Отмена</button></div>}
           {contourDraft !== null && <div className="district-contour-panel">
@@ -1502,7 +1515,11 @@ export function DistrictMapPage(props: Props) {
           {mapBackupStatus !== '' && <p className="district-act-status district-map-backup-status">{mapBackupStatus}</p>}
           {actImportStatus !== '' && <p className="district-act-status">{actImportStatus}</p>}
           {pendingHydrantAct !== null && <button type="button" className="primary district-act-apply" onClick={applyHydrantAct}><UiIcon name="check" /><span>Применить данные акта к пожарным гидрантам на карте</span></button>}
-          <button className="secondary exit-admin" onClick={() => { props.onCloseManagement(); props.onExitAdmin(); }}>Завершить режим настройки</button>
+          {sharedPublishStatus !== null && <p className={`district-publish-status ${sharedPublishStatus.success ? 'is-success' : 'is-error'}`} role="status">{sharedPublishStatus.message}</p>}
+          <div className="district-management-footer-actions">
+            <button type="button" className="primary publish-shared-map" disabled={props.publishBusy} onClick={() => void publishForAllDevices()}><UiIcon name="upload" /><span>{props.publishBusy ? 'Загружаю изменения…' : 'Опубликовать для всех устройств'}</span></button>
+            <button className="secondary exit-admin" onClick={() => { props.onCloseManagement(); props.onExitAdmin(); }}>Завершить режим настройки</button>
+          </div>
         </section>
       </div>}
       {editorObject !== null && <ObjectEditor object={editorObject} objects={props.objects} onSave={upsertObject} onEditContour={startContourEdit} onClose={() => setEditorObject(null)} />}

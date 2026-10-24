@@ -2624,7 +2624,8 @@ button.wide { width: 100%; margin-top: 10px; }
   transition: opacity .12s ease;
 }
 .district-map-marker:hover .district-marker-hover-card,
-.district-object-contour-group:hover .district-contour-hover-card {
+.district-object-contour-group:hover .district-contour-hover-card,
+.district-contour-hover-card.visible {
   opacity: 1;
   visibility: visible;
 }
@@ -2838,10 +2839,34 @@ button.wide { width: 100%; margin-top: 10px; }
   font-weight: 900;
 }
 .district-management-dialog .district-act-apply .ui-mini-icon { width: 18px; height: 18px; stroke: currentColor; }
+.district-management-footer-actions {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 8px;
+}
+.district-management-footer-actions > button {
+  min-height: 42px;
+  margin: 0;
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 850;
+}
+.district-management-footer-actions .publish-shared-map { display: flex; align-items: center; justify-content: center; gap: 7px; }
+.district-management-footer-actions .publish-shared-map .ui-mini-icon { width: 17px; height: 17px; stroke: currentColor; }
+.district-management-footer-actions .publish-shared-map:disabled { cursor: progress; opacity: .72; }
+.district-management-dialog .district-publish-status {
+  margin: 12px 0 0;
+  padding: 9px 10px;
+  border-left: 3px solid #168e99;
+  background: #e5f6f7;
+  color: #17545b;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.district-management-dialog .district-publish-status.is-error { border-left-color: #c93c45; background: #fff0f0; color: #902d34; }
 .district-management-dialog .exit-admin {
   width: 100%;
-  min-height: 38px;
-  margin-top: 12px;
   border: 1px solid #bc9295;
   border-radius: 7px;
   background: #fff1f1;
@@ -2859,6 +2884,8 @@ button.wide { width: 100%; margin-top: 10px; }
 [data-theme="dark"] .district-management-actions > label { border-color: #2f7782; background: #0d3f4b; color: #eafafb; }
 [data-theme="dark"] .district-management-actions small { color: #a5c2c7; }
 [data-theme="dark"] .district-management-dialog .district-map-backup-status { background: #0b424c; color: #d9f5f6; }
+[data-theme="dark"] .district-management-dialog .district-publish-status { background: #0b424c; color: #d9f5f6; }
+[data-theme="dark"] .district-management-dialog .district-publish-status.is-error { background: #4a2027; color: #ffd6d5; }
 [data-theme="dark"] .district-sync-diagnostics { border-color: #2f6873; background: #0a3541; }
 [data-theme="dark"] .district-sync-diagnostics-heading strong { color: #ecfbfc; }
 [data-theme="dark"] .district-sync-diagnostics-heading small,
@@ -3865,12 +3892,13 @@ button.wide { width: 100%; margin-top: 10px; }
 .fire-dispatch-building-label { pointer-events: none; }
 .fire-dispatch-building-label text { fill: #fff; font-size: 17px; font-weight: 950; }
 .fire-dispatch-edge-label,
-.fire-dispatch-water-link text,
+.fire-dispatch-water-distance,
 .fire-dispatch-reservoir-label { paint-order: stroke; stroke: #fff; stroke-width: 5px; stroke-linejoin: round; font-family: Arial, Helvetica, sans-serif; font-weight: 900; }
 .fire-dispatch-edge-label { fill: #161616; font-size: 10px; stroke-width: 3px; }
 .fire-dispatch-water-link line { stroke: #087dcc; stroke-width: 3; stroke-linecap: round; }
 .fire-dispatch-water-arrow { fill: #087dcc; }
-.fire-dispatch-water-link text { fill: #005da4; font-size: 13px; }
+.fire-dispatch-water-distance { fill: #005da4; font-size: 13px; }
+.fire-dispatch-water-distance.short-distance { font-size: 11px; }
 .fire-dispatch-hydrant-symbol { filter: drop-shadow(0 2px 3px #002c55aa); }
 .fire-dispatch-hydrant-symbol .hydrant-map-label { font-size: 11.5px; }
 .fire-dispatch-hydrant-symbol.status-faulty .hydrant-network-line,

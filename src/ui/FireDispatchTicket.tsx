@@ -456,7 +456,7 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
     ...(showObjectPlate ? [boxAt(buildingPoint, 64, 40)] : []),
     { left: MAP_WIDTH - 105, top: 0, right: MAP_WIDTH, bottom: 105 },
   ];
-  const labels = edgeLabels(building.contour, project, fixedObstacles);
+  const labels = building.objectType === 'building' ? edgeLabels(building.contour, project, fixedObstacles) : [];
   const dimensionObstacles = labels.map((label) => rotatedBoxAt(
     { x: label.x, y: label.y },
     Math.max(32, label.text.length * 7.8),
@@ -479,6 +479,7 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
       ? { x: -rawNormal.x, y: -rawNormal.y }
       : rawNormal;
     const text = formatRulerDistance(target.distanceM);
+    const shortDistance = target.distanceM <= 20;
     const candidates: ScreenPoint[] = [];
     for (const fraction of [.5, .62, .38, .72, .28]) {
       for (const offset of [9, -9, 12, -12]) {
@@ -486,7 +487,11 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
       }
     }
     const width = Math.max(40, text.length * 9);
-    const label = candidates.find((candidate) => {
+    const shortDistanceLabel = {
+      x: Math.max(width / 2 + 5, Math.min(MAP_WIDTH - width / 2 - 5, from.x)),
+      y: Math.min(MAP_HEIGHT - 11, from.y + (source.kind === 'hydrant' ? 25 : 28)),
+    };
+    const label = shortDistance ? shortDistanceLabel : candidates.find((candidate) => {
       const candidateBox = boxAt(candidate, width, 20);
       return candidateBox.left > 5 && candidateBox.right < MAP_WIDTH - 5 && candidateBox.top > 5 && candidateBox.bottom < MAP_HEIGHT - 5
         && markerObstacles.every((box) => !boxesOverlap(candidateBox, box))
@@ -494,12 +499,16 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
         && waterLabelObstacles.every((box) => !boxesOverlap(candidateBox, box));
     }) ?? candidates[0] ?? { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
     waterLabelObstacles.push(boxAt(label, width, 20));
-    return { source, from, to, label, text, angle: readableLineAngle(from, to) };
+    return { source, from, to, label, text, angle: shortDistance ? 0 : readableLineAngle(from, to), shortDistance };
   });
   const resolvedWaterLabelObstacles: LabelBox[] = [];
   const displayedWaterLinks = waterLinks.map((link) => {
     const width = Math.max(40, link.text.length * 9);
     const originalBox = boxAt(link.label, width, 20);
+    if (link.shortDistance) {
+      resolvedWaterLabelObstacles.push(originalBox);
+      return link;
+    }
     if (dimensionObstacles.every((box) => !boxesOverlap(originalBox, box))) {
       resolvedWaterLabelObstacles.push(originalBox);
       return link;
@@ -545,10 +554,9 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
       <defs>
         <marker id="dispatch-water-arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path className="fire-dispatch-water-arrow" d="M0,0 L0,6 L7,3 z" /></marker>
       </defs>
-      {displayedWaterLinks.map(({ source, from, to, label, text, angle }) => {
+      {displayedWaterLinks.map(({ source, from, to }) => {
         return <g key={source.id} className="fire-dispatch-water-link">
           <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} markerEnd="url(#dispatch-water-arrow)" />
-          <text x="0" y="0" transform={`translate(${label.x} ${label.y}) rotate(${angle})`} textAnchor="middle" dominantBaseline="middle">{text}</text>
         </g>;
       })}
       <polygon points={contour} className={`fire-dispatch-building-contour prefix-${buildingPrefix(building.number)}`} />
@@ -569,6 +577,15 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
           </g> : <g className={`fire-dispatch-reservoir-symbol status-${source.status}`}><rect x="-15" y="-15" width="30" height="30" rx="3" /><text textAnchor="middle" dominantBaseline="middle">ПВ</text><text className="fire-dispatch-reservoir-label" x="20" y="-11">{sourceLabel(source)}</text></g>}
         </g>;
       })}
+      {displayedWaterLinks.map(({ source, label, text, angle, shortDistance }) => <text
+        key={`distance-${source.id}`}
+        className={`fire-dispatch-water-distance${shortDistance ? ' short-distance' : ''}`}
+        x="0"
+        y="0"
+        transform={`translate(${label.x} ${label.y}) rotate(${angle})`}
+        textAnchor="middle"
+        dominantBaseline="middle"
+      >{text}</text>)}
     </svg>
     <CompassRose className="fire-dispatch-standard-compass" />
   </div></>;

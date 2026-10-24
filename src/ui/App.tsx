@@ -67,6 +67,7 @@ import {
 type Tab = "calculation" | "goods" | "district";
 type Theme = "light" | "dark";
 type DistrictSyncState = "ready" | "pending" | "publishing" | "error";
+const MAP_ADMIN_PASSWORD = "1234";
 type Snapshot = Readonly<{
   input: CalculationInput;
   source: SourceConfiguration;
@@ -526,8 +527,14 @@ export function App() {
       return next;
     });
   };
-  async function publishPendingDistrictProject() {
-    if (districtPublishingRef.current || adminCredentialRef.current === null) return;
+  async function publishPendingDistrictProject(): Promise<Readonly<{ success: boolean; message: string }>> {
+    if (districtPublishingRef.current) return { success: false, message: "Загрузка уже выполняется. Дождитесь её завершения." };
+    if (adminCredentialRef.current === null) return { success: false, message: "Сначала войдите в режим настройки карты." };
+    const queuedAtStart = pendingDistrictOperationsRef.current.length;
+    if (queuedAtStart === 0) {
+      void refreshMapSyncStatus();
+      return { success: true, message: "Новых изменений для публикации нет. Общая карта уже актуальна." };
+    }
     districtPublishingRef.current = true;
     try {
       if (adminCredentialRef.current.sessionToken === '') {
@@ -600,16 +607,31 @@ export function App() {
         }
       }
       void refreshMapSyncStatus();
+      return {
+        success: pendingDistrictOperationsRef.current.length === 0,
+        message: pendingDistrictOperationsRef.current.length === 0
+          ? "Изменения успешно загружены в общую базу. Другие устройства получат карту автоматически."
+          : "Часть изменений пока остаётся в локальной очереди. Повторите загрузку.",
+      };
     } catch (error) {
       setDistrictSyncState("error");
-      setNotice(`Изменения сохранены на этом устройстве, но пока не отправлены: ${message(error)}`);
+      const failureMessage = `Не удалось загрузить изменения в общую базу. Они сохранены только на этом устройстве: ${message(error)}`;
+      setNotice(failureMessage);
       window.setTimeout(() => {
         if (pendingDistrictOperationsRef.current.length > 0) void publishPendingDistrictProject();
       }, 30_000);
+      return { success: false, message: failureMessage };
     } finally {
       districtPublishingRef.current = false;
     }
   }
+  useEffect(() => {
+    if (pendingDistrictOperationsRef.current.length === 0) return;
+    adminCredentialRef.current ??= { password: MAP_ADMIN_PASSWORD, sessionToken: "" };
+    void publishPendingDistrictProject();
+    // The locally persisted queue must resume once when this browser starts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const commitDistrictObjects = (objects: readonly DistrictMapObject[]) => {
     if (!districtChangeRememberedRef.current) remember("Изменена карта района выезда");
     districtChangeRememberedRef.current = false;
@@ -794,6 +816,8 @@ export function App() {
           syncStatus={{ ...mapSyncStatus, pendingOperations: pendingDistrictOperationsRef.current.length + mapSyncStatus.pendingOperations }}
           syncCheckBusy={mapSyncCheckBusy}
           onCheckSynchronization={() => void refreshMapSyncStatus()}
+          publishBusy={districtSyncState === "publishing"}
+          onPublishForAll={publishPendingDistrictProject}
           conflictBackupCount={districtConflictCount}
           onDownloadConflictBackup={downloadDistrictConflictArchive}
         />
@@ -1151,7 +1175,7 @@ export function App() {
               event.preventDefault();
               (() => {
                 try {
-                  if (adminPassword !== "1234") throw new Error("Неверный пароль администратора.");
+                  if (adminPassword !== MAP_ADMIN_PASSWORD) throw new Error("Неверный пароль администратора.");
                   adminCredentialRef.current = { password: adminPassword, sessionToken: "" };
                   setDistrictAdmin(true);
                   setDistrictManagementOpen(true);

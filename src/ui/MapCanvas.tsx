@@ -24,7 +24,7 @@ import { DistrictObjectToolbar } from "./DistrictObjectToolbar";
 import { CompassRose } from "./CompassRose";
 import { UiIcon } from "./UiIcon";
 import { MapRulerOverlay } from "./MapRulerOverlay";
-import { DistrictObjectContour } from "./DistrictObjectContour";
+import { DistrictContourHoverCard, DistrictObjectContour } from "./DistrictObjectContour";
 import { districtObjectFocusPoint, districtObjectMarkerPoint, districtResponseBoundaryCenter, hasDistrictMarker, isBuildingWithContour, twoTierBuildingMarkerScales } from "./district-map-visuals";
 
 export type ControlPoint = Readonly<{
@@ -858,6 +858,9 @@ export function MapCanvas(props: Props) {
     const priority = (id: string) => id === hoveredDistrictId ? 2 : id === selectedDistrictId || id === searchDistrictId ? 1 : 0;
     return priority(left.object.id) - priority(right.object.id);
   });
+  const hoveredContourObject = visibleDistrictObjects.find((object): object is DistrictBuilding => object.kind === 'building'
+    && object.id === hoveredDistrictId
+    && (object.objectType === 'territory' || object.objectType === 'installation')) ?? null;
   const focusDistrictObject = (object: DistrictMapObject) => {
     setMapCenter(clampMapCenter(districtObjectFocusPoint(object), viewWidth, viewHeight, 5));
     setZoom((current) => Math.max(current, 5));
@@ -1317,6 +1320,7 @@ export function MapCanvas(props: Props) {
               })}
               {visibleDistrictObjects.filter((object): object is DistrictBuilding => object.kind === 'building' && object.mapRole !== undefined && object.mapRole !== 'ordinary').map((object) => <DistrictObjectContour key={`${object.id}-special-contour`} object={object} project={projection.project} selected={selectedDistrictId === object.id && searchDistrictId !== object.id} highlighted={searchDistrictId === object.id} interactionDisabled={rulerActive} onSelect={() => setSelectedDistrictId(object.id)} onHoverChange={(hovered) => setHoveredDistrictId(hovered ? object.id : null)} />)}
               <MapRulerOverlay points={rulerPoints} project={projection.project} />
+              {hoveredContourObject !== null && <DistrictContourHoverCard object={hoveredContourObject} project={projection.project} viewSize={{ width: viewWidth, height: viewHeight }} />}
             </svg>
           </div>
           {!online && <div className="offline-map-status">{props.basemap === "standard" ? "Без интернета · автономная карта" : "Без интернета · автономный спутник"}</div>}

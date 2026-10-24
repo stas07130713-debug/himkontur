@@ -73,18 +73,14 @@ export function DistrictObjectContour({ object, project, selected = false, highl
     const projected = project(point);
     return `${projected.x},${projected.y}`;
   }).join(' ');
+  const showWallDimensions = object.objectType === 'building';
   const corners = responseBoundary ? object.contour : logicalCorners(object.contour);
-  const walls = corners.map((start, index) => {
+  const walls = showWallDimensions ? corners.map((start, index) => {
     const end = responseBoundary ? corners[index + 1] : corners[(index + 1) % corners.length];
     if (end === undefined) return null;
     return { start, end, projectedStart: project(start), projectedEnd: project(end) };
-  }).filter((wall): wall is NonNullable<typeof wall> => wall !== null);
+  }).filter((wall): wall is NonNullable<typeof wall> => wall !== null) : [];
   const wall = hoveredWall === null ? null : walls[hoveredWall] ?? null;
-  const contourOnlyObject = object.objectType === 'territory' || object.objectType === 'installation';
-  const hoverLines = object.objectType === 'installation'
-    ? [object.installationName?.trim() ?? '', namedLine(object.workshopFull, object.workshopShort)]
-    : object.territoryNames.map((unit) => namedLine(unit.fullName, unit.shortName));
-  const hoverPoint = project(districtObjectFocusPoint(object));
   const roleClass = responseBoundary
     ? ' response-boundary'
     : object.mapRole === 'rescue-service'
@@ -127,17 +123,33 @@ export function DistrictObjectContour({ object, project, selected = false, highl
       textAnchor="middle"
       transform={`translate(${(wall.projectedStart.x + wall.projectedEnd.x) / 2} ${(wall.projectedStart.y + wall.projectedEnd.y) / 2}) rotate(${readableLineAngle(wall.projectedStart, wall.projectedEnd)})`}
     >{distanceLabel(edgeDistanceMeters(wall.start, wall.end))}</text>}
-    {contourOnlyObject && <foreignObject
-      className="district-marker-hover-card district-contour-hover-card"
-      x={hoverPoint.x + 18}
-      y={hoverPoint.y - 24 - hoverLines.filter(Boolean).length * 9}
-      width="245"
-      height={42 + hoverLines.filter(Boolean).length * 19}
-    >
-      <div>
-        <strong>{object.objectType === 'installation' ? 'Наружная установка' : 'Территория'}</strong>
-        {hoverLines.filter(Boolean).map((line, index) => <span key={`${object.id}-contour-hover-${index}`}>{line}</span>)}
-      </div>
-    </foreignObject>}
   </g>;
+}
+
+export function DistrictContourHoverCard({ object, project, viewSize }: Readonly<{
+  object: DistrictBuilding;
+  project: Project;
+  viewSize: Readonly<{ width: number; height: number }>;
+}>) {
+  if (object.objectType !== 'territory' && object.objectType !== 'installation') return null;
+  const lines = (object.objectType === 'installation'
+    ? [object.installationName?.trim() ?? '', namedLine(object.workshopFull, object.workshopShort)]
+    : object.territoryNames.map((unit) => namedLine(unit.fullName, unit.shortName))).filter(Boolean);
+  const point = project(districtObjectFocusPoint(object));
+  const width = Math.min(245, Math.max(120, viewSize.width - 12));
+  const height = 42 + lines.length * 19;
+  const x = Math.max(6, Math.min(viewSize.width - width - 6, point.x + 18));
+  const y = Math.max(6, Math.min(viewSize.height - height - 6, point.y - 24 - lines.length * 9));
+  return <foreignObject
+    className="district-marker-hover-card district-contour-hover-card visible"
+    x={x}
+    y={y}
+    width={width}
+    height={height}
+  >
+    <div>
+      <strong>{object.objectType === 'installation' ? 'Наружная установка' : 'Территория'}</strong>
+      {lines.map((line, index) => <span key={`${object.id}-contour-hover-${index}`}>{line}</span>)}
+    </div>
+  </foreignObject>;
 }

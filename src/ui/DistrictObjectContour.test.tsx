@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import type { DistrictBuilding } from './district-map-model';
-import { DistrictObjectContour } from './DistrictObjectContour';
+import { DistrictContourHoverCard, DistrictObjectContour } from './DistrictObjectContour';
 
 const baseObject: DistrictBuilding = {
   id: 'boundary-test',
@@ -37,7 +37,7 @@ describe('DistrictObjectContour', () => {
     expect(markup).not.toContain('<polygon');
   });
 
-  it('renders a territory as a clickable contour with one rectangular hover card', () => {
+  it('renders a territory contour without wall dimensions and provides one overlay hover card', () => {
     const object: DistrictBuilding = {
       ...baseObject,
       contour: [{ latitude: 0, longitude: 0 }, { latitude: 0, longitude: 1 }, { latitude: 1, longitude: 1 }],
@@ -45,9 +45,12 @@ describe('DistrictObjectContour', () => {
     };
     const markup = renderToStaticMarkup(<svg><DistrictObjectContour object={object} project={project} /></svg>);
     expect(markup).toContain('<polygon');
-    expect(markup).toContain('district-contour-hover-card');
-    expect(markup).toContain('Площадка хранения');
-    expect(markup.match(/district-marker-hover-card/gu)).toHaveLength(1);
+    expect(markup).not.toContain('district-contour-edge-measure');
+    expect(markup).not.toContain('district-contour-hover-card');
+    const overlay = renderToStaticMarkup(<svg><DistrictContourHoverCard object={object} project={project} viewSize={{ width: 1000, height: 680 }} /></svg>);
+    expect(overlay).toContain('district-contour-hover-card visible');
+    expect(overlay).toContain('Площадка хранения');
+    expect(overlay.match(/district-marker-hover-card/gu)).toHaveLength(1);
   });
 
   it('shows installation information from its contour instead of a numbered plate', () => {
@@ -60,7 +63,7 @@ describe('DistrictObjectContour', () => {
       workshopShort: 'ЦЭН',
       contour: [{ latitude: 0, longitude: 0 }, { latitude: 0, longitude: 1 }, { latitude: 1, longitude: 1 }],
     };
-    const markup = renderToStaticMarkup(<svg><DistrictObjectContour object={object} project={project} /></svg>);
+    const markup = renderToStaticMarkup(<svg><DistrictContourHoverCard object={object} project={project} viewSize={{ width: 1000, height: 680 }} /></svg>);
     expect(markup).toContain('Наружная насосная установка');
     expect(markup).toContain('ЦЭН — Цех электролиза никеля');
   });
