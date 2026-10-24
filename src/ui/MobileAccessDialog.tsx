@@ -34,7 +34,7 @@ function DownloadMark() {
 
 export function MobileAccessDialog({ open, onClose }: Props) {
   const [qr, setQr] = useState("");
-  const canCheckUpdates = window.himkonturUpdates !== undefined || Capacitor.isNativePlatform();
+  const hasBuiltInUpdater = window.himkonturUpdates !== undefined || Capacitor.isNativePlatform();
 
   useEffect(() => {
     if (!open) {
@@ -106,18 +106,20 @@ export function MobileAccessDialog({ open, onClose }: Props) {
           Это загрузка самостоятельных приложений, а не переход в веб-версию.
           Интернет требуется для скачивания установочного файла и получения погоды.
         </small>
-        {canCheckUpdates && (
-          <button
-            className="application-update-check"
-            type="button"
-            onClick={() => {
+        <button
+          className="application-update-check"
+          type="button"
+          onClick={() => {
+            if (hasBuiltInUpdater) {
               onClose();
               window.dispatchEvent(new Event("himkontur:update-check"));
-            }}
-          >
-            Проверить обновления
-          </button>
-        )}
+              return;
+            }
+            window.open(WINDOWS_DOWNLOAD, "_blank", "noopener,noreferrer");
+          }}
+        >
+          {hasBuiltInUpdater ? "Проверить обновления" : "Скачать последнюю версию Windows"}
+        </button>
       </section>
     </div>
   );

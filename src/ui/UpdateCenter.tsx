@@ -3,7 +3,7 @@ import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor
 import packageInformation from "../../package.json";
 import { isNewerVersion } from "./update-version";
 
-const AUTOMATIC_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1_000;
+const AUTOMATIC_CHECK_INTERVAL_MS = 30 * 60 * 1_000;
 
 type AndroidUpdater = Readonly<{
   getVersion: () => Promise<{ version: string; code: number }>;
@@ -71,12 +71,7 @@ export function UpdateCenter() {
     // Replay the most recent main-process state. This closes the race where a
     // fast update check completed before React registered its event listener.
     void window.himkonturUpdates.getStatus().then(receiveStatus);
-    const startupCheck = window.setTimeout(() => {
-      automaticCheck.current = true;
-      void window.himkonturUpdates?.check();
-    }, 5_500);
     return () => {
-      window.clearTimeout(startupCheck);
       unsubscribe();
     };
   }, []);
@@ -117,6 +112,11 @@ export function UpdateCenter() {
 
   const install = async () => {
     if (window.himkonturUpdates !== undefined) {
+      if (state.mode === "available") {
+        setState({ ...state, mode: "downloading", text: "Загрузка обновления Windows", percent: 0 });
+        await window.himkonturUpdates.download();
+        return;
+      }
       await window.himkonturUpdates.install();
       return;
     }
@@ -135,28 +135,29 @@ export function UpdateCenter() {
   };
 
   if (state.mode === "hidden") return null;
-  const canInstall = state.mode === "ready" || (state.mode === "available" && isAndroid);
-  const importantAndroidUpdate = state.mode === "available" && isAndroid;
+  const isWindows = window.himkonturUpdates !== undefined;
+  const canInstall = state.mode === "ready" || state.mode === "available";
+  const importantUpdate = state.mode === "available" && (isAndroid || isWindows);
   const notification = (
     <aside
-      className={`update-center${importantAndroidUpdate ? " update-center-important" : ""}`}
-      role={importantAndroidUpdate ? "dialog" : "status"}
-      aria-modal={importantAndroidUpdate ? "true" : undefined}
+      className={`update-center${importantUpdate ? " update-center-important" : ""}`}
+      role={importantUpdate ? "dialog" : "status"}
+      aria-modal={importantUpdate ? "true" : undefined}
       aria-live="polite"
-      aria-label={importantAndroidUpdate ? "Доступно обновление ХИМКОНТУР" : undefined}
+      aria-label={importantUpdate ? "Доступно обновление ХИМКОНТУР" : undefined}
     >
       <button className="update-center-close" type="button" aria-label="Скрыть уведомление" onClick={() => setState({ mode: "hidden", text: "" })}>×</button>
-      {importantAndroidUpdate && <div className="update-center-emblem" aria-hidden="true">↓</div>}
-      <strong>{importantAndroidUpdate ? "Доступно новое обновление" : state.mode === "ready" || state.mode === "available" ? "Обновление ХИМКОНТУР" : "ХИМКОНТУР"}</strong>
-      {importantAndroidUpdate && <span className="update-center-version">ХИМКОНТУР · версия {state.version}</span>}
-      <span>{importantAndroidUpdate ? "Установите новую версию, чтобы получить последние исправления и улучшения." : state.text}</span>
-      {importantAndroidUpdate && <span className="update-center-note">Будет установлена сразу последняя версия. Промежуточные обновления не требуются.</span>}
+      {importantUpdate && <div className="update-center-emblem" aria-hidden="true">↓</div>}
+      <strong>{importantUpdate ? "Доступно новое обновление" : state.mode === "ready" || state.mode === "available" ? "Обновление ХИМКОНТУР" : "ХИМКОНТУР"}</strong>
+      {importantUpdate && <span className="update-center-version">ХИМКОНТУР · версия {state.version}</span>}
+      <span>{importantUpdate ? "Установите новую версию, чтобы получить последние исправления и улучшения." : state.text}</span>
+      {importantUpdate && <span className="update-center-note">Будет установлена сразу последняя версия. Промежуточные обновления не требуются.</span>}
       {state.mode === "downloading" && <progress max="100" value={state.percent} />}
       {canInstall && <div className="update-center-actions">
         <button className="update-center-install" type="button" onClick={() => void install()}>{state.mode === "ready" ? "Перезапустить и установить" : "Обновить сейчас"}</button>
-        {importantAndroidUpdate && <button className="update-center-cancel" type="button" onClick={() => setState({ mode: "hidden", text: "" })}>Отмена</button>}
+        {importantUpdate && <button className="update-center-cancel" type="button" onClick={() => setState({ mode: "hidden", text: "" })}>Отмена</button>}
       </div>}
     </aside>
   );
-  return importantAndroidUpdate ? <div className="update-center-backdrop">{notification}</div> : notification;
+  return importantUpdate ? <div className="update-center-backdrop">{notification}</div> : notification;
 }

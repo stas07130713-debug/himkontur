@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('himkonturUpdates', {
   getVersion: () => ipcRenderer.invoke('himkontur:update-version'),
   getStatus: () => ipcRenderer.invoke('himkontur:update-status-current'),
   check: () => ipcRenderer.invoke('himkontur:update-check'),
+  download: () => ipcRenderer.invoke('himkontur:update-download'),
   install: () => ipcRenderer.invoke('himkontur:update-install'),
   onStatus: (callback) => {
     const listener = (_event, status) => callback(status);

@@ -25,6 +25,7 @@ interface Window {
     getVersion: () => Promise<string>;
     getStatus: () => Promise<HimkonturUpdateStatus>;
     check: () => Promise<HimkonturUpdateStatus>;
+    download: () => Promise<HimkonturUpdateStatus>;
     install: () => Promise<HimkonturUpdateStatus>;
     onStatus: (callback: (status: HimkonturUpdateStatus) => void) => () => void;
   }>;

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, powerMonitor, shell } from 'electron';
 import electronUpdater from 'electron-updater';
 import { createServer } from 'node:http';
 import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
@@ -28,6 +28,10 @@ let pendingScenario = null;
 let tileCacheRoot = null;
 let updateTimer = null;
 let lastUpdateStatus = { state: 'idle', version: app.getVersion() };
+let updateCheckInFlight = null;
+let lastUpdateCheckAt = 0;
+const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
+const UPDATE_CHECK_COOLDOWN_MS = 2 * 60 * 1000;
 
 function sendUpdateStatus(status) {
   lastUpdateStatus = status;
@@ -44,6 +48,22 @@ function friendlyUpdateError(error) {
   return 'Не удалось проверить или загрузить обновление. Повторите позднее.';
 }
 
+async function checkForApplicationUpdate({ force = false } = {}) {
+  if (!app.isPackaged) return { state: 'development', version: app.getVersion() };
+  if (updateCheckInFlight !== null) return updateCheckInFlight;
+  if (!force && Date.now() - lastUpdateCheckAt < UPDATE_CHECK_COOLDOWN_MS) return lastUpdateStatus;
+  lastUpdateCheckAt = Date.now();
+  updateCheckInFlight = autoUpdater.checkForUpdates()
+    .then(() => lastUpdateStatus)
+    .catch((error) => {
+      const result = { state: 'error', message: friendlyUpdateError(error) };
+      sendUpdateStatus(result);
+      return result;
+    })
+    .finally(() => { updateCheckInFlight = null; });
+  return updateCheckInFlight;
+}
+
 function configureUpdates() {
   // The GitHub provider first calls api.github.com. Some providers allow the
   // release download itself but block that API domain, so installed copies
@@ -55,7 +75,9 @@ function configureUpdates() {
     url: 'https://github.com/stas07130713-debug/himkontur/releases/latest/download',
     useMultipleRangeRequest: false
   });
-  autoUpdater.autoDownload = true;
+  // First tell the user that a new version exists. A 400+ MB installer must
+  // not be downloaded silently on a metered or slow connection.
+  autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.autoRunAppAfterInstall = true;
   autoUpdater.allowPrerelease = false;
@@ -72,10 +94,14 @@ function configureUpdates() {
   ipcMain.handle('himkontur:update-version', () => app.getVersion());
   ipcMain.handle('himkontur:update-status-current', () => lastUpdateStatus);
   ipcMain.handle('himkontur:update-check', async () => {
-    if (!app.isPackaged) return { state: 'development', version: app.getVersion() };
+    sendUpdateStatus({ state: 'checking', version: app.getVersion() });
+    return checkForApplicationUpdate({ force: true });
+  });
+  ipcMain.handle('himkontur:update-download', async () => {
     try {
-      await autoUpdater.checkForUpdates();
-      return { state: 'checking' };
+      sendUpdateStatus({ state: 'downloading', version: lastUpdateStatus.version, percent: 0 });
+      await autoUpdater.downloadUpdate();
+      return lastUpdateStatus;
     } catch (error) {
       const result = { state: 'error', message: friendlyUpdateError(error) };
       sendUpdateStatus(result);
@@ -313,6 +339,7 @@ async function createWindow() {
   await mainWindow.webContents.session.clearCache();
   mainWindow.once('ready-to-show', () => mainWindow?.show());
   await mainWindow.loadURL(`http://${HOST}:${PORT}/${pendingScenario === null ? '' : '?scenario=1'}`);
+  mainWindow.on('focus', () => void checkForApplicationUpdate());
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
@@ -326,8 +353,9 @@ async function bootstrap() {
   await startServer();
   await createWindow();
   if (app.isPackaged) {
-    setTimeout(() => void autoUpdater.checkForUpdates().catch(() => undefined), 5_000);
-    updateTimer = setInterval(() => void autoUpdater.checkForUpdates().catch(() => undefined), 6 * 60 * 60 * 1000);
+    setTimeout(() => void checkForApplicationUpdate({ force: true }), 5_000);
+    updateTimer = setInterval(() => void checkForApplicationUpdate(), UPDATE_CHECK_INTERVAL_MS);
+    powerMonitor.on('resume', () => void checkForApplicationUpdate());
   }
 }
 
