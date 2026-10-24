@@ -2623,7 +2623,8 @@ button.wide { width: 100%; margin-top: 10px; }
   pointer-events: none;
   transition: opacity .12s ease;
 }
-.district-map-marker:hover .district-marker-hover-card {
+.district-map-marker:hover .district-marker-hover-card,
+.district-object-contour-group:hover .district-contour-hover-card {
   opacity: 1;
   visibility: visible;
 }
@@ -3122,6 +3123,47 @@ button.wide { width: 100%; margin-top: 10px; }
   gap: 8px;
 }
 .fire-dispatch-ticket-sheet.mobile-map-only .fire-dispatch-map { aspect-ratio: 1000 / 680; }
+.fire-dispatch-scheme-viewport:not(.mobile),
+.fire-dispatch-scheme-viewport:not(.mobile) > .fire-dispatch-scheme-scale { display: contents; }
+.fire-dispatch-mobile-zoom-controls {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 38px 54px 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+  box-sizing: border-box;
+  color: #cde9ec;
+}
+.fire-dispatch-mobile-zoom-controls button {
+  min-height: 34px;
+  border: 1px solid #5ca0aa;
+  border-radius: 7px;
+  background: #f5ffff;
+  color: #075b69;
+  font-size: 20px;
+  font-weight: 900;
+}
+.fire-dispatch-mobile-zoom-controls button:disabled { opacity: .42; }
+.fire-dispatch-mobile-zoom-controls span { color: #fff; font-size: 12px; font-weight: 850; text-align: center; }
+.fire-dispatch-mobile-zoom-controls small { min-width: 0; font-size: 10px; line-height: 1.2; }
+.fire-dispatch-scheme-viewport.mobile {
+  width: 100%;
+  max-height: calc(100dvh - 108px);
+  overflow: auto;
+  box-sizing: border-box;
+  overscroll-behavior: contain;
+  touch-action: none;
+  -webkit-overflow-scrolling: touch;
+}
+.fire-dispatch-scheme-viewport.mobile > .fire-dispatch-scheme-scale {
+  min-width: 100%;
+  box-sizing: border-box;
+}
+.fire-dispatch-scheme-viewport.mobile .fire-dispatch-ticket-sheet.mobile-map-only {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
 
 @media (max-width: 720px), (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
   .topbar { padding-block: 5px 4px; gap: 4px; }
@@ -3294,7 +3336,8 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-object-contour { pointer-events: all; }
 .district-object-contour.territory {
   fill: transparent;
-  stroke: transparent;
+  stroke: var(--object-color);
+  stroke-width: 3;
   filter: none;
 }
 .district-object-contour.territory.hovered,

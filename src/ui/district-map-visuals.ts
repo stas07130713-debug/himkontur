@@ -30,8 +30,7 @@ export function districtLayerKey(object: DistrictMapObject): DistrictLayerKey {
 export function hasDistrictMarker(object: DistrictMapObject): boolean {
   return object.kind !== 'building'
     || object.mapRole === 'rescue-service'
-    || object.objectType === 'installation'
-    || (object.objectType !== 'territory' && buildingPrefix(object.number) !== '0');
+    || (object.objectType === 'building' && buildingPrefix(object.number) !== '0');
 }
 
 export function districtObjectFocusPoint(object: DistrictMapObject): GeoPoint {

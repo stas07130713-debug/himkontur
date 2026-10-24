@@ -619,7 +619,7 @@ function ObjectDetails({ object, adminMode, onEdit, onDelete, onOpenDispatch }: 
       {object.note !== '' && <div className="district-details-note"><strong>Примечание</strong><p>{object.note}</p></div>}
       <p className="district-details-coordinates">{object.point.latitude.toFixed(6)}° с.ш.<br />{object.point.longitude.toFixed(6)}° в.д.</p>
       {adminMode && <div className="district-details-actions"><button onClick={onEdit}>Редактировать</button><button className="danger" onClick={onDelete}>Удалить</button></div>}
-      {object.kind === 'building' && object.mapRole !== 'response-boundary' && (object.objectType === 'building' || object.mapRole === 'rescue-service') && <button type="button" className="district-emergency-button" onClick={onOpenDispatch}>Пожар / Авария</button>}
+      {object.kind === 'building' && object.mapRole !== 'response-boundary' && <button type="button" className="district-emergency-button" onClick={onOpenDispatch}>Пожар / Авария</button>}
     </article>
   );
 }

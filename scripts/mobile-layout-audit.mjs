@@ -50,6 +50,7 @@ try {
   let districtLegendHeaderContained = false;
   let districtSearchCaretVisible = false;
   let mobileDispatchMapOnly = false;
+  let mobileDispatchLandscapeMapOnly = false;
   let unifiedCalculationCommandBar = false;
   let unifiedDistrictCommandBar = false;
   let calculationSearchRowsInline = false;
@@ -364,12 +365,20 @@ try {
       mobileDispatchTouchActions = await evaluate(`(() => {
         const sheet = document.querySelector('.fire-dispatch-ticket-sheet.mobile-map-only');
         const map = sheet?.querySelector('.fire-dispatch-map');
-        return sheet && map ? { sheet: getComputedStyle(sheet).touchAction, map: getComputedStyle(map).touchAction } : null;
+        const viewport = document.querySelector('.fire-dispatch-scheme-viewport.mobile');
+        const controls = document.querySelector('.fire-dispatch-mobile-zoom-controls');
+        return sheet && map && viewport && controls ? {
+          sheet: getComputedStyle(sheet).touchAction,
+          map: getComputedStyle(map).touchAction,
+          viewport: getComputedStyle(viewport).touchAction,
+          controls: controls.querySelectorAll('button').length,
+        } : null;
       })()`);
       const allowsPinchZoom = (value) => value === 'manipulation' || value.includes('pinch-zoom');
       mobileDispatchPinchZoom = Boolean(mobileDispatchTouchActions
-        && allowsPinchZoom(mobileDispatchTouchActions.sheet)
-        && allowsPinchZoom(mobileDispatchTouchActions.map));
+        && mobileDispatchTouchActions.controls === 2
+        && (mobileDispatchTouchActions.viewport === 'none'
+          || (allowsPinchZoom(mobileDispatchTouchActions.sheet) && allowsPinchZoom(mobileDispatchTouchActions.map))));
       const dispatchShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
       writeFileSync(resolve('artifacts', 'mobile-dispatch-map-390.png'), Buffer.from(dispatchShot.data, 'base64'));
       await evaluate(`document.querySelector('.fire-dispatch-screen-actions button:last-child')?.click()`);
@@ -395,6 +404,25 @@ try {
     if (size.width === 844) {
       const shot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true });
       writeFileSync(resolve('artifacts', 'mobile-calculation-landscape-844.png'), Buffer.from(shot.data, 'base64'));
+      await evaluate(`document.querySelectorAll('.main-tabs button')[2]?.click()`);
+      await delay(500);
+      await evaluate(`document.querySelector('.district-map-marker.building-number-marker')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))`);
+      await delay(300);
+      await evaluate(`document.querySelector('.district-emergency-button')?.click()`);
+      await delay(700);
+      mobileDispatchLandscapeMapOnly = await evaluate(`(() => {
+        const dialog = document.querySelector('.fire-dispatch-ticket-dialog');
+        const sheet = document.querySelector('.fire-dispatch-ticket-sheet.mobile-map-only');
+        const actions = dialog?.querySelector('.fire-dispatch-screen-actions')?.textContent ?? '';
+        return Boolean(dialog && sheet && sheet.querySelector('.fire-dispatch-map')
+          && sheet.querySelector('.fire-dispatch-planning-documents')
+          && !sheet.textContent?.includes('ПУТЁВКА')
+          && !actions.includes('Распечатать')
+          && actions.includes('Сохранить схему PDF'));
+      })()`);
+      const landscapeDispatchShot = await command('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+      writeFileSync(resolve('artifacts', 'mobile-dispatch-map-landscape-844.png'), Buffer.from(landscapeDispatchShot.data, 'base64'));
+      await evaluate(`document.querySelector('.fire-dispatch-screen-actions button:last-child')?.click(); document.querySelectorAll('.main-tabs button')[0]?.click();`);
     }
   }
   const failures = cases.filter((item) => item.scrollWidth > item.viewport + 1 || !item.tabs || !item.mobileButton || !item.mobileSubtitle || !item.actionsBalanced || !item.actionsCompact || !item.themeSwitch || !item.themeDoesNotOverlapTabs || !item.left || !item.map || !item.fullCloudLabels || !item.compassAvoidsToolbarContent || !item.mapControlsRightAligned || !item.mapOverlayControlsDoNotOverlap || !item.right || !item.mobileOrder || !item.calculate);
@@ -412,6 +440,7 @@ try {
   if (!districtLegendHeaderContained) failures.push({ check: 'district-legend-header-contained' });
   if (!districtSearchCaretVisible) failures.push({ check: 'district-search-caret-visible' });
   if (!mobileDispatchMapOnly) failures.push({ check: 'mobile-dispatch-map-only' });
+  if (!mobileDispatchLandscapeMapOnly) failures.push({ check: 'mobile-dispatch-landscape-map-only' });
   if (!unifiedCalculationCommandBar) failures.push({ check: 'unified-calculation-command-bar' });
   if (!unifiedDistrictCommandBar) failures.push({ check: 'unified-district-command-bar' });
   if (!calculationSearchRowsInline) failures.push({ check: 'calculation-search-rows-inline' });
@@ -421,7 +450,7 @@ try {
   if (!searchFocusIsBorderless) failures.push({ check: 'search-focus-is-borderless' });
   if (!mobileDispatchPinchZoom) failures.push({ check: 'mobile-dispatch-pinch-zoom' });
   if (!adminLoginWorksOffline) failures.push({ check: 'admin-login-works-without-cloud' });
-  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, dangerousGoodsResetWorks, dangerousGoodsActionsHorizontal, calculationLegendAligned, expandedSourceCanScroll, updateModalProminent, districtLegendStartsCollapsed, districtNppvStartsHidden, districtTerritoriesStartHidden, districtLegendAutoCollapses, districtBuildingAutoReveal, districtLegendHeaderContained, districtSearchCaretVisible, mobileDispatchMapOnly, unifiedCalculationCommandBar, unifiedDistrictCommandBar, calculationSearchRowsInline, districtSearchRowsInline, districtOverlayControlsDoNotOverlap, districtBuildingPlatesVisible, searchFocusIsBorderless, mobileDispatchPinchZoom, mobileDispatchTouchActions, adminLoginWorksOffline, cases, failures };
+  const report = { passed: failures.length === 0, dangerousGoodsAutoReveal, dangerousGoodsResetWorks, dangerousGoodsActionsHorizontal, calculationLegendAligned, expandedSourceCanScroll, updateModalProminent, districtLegendStartsCollapsed, districtNppvStartsHidden, districtTerritoriesStartHidden, districtLegendAutoCollapses, districtBuildingAutoReveal, districtLegendHeaderContained, districtSearchCaretVisible, mobileDispatchMapOnly, mobileDispatchLandscapeMapOnly, unifiedCalculationCommandBar, unifiedDistrictCommandBar, calculationSearchRowsInline, districtSearchRowsInline, districtOverlayControlsDoNotOverlap, districtBuildingPlatesVisible, searchFocusIsBorderless, mobileDispatchPinchZoom, mobileDispatchTouchActions, adminLoginWorksOffline, cases, failures };
   writeFileSync(resolve('artifacts', 'mobile-layout-audit.json'), JSON.stringify(report, null, 2));
   if (failures.length) throw new Error(`Мобильная компоновка не прошла проверку: ${JSON.stringify(failures)}`);
   console.log(`Мобильная компоновка проверена на ${cases.map((item) => `${item.width}×${item.height}`).join(', ')}: горизонтального сдвига нет; найденный опасный груз открывается автоматически; после ввода следуют результаты, карта и контрольные точки.`);

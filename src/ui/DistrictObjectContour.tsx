@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { GeoPoint } from '../core/types';
 import type { DistrictBuilding } from './district-map-model';
 import { buildingPrefix } from './district-map-model';
+import { districtObjectFocusPoint } from './district-map-visuals';
 
 type ScreenPoint = Readonly<{ x: number; y: number }>;
 type Project = (point: GeoPoint) => ScreenPoint;
@@ -27,6 +28,12 @@ function readableLineAngle(start: ScreenPoint, end: ScreenPoint): number {
   if (angle > 90) angle -= 180;
   if (angle < -90) angle += 180;
   return angle;
+}
+
+function namedLine(fullName: string, shortName: string): string {
+  if (shortName.trim() === '') return fullName.trim();
+  if (fullName.trim() === '') return shortName.trim();
+  return `${shortName.trim()} — ${fullName.trim()}`;
 }
 
 /** Construction points on one straight wall are ignored for measurement. */
@@ -73,6 +80,11 @@ export function DistrictObjectContour({ object, project, selected = false, highl
     return { start, end, projectedStart: project(start), projectedEnd: project(end) };
   }).filter((wall): wall is NonNullable<typeof wall> => wall !== null);
   const wall = hoveredWall === null ? null : walls[hoveredWall] ?? null;
+  const contourOnlyObject = object.objectType === 'territory' || object.objectType === 'installation';
+  const hoverLines = object.objectType === 'installation'
+    ? [object.installationName?.trim() ?? '', namedLine(object.workshopFull, object.workshopShort)]
+    : object.territoryNames.map((unit) => namedLine(unit.fullName, unit.shortName));
+  const hoverPoint = project(districtObjectFocusPoint(object));
   const roleClass = responseBoundary
     ? ' response-boundary'
     : object.mapRole === 'rescue-service'
@@ -115,5 +127,17 @@ export function DistrictObjectContour({ object, project, selected = false, highl
       textAnchor="middle"
       transform={`translate(${(wall.projectedStart.x + wall.projectedEnd.x) / 2} ${(wall.projectedStart.y + wall.projectedEnd.y) / 2}) rotate(${readableLineAngle(wall.projectedStart, wall.projectedEnd)})`}
     >{distanceLabel(edgeDistanceMeters(wall.start, wall.end))}</text>}
+    {contourOnlyObject && <foreignObject
+      className="district-marker-hover-card district-contour-hover-card"
+      x={hoverPoint.x + 18}
+      y={hoverPoint.y - 24 - hoverLines.filter(Boolean).length * 9}
+      width="245"
+      height={42 + hoverLines.filter(Boolean).length * 19}
+    >
+      <div>
+        <strong>{object.objectType === 'installation' ? 'Наружная установка' : 'Территория'}</strong>
+        {hoverLines.filter(Boolean).map((line, index) => <span key={`${object.id}-contour-hover-${index}`}>{line}</span>)}
+      </div>
+    </foreignObject>}
   </g>;
 }

@@ -36,4 +36,32 @@ describe('DistrictObjectContour', () => {
     expect(markup).not.toContain('<polyline');
     expect(markup).not.toContain('<polygon');
   });
+
+  it('renders a territory as a clickable contour with one rectangular hover card', () => {
+    const object: DistrictBuilding = {
+      ...baseObject,
+      contour: [{ latitude: 0, longitude: 0 }, { latitude: 0, longitude: 1 }, { latitude: 1, longitude: 1 }],
+      territoryNames: [{ id: 'territory-name', fullName: 'Площадка хранения', shortName: 'ПХ' }],
+    };
+    const markup = renderToStaticMarkup(<svg><DistrictObjectContour object={object} project={project} /></svg>);
+    expect(markup).toContain('<polygon');
+    expect(markup).toContain('district-contour-hover-card');
+    expect(markup).toContain('Площадка хранения');
+    expect(markup.match(/district-marker-hover-card/gu)).toHaveLength(1);
+  });
+
+  it('shows installation information from its contour instead of a numbered plate', () => {
+    const object: DistrictBuilding = {
+      ...baseObject,
+      objectType: 'installation',
+      number: '0',
+      installationName: 'Наружная насосная установка',
+      workshopFull: 'Цех электролиза никеля',
+      workshopShort: 'ЦЭН',
+      contour: [{ latitude: 0, longitude: 0 }, { latitude: 0, longitude: 1 }, { latitude: 1, longitude: 1 }],
+    };
+    const markup = renderToStaticMarkup(<svg><DistrictObjectContour object={object} project={project} /></svg>);
+    expect(markup).toContain('Наружная насосная установка');
+    expect(markup).toContain('ЦЭН — Цех электролиза никеля');
+  });
 });

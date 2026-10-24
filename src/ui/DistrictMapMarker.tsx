@@ -78,7 +78,6 @@ export function DistrictMapMarker({ object, x, y, selected, highlighted = false,
       <foreignObject className="district-marker-hover-card" x="25" y={-18 - hoverLines.length * 9} width="245" height={42 + hoverLines.length * 19}>
         <div><strong>Пожарный гидрант {object.number}</strong>{hoverLines.map((line, index) => <span key={`${object.id}-hover-${index}`}>{line}</span>)}</div>
       </foreignObject>
-      <title>Пожарный гидрант {object.number}; {hydrantNetworkCode(object)}</title>
     </g>
     );
   }
@@ -97,7 +96,6 @@ export function DistrictMapMarker({ object, x, y, selected, highlighted = false,
         <foreignObject className="district-marker-hover-card" x="25" y={-18 - hoverLines.length * 9} width="245" height={42 + hoverLines.length * 19}>
           <div><strong>Пожарный водоём {object.number}</strong>{hoverLines.map((line, index) => <span key={`${object.id}-hover-${index}`}>{line}</span>)}</div>
         </foreignObject>
-        <title>{`Пожарный водоём ${object.number}${object.volumeM3 === null ? '' : `; ${object.volumeM3} м³`}`}</title>
       </g>
     );
   }
@@ -132,7 +130,6 @@ export function DistrictMapMarker({ object, x, y, selected, highlighted = false,
       <foreignObject className="district-marker-hover-card" x="25" y={-18 - visibleHoverLines.length * 9} width="245" height={42 + visibleHoverLines.length * 19}>
         <div><strong>{rescueService ? 'Аварийно-спасательная служба' : installation ? 'Наружная установка' : `${object.objectType === 'territory' ? 'Территория' : 'Здание'} ${object.number}`}</strong>{visibleHoverLines.map((line, index) => <span key={`${object.id}-hover-${index}`}>{line}</span>)}</div>
       </foreignObject>
-      <title>{rescueService ? `Аварийно-спасательная служба · ${visibleHoverLines.join(' · ')}` : `${object.number} · ${hoverLines.join(' · ')}`}</title>
     </g>
   );
 }

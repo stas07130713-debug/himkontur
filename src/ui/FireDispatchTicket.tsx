@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { useCallback, useEffect, useMemo, useRef, useState, type TouchEvent as ReactTouchEvent } from 'react';
 import type { GeoPoint } from '../core/types';
 import { distanceMeters, formatRulerDistance } from './map-ruler';
 import type { Basemap } from './MapCanvas';
@@ -34,6 +35,10 @@ const EMERGENCY_TYPES = [
 ] as const;
 
 const DISPATCHER_HISTORY_KEY = 'himkontur-dispatcher-history';
+
+function firstNonEmpty(...values: readonly (string | undefined)[]): string {
+  return values.map((value) => value?.trim() ?? '').find((value) => value !== '') ?? '';
+}
 
 function loadDispatcherHistory(): readonly string[] {
   if (typeof window === 'undefined') return [];
@@ -83,7 +88,13 @@ function EmergencyTypeField({ value, onChange }: Readonly<{ value: string; onCha
 
 function dispatchObjectShortName(building: DistrictBuilding): string {
   const parts = [
-    building.mapRole === 'rescue-service' ? 'АСС' : building.number,
+    building.mapRole === 'rescue-service'
+      ? 'АСС'
+      : building.objectType === 'installation'
+        ? building.installationName ?? 'Наружная установка'
+        : building.objectType === 'territory'
+          ? firstNonEmpty(building.territoryNames[0]?.shortName, building.territoryNames[0]?.fullName, 'Территория')
+          : building.number,
     building.workshopShort,
     ...building.departments.map((unit) => unit.shortName),
     ...building.sites.map((unit) => unit.shortName),
@@ -154,7 +165,13 @@ function sourceLabel(source: WaterSource): string {
 
 function buildingAddress(building: DistrictBuilding): string {
   const parts = [
-    building.mapRole === 'rescue-service' ? 'Аварийно-спасательная служба' : `Здание № ${building.number}`,
+    building.mapRole === 'rescue-service'
+      ? 'Аварийно-спасательная служба'
+      : building.objectType === 'installation'
+        ? `Наружная установка: ${firstNonEmpty(building.installationName, 'наименование не указано')}`
+        : building.objectType === 'territory'
+          ? `Территория: ${firstNonEmpty(building.territoryNames.map((unit) => firstNonEmpty(unit.fullName, unit.shortName)).filter(Boolean).join(', '), 'наименование не указано')}`
+          : `Здание № ${building.number}`,
     building.workshopFull,
     ...building.departments.map((unit) => unit.fullName),
     ...building.sites.map((unit) => unit.fullName),
@@ -175,6 +192,16 @@ function localDateAndTime(): Readonly<{ date: string; time: string }> {
   const offset = now.getTimezoneOffset() * 60_000;
   const local = new Date(now.getTime() - offset).toISOString();
   return { date: local.slice(0, 10), time: local.slice(11, 16) };
+}
+
+function mobileDispatchDevice(): boolean {
+  return Capacitor.isNativePlatform()
+    || window.matchMedia('(hover: none) and (pointer: coarse)').matches
+    || Math.min(window.screen.width, window.screen.height) <= 720;
+}
+
+function nextPaint(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 }
 
 function fitMap(buildingPoints: readonly GeoPoint[], requiredSourcePoints: readonly GeoPoint[]): Readonly<{ center: GeoPoint; zoom: number; project: (point: GeoPoint) => ScreenPoint }> {
@@ -419,13 +446,14 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
   }).join(' ');
   const buildingPoint = project(districtObjectMarkerPoint(building));
   const markerScale = fittedBuildingMarkerScale(building, 1, project);
+  const showObjectPlate = building.objectType === 'building' || building.mapRole === 'rescue-service';
   // The hydrant badge is wider than the symbol itself. Keep a generous safety
   // area around every visible source so a distance label can never sit on top
   // of the «ПГ-… / К-…» plates.
   const markerObstacles = sources.map(({ source }) => boxAt(project(source.point), source.kind === 'hydrant' ? 132 : 104, 44));
   const fixedObstacles = [
     ...markerObstacles,
-    boxAt(buildingPoint, 64, 40),
+    ...(showObjectPlate ? [boxAt(buildingPoint, 64, 40)] : []),
     { left: MAP_WIDTH - 105, top: 0, right: MAP_WIDTH, bottom: 105 },
   ];
   const labels = edgeLabels(building.contour, project, fixedObstacles);
@@ -525,7 +553,7 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
       })}
       <polygon points={contour} className={`fire-dispatch-building-contour prefix-${buildingPrefix(building.number)}`} />
       {labels.map((label) => <text key={label.key} className="fire-dispatch-edge-label" x="0" y="0" transform={`translate(${label.x} ${label.y}) rotate(${label.angle})`} textAnchor="middle" dominantBaseline="middle">{label.text}</text>)}
-      <g className={`fire-dispatch-building-label building-number-marker prefix-${buildingPrefix(building.number)}`} transform={`translate(${buildingPoint.x} ${buildingPoint.y})`}><g transform={`scale(${markerScale})`}><path d="M-21-13h42v26h-42z" /><text x="0" y="5" textAnchor="middle">{building.number}</text></g></g>
+      {showObjectPlate && <g className={`fire-dispatch-building-label building-number-marker prefix-${buildingPrefix(building.number)}`} transform={`translate(${buildingPoint.x} ${buildingPoint.y})`}><g transform={`scale(${markerScale})`}><path d="M-21-13h42v26h-42z" /><text x="0" y="5" textAnchor="middle">{building.mapRole === 'rescue-service' ? 'АСС' : building.number}</text></g></g>}
       {sources.map(({ source }) => {
         const point = project(source.point);
         return <g key={`marker-${source.id}`} className={`fire-dispatch-water-marker ${source.kind}`} transform={`translate(${point.x} ${point.y})`}>
@@ -553,7 +581,18 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
   onClose: () => void;
 }>) {
   const sheetRef = useRef<HTMLElement>(null);
-  const [mobileMapOnly, setMobileMapOnly] = useState(() => window.matchMedia('(max-width: 720px)').matches);
+  const zoomViewportRef = useRef<HTMLDivElement>(null);
+  const mobileTouchRef = useRef<Readonly<{
+    mode: 'pan' | 'pinch';
+    distance: number;
+    zoom: number;
+    clientX: number;
+    clientY: number;
+    scrollLeft: number;
+    scrollTop: number;
+  }> | null>(null);
+  const [mobileMapOnly, setMobileMapOnly] = useState(mobileDispatchDevice);
+  const [schemeZoom, setSchemeZoom] = useState(1);
   const initial = localDateAndTime();
   const [division, setDivision] = useState('МВАСО АСС');
   const [crew, setCrew] = useState('');
@@ -576,11 +615,65 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
   }, [dispatcher, dispatcherSuggestions]);
   useEffect(() => {
     warmDispatchExport();
-    const media = window.matchMedia('(max-width: 720px)');
-    const update = () => setMobileMapOnly(media.matches);
+    const media = window.matchMedia('(hover: none) and (pointer: coarse)');
+    const update = () => setMobileMapOnly(mobileDispatchDevice());
     media.addEventListener('change', update);
-    return () => media.removeEventListener('change', update);
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+    return () => {
+      media.removeEventListener('change', update);
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+    };
   }, []);
+  const changeSchemeZoom = (value: number) => setSchemeZoom(Math.max(1, Math.min(4, value)));
+  const onSchemeTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const viewport = zoomViewportRef.current;
+    if (!mobileMapOnly || viewport === null) return;
+    if (event.touches.length >= 2) {
+      const first = event.touches.item(0);
+      const second = event.touches.item(1);
+      mobileTouchRef.current = {
+        mode: 'pinch',
+        distance: Math.max(1, Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY)),
+        zoom: schemeZoom,
+        clientX: 0,
+        clientY: 0,
+        scrollLeft: viewport.scrollLeft,
+        scrollTop: viewport.scrollTop,
+      };
+      return;
+    }
+    const touch = event.touches.item(0);
+    mobileTouchRef.current = {
+      mode: 'pan',
+      distance: 0,
+      zoom: schemeZoom,
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      scrollLeft: viewport.scrollLeft,
+      scrollTop: viewport.scrollTop,
+    };
+  };
+  const onSchemeTouchMove = (event: ReactTouchEvent<HTMLDivElement>) => {
+    const viewport = zoomViewportRef.current;
+    const gesture = mobileTouchRef.current;
+    if (!mobileMapOnly || viewport === null || gesture === null) return;
+    if (event.touches.length >= 2) {
+      const first = event.touches.item(0);
+      const second = event.touches.item(1);
+      event.preventDefault();
+      const distance = Math.max(1, Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY));
+      changeSchemeZoom(gesture.zoom * distance / Math.max(1, gesture.distance));
+      return;
+    }
+    if (gesture.mode !== 'pan' || schemeZoom <= 1) return;
+    const touch = event.touches.item(0);
+    event.preventDefault();
+    viewport.scrollLeft = gesture.scrollLeft + gesture.clientX - touch.clientX;
+    viewport.scrollTop = gesture.scrollTop + gesture.clientY - touch.clientY;
+  };
+  const finishSchemeTouch = () => { mobileTouchRef.current = null; };
   const print = async () => {
     if (busy || sheetRef.current === null) return;
     setBusy(true);
@@ -597,6 +690,7 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
   };
   const savePdf = async () => {
     if (busy || sheetRef.current === null) return;
+    const priorZoom = schemeZoom;
     setBusy(true);
     setSaveStatus('Подготавливается папка…');
     try {
@@ -606,13 +700,18 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
         return;
       }
       setSaveStatus('Формируется PDF…');
-      const imageDataUrl = await captureDispatchSnapshot(sheetRef.current, { scale: mobileMapOnly ? 1.2 : 1.35 });
+      if (mobileMapOnly && priorZoom !== 1) {
+        setSchemeZoom(1);
+        await nextPaint();
+      }
+      const imageDataUrl = await captureDispatchSnapshot(sheetRef.current, mobileMapOnly ? {} : { scale: 1.35 });
       const pdf = await createDispatchPdf(imageDataUrl);
       const location = await saveDispatchPdf(pdf, dispatchFilename(date, building, emergencyType), false);
       setSaveStatus(`PDF сохранён: ${location}`);
     } catch (error) {
       setSaveStatus(error instanceof Error ? `Не удалось сохранить PDF: ${error.message}` : 'Не удалось сохранить PDF.');
     } finally {
+      if (mobileMapOnly && priorZoom !== 1) setSchemeZoom(priorZoom);
       setBusy(false);
     }
   };
@@ -625,6 +724,21 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
         <button type="button" className="secondary" disabled={busy} onClick={() => { void savePdf(); }}>{mobileMapOnly ? 'Сохранить схему PDF' : 'Загрузить PDF в папку'}</button>
         <button type="button" className="secondary" disabled={busy} onClick={onClose}><UiIcon name="close" /> Закрыть</button>
       </div>
+      {mobileMapOnly && <div className="fire-dispatch-mobile-zoom-controls" aria-label="Масштаб схемы">
+        <button type="button" aria-label="Уменьшить схему" disabled={schemeZoom <= 1} onClick={() => changeSchemeZoom(schemeZoom / 1.35)}>−</button>
+        <span>{Math.round(schemeZoom * 100)}%</span>
+        <button type="button" aria-label="Увеличить схему" disabled={schemeZoom >= 4} onClick={() => changeSchemeZoom(schemeZoom * 1.35)}>+</button>
+        <small>Можно масштабировать двумя пальцами</small>
+      </div>}
+      <div
+        className={`fire-dispatch-scheme-viewport${mobileMapOnly ? ' mobile' : ''}`}
+        ref={zoomViewportRef}
+        onTouchStart={onSchemeTouchStart}
+        onTouchMove={onSchemeTouchMove}
+        onTouchEnd={finishSchemeTouch}
+        onTouchCancel={finishSchemeTouch}
+      >
+      <div className="fire-dispatch-scheme-scale" style={mobileMapOnly ? { width: `${schemeZoom * 100}%` } : undefined}>
       <article className={`fire-dispatch-ticket-sheet${mobileMapOnly ? ' mobile-map-only' : ''}`} ref={sheetRef}>
         {!mobileMapOnly && <><header>
           <h1 id="fire-dispatch-ticket-title">ПУТЁВКА</h1>
@@ -665,6 +779,8 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
         </section>
         <footer><span>Сформировано системой «ХИМКОНТУР»</span></footer></>}
       </article>
+      </div>
+      </div>
     </section>
   </div>;
 }
