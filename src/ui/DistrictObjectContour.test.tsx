@@ -67,4 +67,20 @@ describe('DistrictObjectContour', () => {
     expect(markup).toContain('Наружная насосная установка');
     expect(markup).toContain('ЦЭН — Цех электролиза никеля');
   });
+
+  it('renders a demolished object as a hatched contour without dimensions or a card', () => {
+    const object: DistrictBuilding = {
+      ...baseObject,
+      objectType: 'demolished',
+      number: '0',
+      contour: [{ latitude: 0, longitude: 0 }, { latitude: 0, longitude: 1 }, { latitude: 1, longitude: 1 }],
+    };
+    const contour = renderToStaticMarkup(<svg><DistrictObjectContour object={object} project={project} /></svg>);
+    expect(contour).toContain('demolished-hatch-');
+    expect(contour).toContain('district-object-contour prefix-0 territory demolished');
+    expect(contour).not.toContain('district-contour-edge-measure');
+    const hover = renderToStaticMarkup(<svg><DistrictContourHoverCard object={object} project={project} viewSize={{ width: 1000, height: 680 }} /></svg>);
+    expect(hover).toContain('Демонтированный объект');
+    expect(hover).not.toContain('Наружная установка');
+  });
 });

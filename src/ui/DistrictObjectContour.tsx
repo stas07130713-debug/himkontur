@@ -68,6 +68,8 @@ export function DistrictObjectContour({ object, project, selected = false, highl
   const [hovered, setHovered] = useState(false);
   const [hoveredWall, setHoveredWall] = useState<number | null>(null);
   const responseBoundary = object.mapRole === 'response-boundary';
+  const demolished = object.objectType === 'demolished';
+  const hatchId = `demolished-hatch-${object.id.replace(/[^a-z0-9_-]/giu, '-')}`;
   if (object.contour.length < (responseBoundary ? 2 : 3)) return null;
   const contourPoints = object.contour.map((point) => {
     const projected = project(point);
@@ -92,6 +94,7 @@ export function DistrictObjectContour({ object, project, selected = false, highl
     onPointerEnter={() => { if (!interactionDisabled) { setHovered(true); onHoverChange?.(true); } }}
     onPointerLeave={() => { setHovered(false); setHoveredWall(null); onHoverChange?.(false); }}
   >
+    {demolished && <defs><pattern id={hatchId} width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="9" height="9" fill="rgba(213,45,54,.14)" /><line x1="0" y1="0" x2="0" y2="9" stroke="#d52d36" strokeWidth="3" /></pattern></defs>}
     {responseBoundary
       ? <polyline
           points={contourPoints}
@@ -100,7 +103,8 @@ export function DistrictObjectContour({ object, project, selected = false, highl
         />
       : <polygon
           points={contourPoints}
-          className={`district-object-contour prefix-${buildingPrefix(object.number)}${object.objectType === 'territory' || buildingPrefix(object.number) === '0' ? ' territory' : ''}${roleClass}${hovered ? ' hovered' : ''}${selected ? ' selected' : ''}${highlighted ? ' search-highlight' : ''}`}
+          className={`district-object-contour prefix-${buildingPrefix(object.number)}${object.objectType === 'territory' || buildingPrefix(object.number) === '0' ? ' territory' : ''}${demolished ? ' demolished' : ''}${roleClass}${hovered ? ' hovered' : ''}${selected ? ' selected' : ''}${highlighted ? ' search-highlight' : ''}`}
+          style={demolished ? { fill: `url(#${hatchId})` } : undefined}
           onClick={(event) => { if (!interactionDisabled) { event.stopPropagation(); onSelect?.(); } }}
           onPointerDown={(event) => { if (!interactionDisabled && event.button === 0) event.stopPropagation(); }}
         />}
@@ -131,10 +135,10 @@ export function DistrictContourHoverCard({ object, project, viewSize }: Readonly
   project: Project;
   viewSize: Readonly<{ width: number; height: number }>;
 }>) {
-  if (object.objectType !== 'territory' && object.objectType !== 'installation') return null;
+  if (object.objectType !== 'territory' && object.objectType !== 'installation' && object.objectType !== 'demolished') return null;
   const lines = (object.objectType === 'installation'
     ? [object.installationName?.trim() ?? '', namedLine(object.workshopFull, object.workshopShort)]
-    : object.territoryNames.map((unit) => namedLine(unit.fullName, unit.shortName))).filter(Boolean);
+    : object.objectType === 'demolished' ? [] : object.territoryNames.map((unit) => namedLine(unit.fullName, unit.shortName))).filter(Boolean);
   const point = project(districtObjectFocusPoint(object));
   const width = Math.min(245, Math.max(120, viewSize.width - 12));
   const height = 42 + lines.length * 19;
@@ -148,7 +152,7 @@ export function DistrictContourHoverCard({ object, project, viewSize }: Readonly
     height={height}
   >
     <div>
-      <strong>{object.objectType === 'installation' ? 'Наружная установка' : 'Территория'}</strong>
+      <strong>{object.objectType === 'installation' ? 'Наружная установка' : object.objectType === 'demolished' ? 'Демонтированный объект' : 'Территория'}</strong>
       {lines.map((line, index) => <span key={`${object.id}-contour-hover-${index}`}>{line}</span>)}
     </div>
   </foreignObject>;

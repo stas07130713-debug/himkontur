@@ -16,12 +16,13 @@ export const BUILDING_LAYER_KEYS = [
 ] as const;
 
 export const NPPV_LAYER_KEYS = ['hydrant', 'reservoir'] as const;
-export const SPECIAL_LAYER_KEYS = ['response-boundary', 'rescue-service'] as const;
+export const SPECIAL_LAYER_KEYS = ['demolished', 'response-boundary', 'rescue-service'] as const;
 export const DISTRICT_LAYER_KEYS = [...BUILDING_LAYER_KEYS, ...NPPV_LAYER_KEYS, ...SPECIAL_LAYER_KEYS] as const;
 export type DistrictLayerKey = typeof DISTRICT_LAYER_KEYS[number];
 
 export function districtLayerKey(object: DistrictMapObject): DistrictLayerKey {
   if (object.kind !== 'building') return object.kind;
+  if (object.objectType === 'demolished') return 'demolished';
   if (object.mapRole === 'response-boundary' || object.mapRole === 'rescue-service') return object.mapRole;
   const prefix = buildingPrefix(object.number);
   return `building-${/^[0-9]$/u.test(prefix) ? prefix : '1'}` as DistrictLayerKey;

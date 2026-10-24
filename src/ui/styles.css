@@ -2173,6 +2173,16 @@ button.wide { width: 100%; margin-top: 10px; }
 .hydrant-marker.status-unknown .hydrant-map-label { fill: #a31420; }
 .hydrant-marker.status-disabled .hydrant-network-line, .hydrant-marker.status-disabled .hydrant-symbol-outline { stroke: #b36c00; }
 .hydrant-marker.status-disabled .hydrant-symbol-half { fill: #b36c00; }
+.hydrant-marker.type-foam.status-serviceable .hydrant-network-line,
+.hydrant-marker.type-foam.status-serviceable .hydrant-symbol-outline,
+.hydrant-plan-symbol.type-foam.status-serviceable .hydrant-network-line,
+.hydrant-plan-symbol.type-foam.status-serviceable .hydrant-symbol-outline { stroke: #13864c; }
+.hydrant-marker.type-foam.status-serviceable .hydrant-symbol-half,
+.hydrant-plan-symbol.type-foam.status-serviceable .hydrant-symbol-half { fill: #13864c; }
+.hydrant-marker.type-foam.status-serviceable .hydrant-label-back,
+.hydrant-plan-symbol.type-foam.status-serviceable .hydrant-label-back { stroke: #13864c; }
+.hydrant-marker.type-foam.status-serviceable .hydrant-map-label,
+.hydrant-plan-symbol.type-foam.status-serviceable .hydrant-map-label { fill: #0a6c3a; }
 .hydrant-marker.selected .hydrant-symbol-outline { stroke: #20e5df; stroke-width: 4; }
 .hydrant-plan-symbol { display: block; overflow: visible; }
 .reservoir-symbol-square { fill: #0878bf; stroke: #fff; stroke-width: 1.8; filter: drop-shadow(0 1px 2px #001c28aa); }
@@ -2206,6 +2216,8 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-object-contour.prefix-7 { --object-color: #707981; }
 .district-object-contour.prefix-8 { --object-color: #78b947; }
 .district-object-contour.prefix-9 { --object-color: #e17d2d; }
+.district-object-contour.demolished { --object-color: #d52d36; fill-opacity: 1; stroke: #d52d36; stroke-width: 3.5; }
+.district-object-contour.demolished:hover, .district-object-contour.demolished.hovered { stroke-width: 5; filter: drop-shadow(0 0 5px #fff); }
 .district-object-contour:hover, .district-object-contour.selected, .district-object-contour.search-highlight { fill: color-mix(in srgb, var(--object-color) 42%, transparent); stroke-width: 5; filter: drop-shadow(0 0 5px #fff); }
 .district-object-contour.interaction-disabled { pointer-events: none; }
 .district-contour-draft polygon { fill: #00d8d52b; stroke: #00b7bd; stroke-width: 3; stroke-dasharray: 8 5; vector-effect: non-scaling-stroke; }
@@ -3116,6 +3128,9 @@ button.wide { width: 100%; margin-top: 10px; }
   outline: 2px solid #08aeb7;
   outline-offset: 1px;
 }
+.control-palette .inline-controls-list .placed-control-row.automatic-ass-warning { grid-template-columns: 36px minmax(0, 1fr); cursor: pointer; }
+.controls-list .automatic-ass-warning strong { white-space: normal; text-overflow: clip; }
+.ass-warning-badge { width: 32px; height: 32px; display: grid; place-items: center; border: 2px solid #fff; border-radius: 7px; background: #e33a32; color: #fff; font-size: 10px; font-weight: 950; box-shadow: 0 1px 4px #00202b55; }
 [data-theme="dark"] .control-palette .inline-controls-list .section-heading {
   border-bottom-color: #31515a;
   background: #0a222c;
@@ -3402,6 +3417,8 @@ button.wide { width: 100%; margin-top: 10px; }
   transform-origin: center;
   animation: district-contour-search-pulse .82s ease-in-out 3;
 }
+.district-legend-demolished { width: 31px; height: 20px; border: 2px solid #d52d36; border-radius: 2px; background: repeating-linear-gradient(125deg, #d52d3624 0 5px, #d52d36 5px 8px, #d52d3624 8px 13px); box-sizing: border-box; }
+.district-contour-draft.demolished-draft polygon { fill: #d52d3630; stroke: #d52d36; stroke-dasharray: 8 5; }
 @keyframes district-contour-search-pulse {
   0%, 100% { opacity: .7; filter: drop-shadow(0 0 3px #fff); }
   50% { opacity: 1; filter: drop-shadow(0 0 11px #2ff8ee); }
@@ -3914,6 +3931,11 @@ button.wide { width: 100%; margin-top: 10px; }
 .fire-dispatch-hydrant-symbol.status-disabled .hydrant-network-line,
 .fire-dispatch-hydrant-symbol.status-disabled .hydrant-symbol-outline { stroke: #b36c00; }
 .fire-dispatch-hydrant-symbol.status-disabled .hydrant-symbol-half { fill: #b36c00; }
+.fire-dispatch-hydrant-symbol.type-foam.status-serviceable .hydrant-network-line,
+.fire-dispatch-hydrant-symbol.type-foam.status-serviceable .hydrant-symbol-outline { stroke: #13864c; }
+.fire-dispatch-hydrant-symbol.type-foam.status-serviceable .hydrant-symbol-half { fill: #13864c; }
+.fire-dispatch-hydrant-symbol.type-foam.status-serviceable .hydrant-label-back { stroke: #13864c; }
+.fire-dispatch-hydrant-symbol.type-foam.status-serviceable .hydrant-map-label { fill: #0a6c3a; }
 .fire-dispatch-reservoir-symbol > rect { fill: #087dcc; stroke: #fff; stroke-width: 3; filter: drop-shadow(0 2px 3px #002c55aa); }
 .fire-dispatch-reservoir-symbol > text:first-of-type { fill: #fff; font-size: 12px; font-weight: 950; }
 .fire-dispatch-reservoir-label { fill: #005da4; font-size: 16px; }
@@ -4579,7 +4601,10 @@ svg.district-legend-building text {
 }
 .district-installation-index span { color: #526b73; font-size: 12px; font-weight: 750; }
 .district-installation-index strong { width: 38px; height: 25px; display: grid; place-items: center; border-radius: 4px; background: #246fae; color: #fff; font-size: 15px; }
-.district-conflict-backup { width: 100%; margin-top: 8px; }
+.district-conflict-backup { width: 100%; margin-top: 8px; display: grid; gap: 7px; }
+.district-conflict-backup p { margin: 0; color: #506a70; font-size: 12px; line-height: 1.35; }
+.district-conflict-backup > div { display: flex; gap: 8px; flex-wrap: wrap; }
+.district-conflict-backup button { flex: 1 1 220px; }
 
 @media (max-width: 720px), (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
   .calculation-map-toolbar,

@@ -159,7 +159,11 @@ function closestPointOnContour(source: GeoPoint, contour: readonly GeoPoint[]): 
 
 function sourceLabel(source: WaterSource): string {
   const number = source.number.trim();
-  if (source.kind === 'hydrant') return /^пг[-\s]/iu.test(number) ? number : `ПГ-${number}`;
+  if (source.kind === 'hydrant') {
+    const prefix = source.hydrantType === 'foam' ? 'ППГ' : 'ПГ';
+    const core = number.replace(/^пп?г[-\s]*/iu, '');
+    return `${prefix}-${core}`;
+  }
   return /^пв[-\s]/iu.test(number) ? number : `ПВ-${number}`;
 }
 
@@ -565,7 +569,7 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
       {sources.map(({ source }) => {
         const point = project(source.point);
         return <g key={`marker-${source.id}`} className={`fire-dispatch-water-marker ${source.kind}`} transform={`translate(${point.x} ${point.y})`}>
-          {source.kind === 'hydrant' ? <g className={`fire-dispatch-hydrant-symbol status-${source.status}`}>
+          {source.kind === 'hydrant' ? <g className={`fire-dispatch-hydrant-symbol type-${source.hydrantType} status-${source.status}`}>
             <line className="hydrant-network-line" x1="-57" y1="0" x2="57" y2="0" />
             <rect className="hydrant-label-back" x="-63" y="-19" width="49" height="16" rx="3" />
             <rect className="hydrant-label-back" x="14" y="-19" width="49" height="16" rx="3" />

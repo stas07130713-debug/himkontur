@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DistrictBuilding, DistrictMapProject } from './district-map-model';
-import { mergeDistrictMapProjects } from './district-map-merge';
+import { clearDistrictMapConflictArchives, districtMapConflictArchiveCount, mergeDistrictMapProjects, saveDistrictMapConflictArchive, serializeDistrictMapConflictReport } from './district-map-merge';
 
 function building(id: string, name: string, updatedAtIso: string): DistrictBuilding {
   return {
@@ -35,6 +35,7 @@ function project(revision: number, objects: readonly DistrictBuilding[]): Distri
 }
 
 describe('conflict-safe district map merge', () => {
+  afterEach(() => vi.unstubAllGlobals());
   it('combines changes to different objects from two computers', () => {
     const first = building('1.1', 'Цех 1', '2026-10-23T08:00:00.000Z');
     const second = building('2.1', 'Цех 2', '2026-10-23T08:00:00.000Z');
@@ -73,5 +74,25 @@ describe('conflict-safe district map merge', () => {
     const merged = mergeDistrictMapProjects(null, project(11, [local]), project(12, [remote]));
     expect(merged.project.published.map((object) => object.id)).toEqual(['2.1', '1.1']);
     expect(merged.conflicts).toHaveLength(0);
+  });
+
+  it('exports a readable conflict report and clears it after review', () => {
+    const values = new Map<string, string>();
+    vi.stubGlobal('window', { localStorage: {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
+    } });
+    const local = building('1.1', 'Домашняя версия', '2026-10-24T10:00:00.000Z');
+    const remote = building('1.1', 'Рабочая версия', '2026-10-24T09:00:00.000Z');
+    saveDistrictMapConflictArchive({ createdAtIso: '2026-10-24T10:01:00.000Z', baseRevision: 1, localRevision: 2, remoteRevision: 3, conflicts: [{ objectId: '1.1', local, remote, activeSource: 'local' }] });
+    const report = serializeDistrictMapConflictReport();
+    expect(report).toContain('1.1 · Домашняя версия');
+    expect(report).toContain('Полное название цеха');
+    expect(report).toContain('Домашняя версия');
+    expect(report).toContain('Рабочая версия');
+    expect(report).toContain('с этого устройства');
+    clearDistrictMapConflictArchives();
+    expect(districtMapConflictArchiveCount()).toBe(0);
   });
 });

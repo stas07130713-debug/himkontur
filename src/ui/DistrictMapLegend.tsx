@@ -39,6 +39,11 @@ export function DistrictMapLegend({ basemap, visibleLayers, collapsed, onCollaps
           <BuildingNumberPlate number={item.number} prefix={item.number} />
           <span>{item.label}</span>
         </label>)}
+        <label className="district-legend-demolished-row">
+          <input type="checkbox" checked={visibleLayers.has('demolished')} onChange={(event) => onLayerChange('demolished', event.currentTarget.checked)} />
+          <i className="district-legend-demolished" aria-hidden="true" />
+          <span>Демонтированный объект</span>
+        </label>
       </div>
       <label className="district-legend-row">
         <input type="checkbox" checked={visibleLayers.has('hydrant')} onChange={(event) => onLayerChange('hydrant', event.currentTarget.checked)} />

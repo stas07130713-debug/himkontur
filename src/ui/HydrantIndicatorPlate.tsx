@@ -16,9 +16,10 @@ export function HydrantIndicatorPlate({ object, editable = false, onChange }: Re
   editable?: boolean;
   onChange?: (changes: Partial<DistrictHydrant>) => void;
 }>) {
-  const number = object.number.replace(/^ПГ[-\s]*/iu, '');
+  const foam = object.hydrantType === 'foam';
+  const number = object.number.replace(/^ПП?Г[-\s]*/iu, '');
   return (
-    <div className={`district-hydrant-plate${editable ? ' editable' : ''}`} aria-label={`Табличка пожарного гидранта ${object.number}`}>
+    <div className={`district-hydrant-plate${editable ? ' editable' : ''}`} aria-label={`${foam ? 'Табличка пенного пожарного гидранта' : 'Табличка пожарного гидранта'} ${object.number}`}>
         <svg viewBox="0 0 100 100" role="img">
           <rect x="1" y="1" width="98" height="98" className="hydrant-plate-frame" />
           <rect x="7" y="7" width="86" height="86" className="hydrant-plate-face" />
@@ -28,7 +29,7 @@ export function HydrantIndicatorPlate({ object, editable = false, onChange }: Re
             <text x="21.5" y="19.5" textAnchor="middle" className="hydrant-plate-small">{HYDRANT_PATTERN_SHORT[object.pattern] || '—'}</text>
             <text x="78.5" y="19.5" textAnchor="middle" className="hydrant-plate-small">{hydrantNetworkCode(object)}</text>
           </>}
-          <text x="42" y="50" textAnchor="middle" className="hydrant-plate-big">ПГ</text>
+          <text x="42" y="50" textAnchor="middle" className="hydrant-plate-big">{foam ? 'ППГ' : 'ПГ'}</text>
           <line x1="58" y1="44" x2="67" y2="44" className="hydrant-plate-dash" />
           <rect x="72" y="35" width="20" height="16" rx="1" className="hydrant-plate-slot" />
           {!editable && <text x="82" y="47" textAnchor="middle" className="hydrant-plate-small">{number || '—'}</text>}
@@ -55,7 +56,7 @@ export function HydrantIndicatorPlate({ object, editable = false, onChange }: Re
             <b aria-hidden="true">−</b>
             <input aria-label="Диаметр сети на табличке" inputMode="numeric" value={object.diameterMm ?? ''} onChange={(event) => onChange?.({ diameterMm: numeric(event.currentTarget.value) })} />
           </span>
-          <input className="plate-number-input" aria-label="Номер гидранта на табличке" value={number} onChange={(event) => onChange?.({ number: event.currentTarget.value.trim() === '' ? '' : `ПГ-${event.currentTarget.value.replace(/[^0-9а-яa-z-]/giu, '')}` })} />
+          <input className="plate-number-input" aria-label="Номер гидранта на табличке" value={number} onChange={(event) => onChange?.({ number: event.currentTarget.value.trim() === '' ? '' : `${foam ? 'ППГ' : 'ПГ'}-${event.currentTarget.value.replace(/[^0-9а-яa-z-]/giu, '')}` })} />
           <input className="plate-forward-input" aria-label="Расстояние прямо" inputMode="decimal" value={object.signDistanceForwardM ?? ''} onChange={(event) => onChange?.({ signDistanceForwardM: numeric(event.currentTarget.value) })} />
           <input className="plate-left-input" aria-label="Расстояние влево" inputMode="decimal" value={object.signDistanceLeftM ?? ''} onChange={(event) => onChange?.({ signDistanceLeftM: numeric(event.currentTarget.value) })} />
           <input className="plate-right-input" aria-label="Расстояние вправо" inputMode="decimal" value={object.signDistanceRightM ?? ''} onChange={(event) => onChange?.({ signDistanceRightM: numeric(event.currentTarget.value) })} />

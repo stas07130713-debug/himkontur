@@ -80,6 +80,7 @@ type Props = Readonly<{
   onPublishForAll: () => Promise<Readonly<{ success: boolean; message: string }>>;
   conflictBackupCount: number;
   onDownloadConflictBackup: () => void;
+  onClearConflictBackup: () => void;
 }>;
 
 type ContourDragState =
@@ -103,7 +104,7 @@ type ContourDragState =
   };
 
 type ContourDraft = Readonly<{
-  objectType: 'building' | 'territory' | 'installation';
+  objectType: 'building' | 'territory' | 'installation' | 'demolished';
   mapRole: DistrictBuildingMapRole;
   points: readonly GeoPoint[];
   source: 'automatic' | 'manual' | 'editing';
@@ -182,7 +183,7 @@ function buildingWithNumber(object: DistrictBuilding, number: string): DistrictB
 
 function initialBuilding(
   point: GeoPoint,
-  objectType: 'building' | 'territory' | 'installation' = 'building',
+  objectType: 'building' | 'territory' | 'installation' | 'demolished' = 'building',
   contour: readonly GeoPoint[] = [],
   mapRole: DistrictBuildingMapRole = 'ordinary',
 ): DistrictBuilding {
@@ -196,7 +197,7 @@ function initialBuilding(
     contour,
     territoryNames: objectType === 'territory' ? [{ id: crypto.randomUUID(), fullName: responseBoundary ? 'Граница района выезда' : '', shortName: '' }] : [],
     point,
-    number: responseBoundary ? '0.0' : objectType === 'territory' ? '0.' : objectType === 'installation' ? '0' : '',
+    number: responseBoundary ? '0.0' : objectType === 'territory' ? '0.' : objectType === 'installation' || objectType === 'demolished' ? '0' : '',
     installationName: '',
     inventoryNumber: '',
     planningDocuments: [],
@@ -659,6 +660,7 @@ export function DistrictMapPage(props: Props) {
   const stageRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const detailsPanelRef = useRef<HTMLElement>(null);
+  const suppressNextDetailsScrollRef = useRef(false);
   const initialViewportFittedRef = useRef(false);
   const actInputRef = useRef<HTMLInputElement>(null);
   const mapBackupInputRef = useRef<HTMLInputElement>(null);
@@ -766,7 +768,7 @@ export function DistrictMapPage(props: Props) {
   });
   const hoveredContourObject = visibleObjects.find((object): object is DistrictBuilding => object.kind === 'building'
     && object.id === hoveredId
-    && (object.objectType === 'territory' || object.objectType === 'installation')) ?? null;
+    && (object.objectType === 'territory' || object.objectType === 'installation' || object.objectType === 'demolished')) ?? null;
 
   const locate = (clientX: number, clientY: number): GeoPoint | null => {
     const rect = stageRef.current?.getBoundingClientRect();
@@ -816,12 +818,20 @@ export function DistrictMapPage(props: Props) {
       latitude: finalPoints.reduce((sum, item) => sum + item.latitude, 0) / finalPoints.length,
       longitude: finalPoints.reduce((sum, item) => sum + item.longitude, 0) / finalPoints.length,
     };
+    if (contourDraft.objectType === 'demolished') {
+      const created = initialBuilding(point, 'demolished', finalPoints, contourDraft.mapRole);
+      props.onClearTransientHistory();
+      props.onCommitObjects([...props.objects, created]);
+      setContourDraft(null);
+      setContourStatus('Демонтированный объект добавлен на карту.');
+      return;
+    }
     setEditorObject(initialBuilding(point, contourDraft.objectType, finalPoints, contourDraft.mapRole));
     props.onClearTransientHistory();
     setContourDraft(null);
     setContourStatus('');
   };
-  const startContour = (objectType: 'building' | 'territory' | 'installation', mapRole: DistrictBuildingMapRole = 'ordinary') => {
+  const startContour = (objectType: 'building' | 'territory' | 'installation' | 'demolished', mapRole: DistrictBuildingMapRole = 'ordinary') => {
     if (contextMenu === null) return;
     props.onClearTransientHistory();
     const automatic = objectType === 'territory' ? null : buildingContourResolverRef.current?.(contextMenu.point) ?? null;
@@ -861,15 +871,31 @@ export function DistrictMapPage(props: Props) {
       setZoom(9);
     }
     selectObject(object.id);
+    if (compactViewport()) window.requestAnimationFrame(() => detailsPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
+  const previewObject = (object: DistrictMapObject) => {
+    suppressNextDetailsScrollRef.current = true;
+    setCenter(districtObjectFocusPoint(object));
+    if (isBuildingWithContour(object)) {
+      const latitudeSpanKm = (Math.max(...object.contour.map((point) => point.latitude)) - Math.min(...object.contour.map((point) => point.latitude))) * KM_PER_LATITUDE_DEGREE;
+      const longitudeSpanKm = (Math.max(...object.contour.map((point) => point.longitude)) - Math.min(...object.contour.map((point) => point.longitude))) * KM_PER_LONGITUDE_DEGREE;
+      const basePixelsPerKm = Math.min(viewSize.width / BASE_WIDTH_KM, viewSize.height / BASE_HEIGHT_KM);
+      const fittedZoom = Math.min((viewSize.width * 0.56) / Math.max(longitudeSpanKm, 0.025), (viewSize.height * 0.56) / Math.max(latitudeSpanKm, 0.025)) / basePixelsPerKm;
+      setZoom(Math.max(4.5, Math.min(18, fittedZoom)));
+    } else setZoom(9);
+    selectObject(object.id);
   };
   const clearMapSelection = () => {
     setSelectedId(null);
     setSearchHighlightedId(null);
-    setLegendCollapsed(compactViewport());
     setSearchResetSignal((current) => current + 1);
   };
   useEffect(() => {
     if (selectedId === null || !compactViewport()) return;
+    if (suppressNextDetailsScrollRef.current) {
+      suppressNextDetailsScrollRef.current = false;
+      return;
+    }
     const frame = window.requestAnimationFrame(() => detailsPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
     return () => window.cancelAnimationFrame(frame);
   }, [selectedId]);
@@ -945,7 +971,6 @@ export function DistrictMapPage(props: Props) {
     if (selected === null || !window.confirm(`Удалить «${districtObjectTitle(selected)}» из проекта?`)) return;
     props.onCommitObjects(props.objects.filter((item) => item.id !== selected.id));
     setSelectedId(null);
-    setLegendCollapsed(false);
   };
   const downloadMapBackup = () => {
     const now = new Date();
@@ -1310,9 +1335,11 @@ export function DistrictMapPage(props: Props) {
             onShowBuildingsChange={(visible) => setLayerGroupVisibility(BUILDING_LAYER_KEYS, visible)}
             onShowHydrantsChange={(visible) => setLayerGroupVisibility(NPPV_LAYER_KEYS, visible)}
             onFocus={focusObject}
+            onPreview={previewObject}
             onSearchSelectionChange={(object) => setSearchHighlightedId(object?.id ?? null)}
             resetSignal={searchResetSignal}
             compact
+            twoStepSelection={compactViewport()}
           />}
         </div>
         <div className={`district-map-surface ${props.basemap}`} ref={stageRef}>
@@ -1354,9 +1381,9 @@ export function DistrictMapPage(props: Props) {
           >
             <rect width={viewSize.width} height={viewSize.height} className="map-base" />
             {visibleObjects.filter((object): object is DistrictBuilding => object.kind === 'building').map((object) => <DistrictObjectContour key={`${object.id}-contour`} object={object} project={projection.project} selected={selectedId === object.id && searchHighlightedId !== object.id} highlighted={searchHighlightedId === object.id} interactionDisabled={rulerActive || contourDraft !== null} onSelect={() => {
-              selectObject(object.id);
+              if (object.objectType !== 'demolished') selectObject(object.id);
             }} onHoverChange={(hovered) => setHoveredId(hovered ? object.id : null)} />)}
-            {contourDraft !== null && <g className={`district-contour-draft ${contourDraft.source}${contourDraft.mapRole === 'response-boundary' ? ' response-boundary-draft' : ''}`}>
+            {contourDraft !== null && <g className={`district-contour-draft ${contourDraft.source}${contourDraft.objectType === 'demolished' ? ' demolished-draft' : ''}${contourDraft.mapRole === 'response-boundary' ? ' response-boundary-draft' : ''}`}>
               {contourDraft.mapRole === 'response-boundary'
                 ? <polyline points={contourDraft.points.map((point) => { const projected = projection.project(point); return `${projected.x},${projected.y}`; }).join(' ')} />
                 : <polygon points={contourDraft.points.map((point) => { const projected = projection.project(point); return `${projected.x},${projected.y}`; }).join(' ')} />}
@@ -1461,7 +1488,7 @@ export function DistrictMapPage(props: Props) {
             <MapRulerOverlay points={rulerPoints} project={projection.project} />
             {hoveredContourObject !== null && <DistrictContourHoverCard object={hoveredContourObject} project={projection.project} viewSize={viewSize} />}
           </svg>
-          {contextMenu !== null && <div className="district-add-menu" style={{ left: contextMenu.x, top: contextMenu.y }}><strong>Добавить на карту</strong><button onClick={() => startContour('building')}>Здание с контуром</button><button onClick={() => startContour('installation')}>Наружная установка с контуром</button><button onClick={() => startContour('territory')}>Территория с контуром</button><button onClick={() => { setEditorObject(initialHydrant(contextMenu.point)); setContextMenu(null); }}>Пожарный гидрант</button><button onClick={() => { setEditorObject(initialFireReservoir(contextMenu.point)); setContextMenu(null); }}>Пожарный водоём</button><button className="secondary" onClick={() => setContextMenu(null)}>Отмена</button></div>}
+          {contextMenu !== null && <div className="district-add-menu" style={{ left: contextMenu.x, top: contextMenu.y }}><strong>Добавить на карту</strong><button onClick={() => startContour('building')}>Здание с контуром</button><button onClick={() => startContour('installation')}>Наружная установка с контуром</button><button onClick={() => startContour('territory')}>Территория с контуром</button><button onClick={() => { setEditorObject(initialHydrant(contextMenu.point)); setContextMenu(null); }}>Пожарный гидрант</button><button onClick={() => { setEditorObject(initialFireReservoir(contextMenu.point)); setContextMenu(null); }}>Пожарный водоём</button><button onClick={() => startContour('demolished')}>Демонтированный объект</button><button className="secondary" onClick={() => setContextMenu(null)}>Отмена</button></div>}
           {contourDraft !== null && <div className="district-contour-panel">
             <strong>{contourDraft.mapRole === 'response-boundary' ? `Граница района выезда: ${pointCountLabel(contourDraft.points.length)}` : contourDraft.source === 'editing' ? 'Изменение границ объекта' : contourDraft.source === 'automatic' ? 'Контур найден автоматически' : `Ручная обводка: ${pointCountLabel(contourDraft.points.length)}`}</strong>
             <span>{contourDraft.mapRole === 'response-boundary' ? 'Ставьте точки вдоль границы. ПКМ по точке удаляет её; удерживайте ПКМ на карте и тяните для перемещения.' : 'Точки и стороны можно перетаскивать; «+» добавляет угол, ПКМ по точке удаляет его. Удерживайте ПКМ на свободном месте и тяните карту.'}</span>
@@ -1510,7 +1537,7 @@ export function DistrictMapPage(props: Props) {
               <span><small>Текущий режим</small><strong>{props.syncStatus.mode === 'primary' ? 'Основная база' : props.syncStatus.mode === 'backup' ? 'Резервный режим' : props.syncStatus.mode === 'recovering' ? 'Восстановление' : props.syncStatus.mode === 'conflict' ? 'Требуется проверка' : props.syncStatus.mode === 'disabled' ? 'Резерв выключен' : 'Автономно'}</strong></span>
               <span><small>Локальная очередь</small><strong>{props.syncStatus.pendingOperations} оп.</strong></span>
             </div>
-            {props.conflictBackupCount > 0 && <button type="button" className="secondary district-conflict-backup" onClick={props.onDownloadConflictBackup}>Скачать журнал сохранённых конфликтов ({props.conflictBackupCount})</button>}
+            {props.conflictBackupCount > 0 && <div className="district-conflict-backup"><p>Журнал хранит обе версии объекта, если два устройства изменили его до синхронизации. В общую карту берётся более новая версия, а журнал позволяет проверить отличия.</p><div><button type="button" className="secondary" onClick={props.onDownloadConflictBackup}>Скачать понятный журнал ({props.conflictBackupCount})</button><button type="button" className="secondary danger" onClick={props.onClearConflictBackup}>Очистить журнал</button></div></div>}
           </section>
           {mapBackupStatus !== '' && <p className="district-act-status district-map-backup-status">{mapBackupStatus}</p>}
           {actImportStatus !== '' && <p className="district-act-status">{actImportStatus}</p>}

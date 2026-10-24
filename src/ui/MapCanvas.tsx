@@ -58,6 +58,7 @@ type Props = Readonly<{
   onControlDelete: (control: ControlPoint) => void;
   onControlDragStart?: (control: ControlPoint) => void;
   controlFocus?: Readonly<{ id: string; revision: number }> | null;
+  districtFocus?: Readonly<{ id: string; revision: number }> | null;
 }>;
 
 const DEFAULT_WIDTH = 1000;
@@ -376,6 +377,19 @@ export function MapCanvas(props: Props) {
     const timer = window.setTimeout(() => setHighlightedControlId((current) => current === control.id ? null : current), 2_600);
     return () => window.clearTimeout(timer);
   }, [props.controlFocus, props.controls]);
+  useEffect(() => {
+    const focus = props.districtFocus;
+    if (focus === null || focus === undefined) return;
+    const object = (props.districtObjects ?? []).find((item) => item.id === focus.id);
+    if (object === undefined) return;
+    setMapCenter(districtObjectFocusPoint(object));
+    setZoom((current) => Math.max(current, 5));
+    setShowRescueService(true);
+    setSelectedDistrictId(object.id);
+    setSearchDistrictId(object.id);
+    const timer = window.setTimeout(() => setSearchDistrictId((current) => current === object.id ? null : current), 2_600);
+    return () => window.clearTimeout(timer);
+  }, [props.districtFocus, props.districtObjects]);
   useEffect(() => {
     const depth = props.result?.finalDepthKm;
     if (depth === undefined) return;
@@ -860,7 +874,7 @@ export function MapCanvas(props: Props) {
   });
   const hoveredContourObject = visibleDistrictObjects.find((object): object is DistrictBuilding => object.kind === 'building'
     && object.id === hoveredDistrictId
-    && (object.objectType === 'territory' || object.objectType === 'installation')) ?? null;
+    && (object.objectType === 'territory' || object.objectType === 'installation' || object.objectType === 'demolished')) ?? null;
   const focusDistrictObject = (object: DistrictMapObject) => {
     setMapCenter(clampMapCenter(districtObjectFocusPoint(object), viewWidth, viewHeight, 5));
     setZoom((current) => Math.max(current, 5));
@@ -1019,7 +1033,7 @@ export function MapCanvas(props: Props) {
                 height={viewHeight}
                 className="map-base"
               />
-              {visibleDistrictObjects.filter((object): object is DistrictBuilding => object.kind === 'building' && (object.mapRole === undefined || object.mapRole === 'ordinary')).map((object) => <DistrictObjectContour key={`${object.id}-contour`} object={object} project={projection.project} selected={selectedDistrictId === object.id && searchDistrictId !== object.id} highlighted={searchDistrictId === object.id} interactionDisabled={rulerActive} onSelect={() => setSelectedDistrictId(object.id)} onHoverChange={(hovered) => setHoveredDistrictId(hovered ? object.id : null)} />)}
+              {visibleDistrictObjects.filter((object): object is DistrictBuilding => object.kind === 'building' && (object.mapRole === undefined || object.mapRole === 'ordinary')).map((object) => <DistrictObjectContour key={`${object.id}-contour`} object={object} project={projection.project} selected={selectedDistrictId === object.id && searchDistrictId !== object.id} highlighted={searchDistrictId === object.id} interactionDisabled={rulerActive} onSelect={() => { if (object.objectType !== 'demolished') setSelectedDistrictId(object.id); }} onHoverChange={(hovered) => setHoveredDistrictId(hovered ? object.id : null)} />)}
               {props.result !== null && showCombined && (
                 <>
                   <path

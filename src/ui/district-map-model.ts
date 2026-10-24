@@ -37,7 +37,7 @@ export type DistrictPlanningDocument = Readonly<{
 
 export type DistrictBuilding = DistrictObjectBase & Readonly<{
   kind: 'building';
-  objectType: 'building' | 'territory' | 'installation';
+  objectType: 'building' | 'territory' | 'installation' | 'demolished';
   mapRole?: DistrictBuildingMapRole;
   contour: readonly GeoPoint[];
   territoryNames: readonly DistrictNamedUnit[];
@@ -285,7 +285,9 @@ function normalizeDistrictObject(value: unknown): DistrictMapObject | null {
   };
   if (value.kind === 'building') {
     const legacy = value as unknown as Record<string, unknown>;
-    const objectType = value.objectType === 'installation'
+    const objectType = value.objectType === 'demolished'
+      ? 'demolished'
+      : value.objectType === 'installation'
       ? 'installation'
       : value.objectType === 'territory' || buildingPrefix(text(value.number)) === '0'
         ? 'territory'
@@ -657,6 +659,7 @@ export function districtObjectTitle(object: DistrictMapObject): string {
   if (object.kind === 'reservoir') return `Пожарный водоём ${object.number}`;
   if (object.mapRole === 'response-boundary') return 'Граница района выезда';
   if (object.mapRole === 'rescue-service') return 'Аварийно-спасательная служба';
+  if (object.objectType === 'demolished') return 'Демонтированный объект';
   if (object.objectType === 'installation') {
     const name = object.installationName?.trim() ?? '';
     return name === '' ? 'Наружная установка' : name;
@@ -678,6 +681,7 @@ export function districtObjectSearchDescription(object: DistrictMapObject): stri
   if (object.kind === 'reservoir') return [object.owner, object.faultDescription].filter(Boolean).join(' · ') || 'Пожарный водоём';
   if (object.mapRole === 'response-boundary') return 'Постоянная граница района выезда';
   if (object.mapRole === 'rescue-service') return ['Аварийно-спасательная служба', object.workshopFull, object.workshopShort].filter(Boolean).join(' · ');
+  if (object.objectType === 'demolished') return 'Снесённый объект, обозначенный штрихованным контуром';
   if (object.objectType === 'installation') return [object.installationName, object.workshopFull, object.workshopShort].filter(Boolean).join(' · ');
   if (object.objectType === 'territory') return object.territoryNames.flatMap((unit) => [unit.fullName, unit.shortName]).map((item) => item.trim()).filter(Boolean).join(' · ');
   const parts = [
@@ -709,6 +713,7 @@ export function districtObjectSearchText(object: DistrictMapObject): string {
     object.mapRole === 'response-boundary' ? 'граница района выезда периметр' : '',
     object.mapRole === 'rescue-service' ? 'аварийно-спасательная служба АСС' : '',
     object.objectType === 'installation' ? `наружная установка ${object.installationName ?? ''}` : '',
+    object.objectType === 'demolished' ? 'демонтированный снесенный объект' : '',
     ...object.territoryNames.flatMap((unit) => [unit.fullName, unit.shortName]),
     object.inventoryNumber ?? '',
     ...object.planningDocuments.flatMap((document) => [document.kind, document.number, planningDocumentLabel(document)]),

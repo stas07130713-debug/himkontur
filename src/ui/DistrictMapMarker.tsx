@@ -19,12 +19,15 @@ type Props = Readonly<{
 
 function HydrantSymbolContents({ object, detailLevel = 'full' }: Readonly<{ object: DistrictHydrant; detailLevel?: 'compact' | 'full' }>): ReactNode {
   const network = hydrantNetworkCode(object);
+  const number = object.hydrantType === 'foam'
+    ? object.number.replace(/^ПП?Г[-\s]*/iu, 'ППГ-')
+    : object.number.replace(/^ППГ[-\s]*/iu, 'ПГ-');
   return <>
     <line className="hydrant-network-line" x1={detailLevel === 'full' ? -43 : -12} y1="0" x2={detailLevel === 'full' ? 43 : 12} y2="0" />
     {detailLevel === 'full' && <>
       <rect className="hydrant-label-back" x="-47" y="-16" width="36" height="14" rx="3" />
       <rect className="hydrant-label-back" x="11" y="-16" width="36" height="14" rx="3" />
-      <text className="hydrant-map-label" x="-29" y="-6" textAnchor="middle">{object.number}</text>
+      <text className="hydrant-map-label" x="-29" y="-6" textAnchor="middle">{number}</text>
       <text className="hydrant-map-label" x="29" y="-6" textAnchor="middle">{network}</text>
     </>}
     <circle className="hydrant-symbol-base" r="10" />
@@ -34,7 +37,7 @@ function HydrantSymbolContents({ object, detailLevel = 'full' }: Readonly<{ obje
 }
 
 export function HydrantPlanSymbol({ object, className = '' }: Readonly<{ object: DistrictHydrant; className?: string }>) {
-  return <svg className={`hydrant-plan-symbol${className === '' ? '' : ` ${className}`}`} viewBox="-42 -19 84 38" aria-label={`Пожарный гидрант ${object.number}, ${hydrantNetworkCode(object)}`}><HydrantSymbolContents object={object} /></svg>;
+  return <svg className={`hydrant-plan-symbol type-${object.hydrantType} status-${object.status}${className === '' ? '' : ` ${className}`}`} viewBox="-42 -19 84 38" aria-label={`${object.hydrantType === 'foam' ? 'Пенный пожарный гидрант' : 'Пожарный гидрант'} ${object.number}, ${hydrantNetworkCode(object)}`}><HydrantSymbolContents object={object} /></svg>;
 }
 
 function ReservoirSymbolContents(): ReactNode {
@@ -69,14 +72,14 @@ export function DistrictMapMarker({ object, x, y, selected, highlighted = false,
   if (object.kind === 'hydrant') {
     const hoverLines = [object.owner.trim(), `Сеть: ${hydrantNetworkCode(object)}`].filter(Boolean);
     return (
-    <g data-object-id={object.id} transform={`translate(${x} ${y})`} className={`district-map-marker hydrant-marker status-${object.status}${selected ? ' selected' : ''}${highlighted ? ' search-highlight' : ''}${editing ? ' editable' : ''}${interactionDisabled ? ' interaction-disabled' : ''}`} onClick={(event) => { if (interactionDisabled) return; event.stopPropagation(); onSelect(); }} onPointerDown={pointerDown} onPointerEnter={() => { if (!interactionDisabled) onHoverChange?.(true); }} onPointerLeave={() => onHoverChange?.(false)}>
+    <g data-object-id={object.id} transform={`translate(${x} ${y})`} className={`district-map-marker hydrant-marker type-${object.hydrantType} status-${object.status}${selected ? ' selected' : ''}${highlighted ? ' search-highlight' : ''}${editing ? ' editable' : ''}${interactionDisabled ? ' interaction-disabled' : ''}`} onClick={(event) => { if (interactionDisabled) return; event.stopPropagation(); onSelect(); }} onPointerDown={pointerDown} onPointerEnter={() => { if (!interactionDisabled) onHoverChange?.(true); }} onPointerLeave={() => onHoverChange?.(false)}>
       <g transform={`scale(${scale})`}>
         <rect className="marker-hit-area" x={detailLevel === 'full' ? -42 : -18} y="-20" width={detailLevel === 'full' ? 84 : 36} height="40" rx="5" />
         <circle className="marker-halo" r="18" />
         <HydrantSymbolContents object={object} detailLevel={detailLevel} />
       </g>
       <foreignObject className="district-marker-hover-card" x="25" y={-18 - hoverLines.length * 9} width="245" height={42 + hoverLines.length * 19}>
-        <div><strong>Пожарный гидрант {object.number}</strong>{hoverLines.map((line, index) => <span key={`${object.id}-hover-${index}`}>{line}</span>)}</div>
+        <div><strong>{object.hydrantType === 'foam' ? 'Пенный пожарный гидрант' : 'Пожарный гидрант'} {object.number}</strong>{hoverLines.map((line, index) => <span key={`${object.id}-hover-${index}`}>{line}</span>)}</div>
       </foreignObject>
     </g>
     );

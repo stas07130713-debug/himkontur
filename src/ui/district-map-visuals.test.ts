@@ -124,6 +124,8 @@ describe('district map visual helpers', () => {
   it('maps the response boundary and rescue service to independent switchable layers', () => {
     expect(districtLayerKey({ ...building, mapRole: 'response-boundary' })).toBe('response-boundary');
     expect(districtLayerKey({ ...building, mapRole: 'rescue-service' })).toBe('rescue-service');
+    expect(districtLayerKey({ ...building, objectType: 'demolished', number: '0' })).toBe('demolished');
+    expect(hasDistrictMarker({ ...building, objectType: 'demolished', number: '0' })).toBe(false);
   });
 
   it('treats a two-point response boundary as an open line, not as a polygon', () => {

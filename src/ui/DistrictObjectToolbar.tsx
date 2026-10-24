@@ -11,8 +11,10 @@ type Props = Readonly<{
   onShowBuildingsChange: (value: boolean) => void;
   onShowHydrantsChange: (value: boolean) => void;
   onFocus: (object: DistrictMapObject) => void;
+  onPreview?: (object: DistrictMapObject) => void;
   onSearchSelectionChange?: (object: DistrictMapObject | null) => void;
   compact?: boolean;
+  twoStepSelection?: boolean;
   resetSignal?: number;
 }>;
 
@@ -20,6 +22,7 @@ export function DistrictObjectToolbar(props: Props) {
   const [buildingQuery, setBuildingQuery] = useState('');
   const [hydrantQuery, setHydrantQuery] = useState('');
   const [focusedKind, setFocusedKind] = useState<'building' | 'nppv' | null>(null);
+  const [previewedObjectId, setPreviewedObjectId] = useState<string | null>(null);
   const buildingInputRef = useRef<HTMLInputElement>(null);
   const hydrantInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -27,12 +30,13 @@ export function DistrictObjectToolbar(props: Props) {
     setBuildingQuery('');
     setHydrantQuery('');
     setFocusedKind(null);
+    setPreviewedObjectId(null);
   }, [props.resetSignal]);
   const buildingResults = useMemo(() => {
     const needle = buildingQuery.trim().toLocaleLowerCase('ru-RU');
     if (needle === '') return [];
     return props.objects
-      .filter((object) => object.kind === 'building' && districtObjectSearchText(object).includes(needle))
+      .filter((object) => object.kind === 'building' && object.objectType !== 'demolished' && districtObjectSearchText(object).includes(needle))
       .slice(0, 20);
   }, [buildingQuery, props.objects]);
   const hydrantResults = useMemo(() => {
@@ -62,13 +66,14 @@ export function DistrictObjectToolbar(props: Props) {
             value={query}
             onFocus={() => setFocusedKind(kind)}
             onBlur={() => window.setTimeout(() => setFocusedKind((current) => current === kind ? null : current), 150)}
-            onChange={(event) => { setFocusedKind(kind); setQuery(event.currentTarget.value); props.onSearchSelectionChange?.(null); }}
+            onChange={(event) => { setFocusedKind(kind); setQuery(event.currentTarget.value); setPreviewedObjectId(null); props.onSearchSelectionChange?.(null); }}
             placeholder={isBuilding ? 'Найти здание' : 'Найти элемент НППВ'}
             aria-label={isBuilding ? 'Поиск здания на карте' : 'Поиск элемента наружного противопожарного водоснабжения на карте'}
           />
           {query !== '' && <button aria-label="Очистить поиск" onMouseDown={(event) => event.preventDefault()} onClick={() => {
             setQuery('');
             setFocusedKind(kind);
+            setPreviewedObjectId(null);
             props.onSearchSelectionChange?.(null);
             window.requestAnimationFrame(() => (kind === 'building' ? buildingInputRef.current : hydrantInputRef.current)?.focus());
           }}><UiIcon name="close" /></button>}
@@ -82,7 +87,15 @@ export function DistrictObjectToolbar(props: Props) {
             {results.length === 0 ? <p>Совпадений не найдено</p> : results.map((object) => {
               const resultText = objectResultText(object, query);
               return (
-                <button key={object.id} onMouseDown={(event) => event.preventDefault()} onClick={() => { props.onFocus(object); props.onSearchSelectionChange?.(object); setQuery(object.kind === 'building' && object.mapRole === 'rescue-service' ? 'АСС' : object.number); setFocusedKind(null); }}>
+                <button key={object.id} onMouseDown={(event) => event.preventDefault()} onClick={() => {
+                  const firstMobileTap = props.twoStepSelection === true && previewedObjectId !== object.id;
+                  if (firstMobileTap) (props.onPreview ?? props.onFocus)(object);
+                  else props.onFocus(object);
+                  props.onSearchSelectionChange?.(object);
+                  setQuery(object.kind === 'building' && object.mapRole === 'rescue-service' ? 'АСС' : object.number);
+                  setPreviewedObjectId(firstMobileTap ? object.id : null);
+                  setFocusedKind(firstMobileTap ? kind : null);
+                }}>
                   <b>{object.kind === 'building' && object.mapRole === 'rescue-service' ? 'АСС' : object.number}</b>
                   <span><strong>{resultText.title}</strong>{resultText.description !== '' && <small>{resultText.description}</small>}</span>
                 </button>

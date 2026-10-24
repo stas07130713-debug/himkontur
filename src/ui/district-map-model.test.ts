@@ -80,6 +80,20 @@ describe('district map backup', () => {
     });
     expect(restored?.published[0] && districtObjectTitle(restored.published[0])).toBe('Открытая насосная установка');
   });
+
+  it('keeps a demolished contour distinct and without a building card', () => {
+    const source = project(29, '2026-10-24T08:00:00Z');
+    const demolished = {
+      id: 'demolished-1', kind: 'building' as const, objectType: 'demolished' as const,
+      point: { latitude: 67.9, longitude: 32.8 },
+      contour: [{ latitude: 67.9, longitude: 32.8 }, { latitude: 67.9, longitude: 32.81 }, { latitude: 67.91, longitude: 32.81 }],
+      territoryNames: [], number: '0', installationName: '', inventoryNumber: '', planningDocuments: [],
+      workshopFull: '', workshopShort: '', departments: [], sites: [], note: '', updatedAtIso: '2026-10-24T08:00:00Z',
+    };
+    const restored = parseDistrictMapBackup(serializeDistrictMapBackup({ ...source, draft: [demolished], published: [demolished] }));
+    expect(restored?.published[0]).toMatchObject({ objectType: 'demolished', number: '0' });
+    expect(restored?.published[0] && districtObjectTitle(restored.published[0])).toBe('Демонтированный объект');
+  });
 });
 
 describe('durable district map operation queue', () => {

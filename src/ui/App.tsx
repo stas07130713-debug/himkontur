@@ -48,10 +48,11 @@ import {
   type DistrictMapProject,
 } from "./district-map-model";
 import {
+  clearDistrictMapConflictArchives,
   districtMapConflictArchiveCount,
   mergeDistrictMapProjects,
   saveDistrictMapConflictArchive,
-  serializeDistrictMapConflictArchives,
+  serializeDistrictMapConflictReport,
 } from "./district-map-merge";
 import {
   authenticateMapAdmin,
@@ -63,6 +64,7 @@ import {
   type MapAdminCredential,
   type MapSyncStatus,
 } from "./map-sync-service";
+import { evaluateRescueServiceWarning } from './rescue-service-warning';
 
 type Tab = "calculation" | "goods" | "district";
 type Theme = "light" | "dark";
@@ -103,6 +105,7 @@ export function App() {
   const [sourcePlaced, setSourcePlaced] = useState(true);
   const [controls, setControls] = useState<readonly ControlPoint[]>([]);
   const [controlFocus, setControlFocus] = useState<Readonly<{ id: string; revision: number }> | null>(null);
+  const [districtFocus, setDistrictFocus] = useState<Readonly<{ id: string; revision: number }> | null>(null);
   // The bundled map is the dependable default on every device. Satellite
   // imagery is an optional online/cached layer selected by the user.
   const [basemap, setBasemap] = useState<Basemap>("standard");
@@ -319,6 +322,10 @@ export function App() {
         ? null
         : verifyCalculation(calculation.result, new Date().toISOString()),
     [calculation.result],
+  );
+  const rescueServiceWarning = useMemo(
+    () => evaluateRescueServiceWarning(calculation.result, districtProject.published),
+    [calculation.result, districtProject.published],
   );
 
   const getWeather = async () => {
@@ -656,13 +663,18 @@ export function App() {
     void publishPendingDistrictProject();
   };
   const downloadDistrictConflictArchive = () => {
-    const blob = new Blob([serializeDistrictMapConflictArchives()], { type: 'application/json;charset=utf-8' });
+    const blob = new Blob([serializeDistrictMapConflictReport()], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `HIMKONTUR-map-conflicts-${new Date().toISOString().slice(0, 10)}.json`;
+    anchor.download = `HIMKONTUR-map-conflicts-${new Date().toISOString().slice(0, 10)}.txt`;
     anchor.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+  const clearDistrictConflictArchive = () => {
+    if (!window.confirm('Очистить просмотренный журнал конфликтов? Сама карта и опубликованные данные не изменятся.')) return;
+    clearDistrictMapConflictArchives();
+    setDistrictConflictCount(0);
   };
 
   return (
@@ -820,6 +832,7 @@ export function App() {
           onPublishForAll={publishPendingDistrictProject}
           conflictBackupCount={districtConflictCount}
           onDownloadConflictBackup={downloadDistrictConflictArchive}
+          onClearConflictBackup={clearDistrictConflictArchive}
         />
       ) : (
         <>
@@ -986,6 +999,7 @@ export function App() {
                 );
               }}
               controlFocus={controlFocus}
+              districtFocus={districtFocus}
             />
             <aside className="right-column">
               <ResultsPanel
@@ -1005,11 +1019,11 @@ export function App() {
                   longitude: effectiveInput.sourcePoint.longitude + offset,
                 });
               }}>
-                {controls.length > 0 && (
+                {(controls.length > 0 || rescueServiceWarning !== null) && (
                   <div className="controls-list inline-controls-list">
                     <div className="section-heading">
-                      <h2>Выставленные точки</h2>
-                      <button
+                      <h2>{rescueServiceWarning === null ? 'Выставленные точки' : 'Точки и предупреждения'}</h2>
+                      {controls.length > 0 && <button
                         className="link"
                         onClick={() => {
                           remember("Удалены контрольные точки");
@@ -1017,8 +1031,25 @@ export function App() {
                         }}
                       >
                         Очистить
-                      </button>
+                      </button>}
                     </div>
+                    {rescueServiceWarning !== null && (() => {
+                      const minutes = rescueServiceWarning.status.arrivalMinutesAfterAccident;
+                      const arrival = rescueServiceWarning.status.arrivalTimeIso === null ? null : new Date(rescueServiceWarning.status.arrivalTimeIso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                      const inZone = rescueServiceWarning.status.reachedByForecast;
+                      const focus = () => setDistrictFocus({ id: rescueServiceWarning.building.id, revision: Date.now() });
+                      return <article
+                        className={`placed-control-row automatic-ass-warning status-${inZone ? 'danger' : 'future'}`}
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Показать здание АСС на карте"
+                        onClick={focus}
+                        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); focus(); } }}
+                      >
+                        <span className="ass-warning-badge">АСС</span>
+                        <div><strong>Внимание! Здание АСС {inZone ? 'находится в зоне заражения' : 'попадёт в зону заражения'}</strong><small><span>{round(rescueServiceWarning.status.distanceKm, 2)} км от источника</span><span>{inZone ? `Облако достигло здания через ${minutes} мин${arrival === null ? '' : ` · ${arrival}`}` : `Ожидается через ${minutes} мин${arrival === null ? '' : ` · ${arrival}`}`}</span></small></div>
+                      </article>;
+                    })()}
                     {controls.map((control) => {
                       const status =
                         calculation.result === null
