@@ -3417,7 +3417,7 @@ button.wide { width: 100%; margin-top: 10px; }
   transform-origin: center;
   animation: district-contour-search-pulse .82s ease-in-out 3;
 }
-.district-legend-demolished { width: 31px; height: 20px; border: 2px solid #d52d36; border-radius: 2px; background: repeating-linear-gradient(125deg, #d52d3624 0 5px, #d52d36 5px 8px, #d52d3624 8px 13px); box-sizing: border-box; }
+.district-legend-demolished { width: 42px; height: 26px; justify-self: center; border: 2px solid #d52d36; border-radius: 2px; background: repeating-linear-gradient(135deg, #d52d3624 0 5px, #d52d36 5px 8px, #d52d3624 8px 13px); box-sizing: border-box; }
 .district-contour-draft.demolished-draft polygon { fill: #d52d3630; stroke: #d52d36; stroke-dasharray: 8 5; }
 @keyframes district-contour-search-pulse {
   0%, 100% { opacity: .7; filter: drop-shadow(0 0 3px #fff); }

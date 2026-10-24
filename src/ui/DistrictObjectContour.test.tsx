@@ -77,6 +77,7 @@ describe('DistrictObjectContour', () => {
     };
     const contour = renderToStaticMarkup(<svg><DistrictObjectContour object={object} project={project} /></svg>);
     expect(contour).toContain('demolished-hatch-');
+    expect(contour).toContain('patternTransform="rotate(45)"');
     expect(contour).toContain('district-object-contour prefix-0 territory demolished');
     expect(contour).not.toContain('district-contour-edge-measure');
     const hover = renderToStaticMarkup(<svg><DistrictContourHoverCard object={object} project={project} viewSize={{ width: 1000, height: 680 }} /></svg>);

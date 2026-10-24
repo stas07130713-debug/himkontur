@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { canRebaseLegacyOperation, hasUnresolvedConflict, isAllowedOrigin, validAuthoritativeRecovery } from './worker.js';
+import { canRebaseLegacyOperation, hasUnresolvedConflict, isAllowedOrigin, shouldUseBackupImmediately, validAuthoritativeRecovery } from './worker.js';
 
 describe('application origin access', () => {
   const configured = 'https://stas07130713-debug.github.io,null';
@@ -31,6 +31,20 @@ describe('district sync conflict guard', () => {
 
   it('allows reconciliation when no conflict is recorded', () => {
     assert.equal(hasUnresolvedConflict({ mode: 'backup' }, 0), false);
+  });
+});
+
+describe('fast backup routing', () => {
+  it('writes directly to D1 while the service is already in backup mode', () => {
+    assert.equal(shouldUseBackupImmediately({ mode: 'backup' }, 0), true);
+  });
+
+  it('keeps the queued chain in D1 until reconciliation completes', () => {
+    assert.equal(shouldUseBackupImmediately({ mode: 'primary' }, 2), true);
+  });
+
+  it('uses the primary write path only for a synchronized state', () => {
+    assert.equal(shouldUseBackupImmediately({ mode: 'primary' }, 0), false);
   });
 });
 

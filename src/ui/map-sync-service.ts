@@ -164,11 +164,11 @@ function requestError(status: number, payload: unknown, fallback: string): MapSy
   return new MapSyncRequestError(message || fallback, status, 'unavailable');
 }
 
-async function coordinatorRequest(path: string, init: RequestInit, timeoutMs: number): Promise<unknown> {
+async function coordinatorRequest(path: string, init: RequestInit, timeoutMs: number, attempts = 2): Promise<unknown> {
   const config = await loadMapSyncConfig();
   if (!config?.coordinatorEnabled) throw new MapSyncRequestError('Резервный облачный сервис ещё не включён.', 0, 'unavailable');
   let lastError: MapSyncRequestError | null = null;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -189,7 +189,7 @@ async function coordinatorRequest(path: string, init: RequestInit, timeoutMs: nu
             ? new MapSyncRequestError('Не удалось связаться с сервером настройки карты. Проверьте интернет и повторите вход.')
             : new MapSyncRequestError(error instanceof Error ? error.message : 'Нет связи с сервисом синхронизации.');
       lastError = normalized;
-      if (normalized.kind !== 'unavailable' || attempt === 1) throw normalized;
+      if (normalized.kind !== 'unavailable' || attempt === attempts - 1) throw normalized;
     } finally {
       window.clearTimeout(timeout);
     }
@@ -237,19 +237,33 @@ export async function withRenewedMapAdminSession<T>(
 }
 
 export async function publishCoordinatedMap(request: CoordinatedPublishRequest): Promise<CoordinatedMapResponse> {
-  const payload = await coordinatorRequest('/v1/map', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${request.credential.sessionToken}`,
-    },
-    body: JSON.stringify({
-      operationId: request.operationId,
-      baseRevision: request.baseRevision,
-      project: request.project,
-      updatedBy: 'Администратор ХИМКОНТУР',
-    }),
-  }, 25_000);
+  let payload: unknown;
+  try {
+    payload = await coordinatorRequest('/v1/map', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${request.credential.sessionToken}`,
+      },
+      body: JSON.stringify({
+        operationId: request.operationId,
+        baseRevision: request.baseRevision,
+        project: request.project,
+        updatedBy: 'Администратор ХИМКОНТУР',
+      }),
+    }, 25_000);
+  } catch (error) {
+    if (!(error instanceof MapSyncRequestError) || error.kind !== 'unavailable') throw error;
+    // A timeout can happen after D1 has already committed the operation but
+    // before the response reaches the browser. Verify the idempotent operation
+    // before claiming that the edit exists only on this device.
+    const verified = await coordinatorRequest(`/v1/operations/${encodeURIComponent(request.operationId)}`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${request.credential.sessionToken}` },
+    }, 8_000, 1).catch(() => null);
+    if (!isObject(verified) || !('project' in verified)) throw error;
+    payload = verified;
+  }
   if (!isObject(payload) || !('project' in payload)) throw new MapSyncRequestError('Сервис синхронизации вернул некорректный ответ.', 502, 'invalid');
   return { project: payload.project, status: normalizeStatus(payload.status) };
 }

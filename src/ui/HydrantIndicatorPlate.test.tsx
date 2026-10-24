@@ -15,6 +15,7 @@ describe('foam hydrant visuals', () => {
   it('labels the indicator plate as ППГ and marks its plan symbol green', () => {
     const plate = renderToStaticMarkup(<HydrantIndicatorPlate object={foamHydrant} />);
     expect(plate).toContain('ППГ');
+    expect(plate).toContain('x1="62"');
     expect(plate).toContain('пенного пожарного гидранта');
     const symbol = renderToStaticMarkup(<HydrantPlanSymbol object={foamHydrant} />);
     expect(symbol).toContain('type-foam status-serviceable');

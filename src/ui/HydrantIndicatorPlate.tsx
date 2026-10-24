@@ -30,7 +30,7 @@ export function HydrantIndicatorPlate({ object, editable = false, onChange }: Re
             <text x="78.5" y="19.5" textAnchor="middle" className="hydrant-plate-small">{hydrantNetworkCode(object)}</text>
           </>}
           <text x="42" y="50" textAnchor="middle" className="hydrant-plate-big">{foam ? 'ППГ' : 'ПГ'}</text>
-          <line x1="58" y1="44" x2="67" y2="44" className="hydrant-plate-dash" />
+          <line x1={foam ? 62 : 58} y1="44" x2="68" y2="44" className="hydrant-plate-dash" />
           <rect x="72" y="35" width="20" height="16" rx="1" className="hydrant-plate-slot" />
           {!editable && <text x="82" y="47" textAnchor="middle" className="hydrant-plate-small">{number || '—'}</text>}
           <rect x="37" y="56" width="26" height="13" rx="1" className="hydrant-plate-slot" />

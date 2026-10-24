@@ -94,7 +94,7 @@ export function DistrictObjectContour({ object, project, selected = false, highl
     onPointerEnter={() => { if (!interactionDisabled) { setHovered(true); onHoverChange?.(true); } }}
     onPointerLeave={() => { setHovered(false); setHoveredWall(null); onHoverChange?.(false); }}
   >
-    {demolished && <defs><pattern id={hatchId} width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><rect width="9" height="9" fill="rgba(213,45,54,.14)" /><line x1="0" y1="0" x2="0" y2="9" stroke="#d52d36" strokeWidth="3" /></pattern></defs>}
+    {demolished && <defs><pattern id={hatchId} width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="9" height="9" fill="rgba(213,45,54,.14)" /><line x1="0" y1="0" x2="0" y2="9" stroke="#d52d36" strokeWidth="3" /></pattern></defs>}
     {responseBoundary
       ? <polyline
           points={contourPoints}

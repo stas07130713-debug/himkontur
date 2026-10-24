@@ -102,6 +102,33 @@ describe('map synchronization sessions', () => {
     });
   });
 
+  it('recognizes a committed operation after its write response was lost', async () => {
+    const project = {
+      id: 'district-map-main',
+      name: 'Карта района выезда',
+      revision: 2,
+      draft: [],
+      published: [],
+      draftSavedAtIso: '2026-10-24T10:00:00.000Z',
+      publishedAtIso: '2026-10-24T10:00:00.000Z',
+    } satisfies DistrictMapProject;
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(configResponse))
+      .mockResolvedValueOnce(jsonResponse({ error: 'gateway timeout' }, 503))
+      .mockResolvedValueOnce(jsonResponse({ error: 'gateway timeout' }, 503))
+      .mockResolvedValueOnce(jsonResponse({ project, status: { mode: 'backup', activeProvider: 'cloudflare' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('window', { setTimeout, clearTimeout });
+
+    await expect(publishCoordinatedMap({
+      operationId: 'operation-committed',
+      baseRevision: 1,
+      project,
+      credential: { password: 'administrator-password', sessionToken: 'active-session' },
+    })).resolves.toMatchObject({ project, status: { mode: 'backup' } });
+    expect(fetchMock.mock.calls[3]?.[0]).toBe('https://coordinator.example.test/v1/operations/operation-committed');
+  });
+
   it('renews an expired session and repeats the interrupted operation once', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse(configResponse))

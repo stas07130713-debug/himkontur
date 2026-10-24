@@ -269,6 +269,10 @@ export function hasUnresolvedConflict(state, conflictCount) {
   return state?.mode === 'conflict' || conflictCount > 0;
 }
 
+export function shouldUseBackupImmediately(state, queued) {
+  return state !== null && (state.mode === 'backup' || queued > 0);
+}
+
 export function canRebaseLegacyOperation(operationId, incomingProject, sharedProject, queued) {
   if (!operationId.startsWith('legacy-') || queued !== 0) return false;
   const incomingPublishedAt = Date.parse(incomingProject.publishedAtIso);
@@ -359,19 +363,23 @@ async function route(request, env, ctx) {
 
   if (request.method === 'GET' && url.pathname === '/v1/map') {
     const state = await readState(env);
-    const primary = await callPrimary(env);
-    if (primary.ok) {
-      const queued = await pendingCount(env);
-      if (state !== null && queued > 0) {
-        ctx.waitUntil(reconcile(env));
-        return jsonResponse(request, env, 200, { project: state.project, status: statusFrom(state, true, true, queued, 'Яндекс снова доступен; актуальные резервные изменения ожидают безопасного переноса.') });
-      }
-      if (state !== null && queued === 0 && primary.revision !== state.revision) ctx.waitUntil(writeState(env, primary.project, 'yandex', primary.revision, 'primary'));
-      return jsonResponse(request, env, 200, { project: primary.project, status: statusFrom(state ?? { revision: primary.revision, primaryRevision: primary.revision }, true, state !== null, queued) });
-    }
-    if (state === null) throw new HttpError(503, 'Основная и резервная базы недоступны. Используйте локальную копию.');
     const queued = await pendingCount(env);
-    return jsonResponse(request, env, 200, { project: state.project, status: statusFrom(state, false, true, queued) });
+    // D1 is the coordinator's authoritative read copy. Do not make every map
+    // opening wait for Yandex: the scheduled reconciliation checks Yandex in
+    // the background and refreshes this copy after recovery.
+    if (state !== null) {
+      const primaryKnownAvailable = state.mode === 'primary' && queued === 0;
+      return jsonResponse(request, env, 200, {
+        project: state.project,
+        status: statusFrom(state, primaryKnownAvailable, true, queued),
+      });
+    }
+    const primary = await callPrimary(env, { timeoutMs: 5000 });
+    if (primary.ok) {
+      ctx.waitUntil(writeState(env, primary.project, 'yandex', primary.revision, 'primary'));
+      return jsonResponse(request, env, 200, { project: primary.project, status: statusFrom({ revision: primary.revision, primaryRevision: primary.revision }, true, false, 0) });
+    }
+    throw new HttpError(503, 'Основная и резервная базы недоступны. Используйте локальную копию.');
   }
 
   if (request.method === 'GET' && url.pathname === '/v1/status') {
@@ -390,11 +398,12 @@ async function route(request, env, ctx) {
     }
     await clearAuthFailures(request, env);
     const state = await readState(env);
-    const primary = await callPrimary(env, { timeoutMs: 5000 });
+    const queued = await pendingCount(env);
+    const primaryKnownAvailable = state?.mode === 'primary' && queued === 0;
     return jsonResponse(request, env, 200, {
       sessionToken: await issueSession(env),
       expiresInSeconds: SESSION_LIFETIME_SECONDS,
-      status: statusFrom(state, primary.ok, state !== null, await pendingCount(env)),
+      status: statusFrom(state, primaryKnownAvailable, state !== null, queued),
     });
   }
 
@@ -438,13 +447,41 @@ async function route(request, env, ctx) {
 
   if (request.method === 'POST' && url.pathname === '/v1/reconcile') {
     await requireSession(request, env);
-    const result = await reconcile(env);
-    return jsonResponse(request, env, 200, { status: statusFrom(result.state, result.primaryAvailable, result.state !== null, result.queued, result.message) });
+    const state = await readState(env);
+    const queued = await pendingCount(env);
+    ctx.waitUntil(reconcile(env));
+    return jsonResponse(request, env, 202, {
+      status: statusFrom(
+        state,
+        state?.mode === 'primary' && queued === 0,
+        state !== null,
+        queued,
+        queued > 0
+          ? 'Проверка и перенос отложенных изменений запущены в фоне.'
+          : 'Проверка основной базы запущена в фоне.',
+      ),
+    });
+  }
+
+  if (request.method === 'GET' && url.pathname.startsWith('/v1/operations/')) {
+    await requireSession(request, env);
+    const operationId = decodeURIComponent(url.pathname.slice('/v1/operations/'.length)).slice(0, 160);
+    if (operationId === '') throw new HttpError(400, 'Не указан идентификатор операции.');
+    const operation = await env.DB.prepare('SELECT project_json, status, error FROM map_operations WHERE operation_id = ?').bind(operationId).first();
+    if (!operation) throw new HttpError(404, 'Операция ещё не найдена в общей базе.');
+    if (operation.status === 'conflict') throw new HttpError(409, 'Операция остановлена из-за конфликта версий.', text(operation.error));
+    const state = await readState(env);
+    const queued = await pendingCount(env);
+    return jsonResponse(request, env, 200, {
+      operationId,
+      operationStatus: operation.status,
+      project: JSON.parse(operation.project_json),
+      status: statusFrom(state, operation.status === 'applied', state !== null, queued, 'Операция уже сохранена в общей базе.'),
+    });
   }
 
   if (request.method === 'POST' && url.pathname === '/v1/map') {
     await requireSession(request, env);
-    await reconcile(env);
     const payload = await readJson(request);
     if (!validProject(payload.project)) throw new HttpError(400, 'Некорректная структура карты.');
     const operationId = text(payload.operationId).slice(0, 160);
@@ -467,9 +504,16 @@ async function route(request, env, ctx) {
     if (state.revision !== baseRevision) throw new HttpError(409, 'Карта уже изменена в другом браузере. Обновите данные перед записью.');
     if (project.revision <= baseRevision) throw new HttpError(400, 'Новая версия карты должна быть больше базовой.');
     const operation = { operationId, baseRevision, project, createdAt: new Date().toISOString() };
+    const queued = await pendingCount(env);
+    if (shouldUseBackupImmediately(state, queued)) {
+      await conditionalBackupCommit(env, operation, 'queued', state.primaryRevision, 'backup');
+      await event(env, 'warning', 'backup-write', `operation=${operationId}, revision=${project.revision}`);
+      const updated = await readState(env);
+      return jsonResponse(request, env, 202, { project: updated.project, status: statusFrom(updated, false, true, await pendingCount(env), 'Изменения сохранены в общей резервной базе и уже доступны другим устройствам. В Яндекс они будут переданы автоматически.') });
+    }
     const primary = await callPrimary(env, {
       method: 'POST',
-      timeoutMs: 15000,
+      timeoutMs: 8000,
       body: { coordinatorToken: env.PRIMARY_SYNC_TOKEN, operationId, baseRevision, project, updatedBy: text(payload.updatedBy) || 'Администратор ХИМКОНТУР' },
     });
     if (primary.ok && primary.protocolVersion >= 2) {

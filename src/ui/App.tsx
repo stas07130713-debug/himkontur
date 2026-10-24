@@ -672,7 +672,7 @@ export function App() {
     window.setTimeout(() => URL.revokeObjectURL(url), 0);
   };
   const clearDistrictConflictArchive = () => {
-    if (!window.confirm('Очистить просмотренный журнал конфликтов? Сама карта и опубликованные данные не изменятся.')) return;
+    if (!window.confirm('Удалить все записи из журнала уже разрешённых конфликтов? Актуальная карта, выбранные версии объектов и опубликованные данные не изменятся.')) return;
     clearDistrictMapConflictArchives();
     setDistrictConflictCount(0);
   };
