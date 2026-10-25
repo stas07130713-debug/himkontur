@@ -1,7 +1,7 @@
 {
   "id": "district-map-main",
   "name": "Карта района выезда",
-  "revision": 1792862036805,
+  "revision": 1792966353985,
   "draft": [
     {
       "id": "kml-hydrant-095f40d67c2912bd9832",
@@ -1758,11 +1758,11 @@
     {
       "id": "kml-hydrant-034b536d492912bd985e",
       "point": {
-        "latitude": 67.902627,
-        "longitude": 32.860675
+        "latitude": 67.90255272124654,
+        "longitude": 32.86042978291235
       },
-      "note": "Источник сведений о состоянии ПГ: акт проверки наружного противопожарного водоснабжения «Акт проверки ПГ Мончегорск  .docx». Дата загрузки: 16.10.2026.",
-      "updatedAtIso": "2026-10-16T06:06:23.130Z",
+      "note": "Изменения внесены в раздел «Координаты объекта» администратором 24.10.2026.",
+      "updatedAtIso": "2026-10-24T11:24:16.671Z",
       "kind": "hydrant",
       "number": "ПГ-96",
       "owner": "ЦЭН ОКН",
@@ -1782,11 +1782,11 @@
     {
       "id": "kml-hydrant-1a72b78d062912bd985e",
       "point": {
-        "latitude": 67.902502,
-        "longitude": 32.861756
+        "latitude": 67.90236340592249,
+        "longitude": 32.861531973149255
       },
-      "note": "Источник сведений о состоянии ПГ: акт проверки наружного противопожарного водоснабжения «Акт проверки ПГ Мончегорск  .docx». Дата загрузки: 16.10.2026.",
-      "updatedAtIso": "2026-10-16T06:06:23.130Z",
+      "note": "Изменения внесены в раздел «Координаты объекта» администратором 24.10.2026.",
+      "updatedAtIso": "2026-10-24T11:24:20.414Z",
       "kind": "hydrant",
       "number": "ПГ-97",
       "owner": "ЦЭН ОКН",
@@ -1998,11 +1998,11 @@
     {
       "id": "kml-hydrant-0b19b228f02912a0b8a9",
       "point": {
-        "latitude": 67.9043516163814,
-        "longitude": 32.85409065520097
+        "latitude": 67.90413271178878,
+        "longitude": 32.854010941929175
       },
-      "note": "Источник сведений о состоянии ПГ: акт проверки наружного противопожарного водоснабжения «Акт проверки ПГ Мончегорск  .docx». Дата загрузки: 16.10.2026.",
-      "updatedAtIso": "2026-10-16T06:06:23.130Z",
+      "note": "Изменения внесены в раздел «Координаты объекта» администратором 24.10.2026.",
+      "updatedAtIso": "2026-10-24T09:56:44.085Z",
       "kind": "hydrant",
       "number": "ПГ-88",
       "owner": "ЦЭН ОКН",
@@ -8964,8 +8964,8 @@
         "latitude": 67.91622130306068,
         "longitude": 32.84249469637871
       },
-      "note": "",
-      "updatedAtIso": "2026-10-22T12:53:57.115Z",
+      "note": "Изменения внесены в раздел «Документы предварительного планирования» администратором 23.10.2026.",
+      "updatedAtIso": "2026-10-23T10:59:49.940Z",
       "kind": "building",
       "objectType": "building",
       "mapRole": "ordinary",
@@ -8996,6 +8996,11 @@
           "id": "6f7e1e33-dfbb-4eff-86b0-3bae52101c9d",
           "kind": "ПТП",
           "number": "9 (46/7)"
+        },
+        {
+          "id": "f25fb18f-f1c7-4db1-8c36-f50b6d7a017e",
+          "kind": "ПМЛА",
+          "number": "8"
         }
       ],
       "workshopFull": "Химико-металлургический цех",
@@ -9111,6 +9116,2079 @@
       "workshopShort": "ЦЭН ОКН",
       "departments": [],
       "sites": []
+    },
+    {
+      "id": "d61f8729-0275-4239-8aaf-f2578f149b9c",
+      "point": {
+        "latitude": 67.920093771036,
+        "longitude": 32.84155257046223
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-23T08:56:06.156Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.9196773152699,
+          "longitude": 32.84142309765128
+        },
+        {
+          "latitude": 67.91976228859295,
+          "longitude": 32.840869526883004
+        },
+        {
+          "latitude": 67.92051022680208,
+          "longitude": 32.841682043273174
+        },
+        {
+          "latitude": 67.92042525347902,
+          "longitude": 32.84223561404145
+        }
+      ],
+      "territoryNames": [],
+      "number": "6.10",
+      "installationName": "",
+      "inventoryNumber": "200011",
+      "planningDocuments": [],
+      "workshopFull": "Цех материально-технического обеспечения",
+      "workshopShort": "ЦМТО",
+      "departments": [
+        {
+          "id": "e705560b-49a7-4993-b569-30b317f7a2eb",
+          "fullName": "Склад материальных ценностей»",
+          "shortName": ""
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "8d29cb5e-ba10-437e-b2b9-8be0e4ec763c",
+      "point": {
+        "latitude": 67.92109117521106,
+        "longitude": 32.84248312052545
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-23T09:04:36.611Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.92179058090781,
+          "longitude": 32.84357964992523
+        },
+        {
+          "latitude": 67.92079570953632,
+          "longitude": 32.84247310254182
+        },
+        {
+          "latitude": 67.92068743755414,
+          "longitude": 32.84235075019669
+        },
+        {
+          "latitude": 67.92074668079258,
+          "longitude": 32.84196194156689
+        },
+        {
+          "latitude": 67.92085699536267,
+          "longitude": 32.842078856013416
+        },
+        {
+          "latitude": 67.9208825310619,
+          "longitude": 32.84192115740203
+        },
+        {
+          "latitude": 67.92187829126206,
+          "longitude": 32.843016386032104
+        }
+      ],
+      "territoryNames": [],
+      "number": "6.12",
+      "installationName": "",
+      "inventoryNumber": "200723, 200724",
+      "planningDocuments": [
+        {
+          "id": "b994572b-4cbf-41af-8683-75bf6f193472",
+          "kind": "ПТП",
+          "number": "13 (46/11)"
+        }
+      ],
+      "workshopFull": "Цех материально-технического обеспечения",
+      "workshopShort": "ЦМТО",
+      "departments": [
+        {
+          "id": "b7a14e0b-37d3-4ccf-9874-626204badd4f",
+          "fullName": "Склад огнеупоров",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "b0dd3514-ca41-4521-a877-088fec38e68b",
+          "fullName": "Административно-бытовой корпус склада огнеупоров",
+          "shortName": "АБК склад огнеупоров"
+        }
+      ]
+    },
+    {
+      "id": "6e881fa5-584f-4cd9-a55f-f0d87624531f",
+      "point": {
+        "latitude": 67.91992448548622,
+        "longitude": 32.842288231745314
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-23T09:15:24.771Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.9204346030827,
+          "longitude": 32.842668626394314
+        },
+        {
+          "latitude": 67.92038119971673,
+          "longitude": 32.8430024456368
+        },
+        {
+          "latitude": 67.91941436788976,
+          "longitude": 32.841907837096315
+        },
+        {
+          "latitude": 67.91946777125573,
+          "longitude": 32.84157401785383
+        }
+      ],
+      "territoryNames": [],
+      "number": "6.9",
+      "installationName": "",
+      "inventoryNumber": "200019, 200020",
+      "planningDocuments": [],
+      "workshopFull": "Цех материально-технического обеспечения",
+      "workshopShort": "ЦМТО",
+      "departments": [
+        {
+          "id": "b91b7530-3777-40b5-abeb-7977c21ba836",
+          "fullName": "Склад",
+          "shortName": "Склад ЦМТО"
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "f1c71bc6-b603-431f-b890-47159bb2dc2a",
+      "point": {
+        "latitude": 67.92112850784615,
+        "longitude": 32.84355222966894
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-23T09:20:18.778Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.92140815567872,
+          "longitude": 32.84364633282772
+        },
+        {
+          "latitude": 67.92134709523495,
+          "longitude": 32.844025704272
+        },
+        {
+          "latitude": 67.92084886001358,
+          "longitude": 32.84345812651016
+        },
+        {
+          "latitude": 67.92090992045735,
+          "longitude": 32.843078755065875
+        }
+      ],
+      "territoryNames": [],
+      "number": "6.11",
+      "installationName": "",
+      "inventoryNumber": "200663",
+      "planningDocuments": [
+        {
+          "id": "fc01fd0e-3a09-4aff-9a29-573565bdf86f",
+          "kind": "ПТП",
+          "number": "13 (46/11)"
+        }
+      ],
+      "workshopFull": "Цех материально-технического обеспечения",
+      "workshopShort": "ЦМТО",
+      "departments": [
+        {
+          "id": "9e5903f4-ad07-4efc-91cb-b6816c629e67",
+          "fullName": "Модульный склад №2",
+          "shortName": "Склад №2"
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "4df56847-963c-49c4-abd9-b9bb095042d1",
+      "point": {
+        "latitude": 67.92205925559102,
+        "longitude": 32.842672392725945
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-23T09:25:01.714Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.92217473392957,
+          "longitude": 32.842658345130715
+        },
+        {
+          "latitude": 67.92215434801147,
+          "longitude": 32.842847270685255
+        },
+        {
+          "latitude": 67.92194377725245,
+          "longitude": 32.842686440321174
+        },
+        {
+          "latitude": 67.92196416317054,
+          "longitude": 32.842497514766634
+        }
+      ],
+      "territoryNames": [],
+      "number": "6.14",
+      "installationName": "",
+      "inventoryNumber": "200012",
+      "planningDocuments": [],
+      "workshopFull": "Цех материально-технического обеспечения",
+      "workshopShort": "ЦМТО",
+      "departments": [
+        {
+          "id": "23759adc-b2a2-4764-ab4e-4e6c168b21fa",
+          "fullName": "Склад ЦМТО",
+          "shortName": ""
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "5d3870a0-b9b3-4e5b-87c4-dd5d714d5660",
+      "point": {
+        "latitude": 67.9207818865471,
+        "longitude": 32.845174223184586
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-23T09:35:03.569Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.92107057249332,
+          "longitude": 32.84518614813458
+        },
+        {
+          "latitude": 67.92101747019791,
+          "longitude": 32.84561827329356
+        },
+        {
+          "latitude": 67.92049320060089,
+          "longitude": 32.84516229823459
+        },
+        {
+          "latitude": 67.9205463028963,
+          "longitude": 32.84473017307561
+        }
+      ],
+      "territoryNames": [],
+      "number": "6.15",
+      "installationName": "",
+      "inventoryNumber": "830984",
+      "planningDocuments": [],
+      "workshopFull": "Цех материально-технического обеспечения",
+      "workshopShort": "ЦМТО",
+      "departments": [
+        {
+          "id": "dec3baa8-485d-4bf6-8fed-b62b95f73f97",
+          "fullName": "Площадка временного хранения таможенных грузов",
+          "shortName": "Таможенный склад"
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "96d17d5a-8146-4bed-82d5-3b9336c3225a",
+      "point": {
+        "latitude": 67.92018728771012,
+        "longitude": 32.850867211818695
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-23T09:51:27.616Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.92002045114695,
+          "longitude": 32.85081922469603
+        },
+        {
+          "latitude": 67.92005309773087,
+          "longitude": 32.85059915641202
+        },
+        {
+          "latitude": 67.92035412427329,
+          "longitude": 32.85091519894136
+        },
+        {
+          "latitude": 67.92032147768937,
+          "longitude": 32.851135267225374
+        }
+      ],
+      "territoryNames": [],
+      "number": "5.36",
+      "installationName": "",
+      "inventoryNumber": "160019",
+      "planningDocuments": [
+        {
+          "id": "1bde3cf8-33ae-4039-8f3a-8da060909316",
+          "kind": "ПЛРН",
+          "number": "5"
+        }
+      ],
+      "workshopFull": "Цех энергообеспечения",
+      "workshopShort": "ЦЭО",
+      "departments": [
+        {
+          "id": "6c01508f-dfa3-419a-9843-06ec1c119308",
+          "fullName": "Здание главной понизительной подстанции -11Г",
+          "shortName": "ГПП-11Г"
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "94b43dd2-842b-419e-abca-d6a073f15ce5",
+      "point": {
+        "latitude": 67.9167846941937,
+        "longitude": 32.84307646751404
+      },
+      "note": "Изменения внесены в раздел «Документы предварительного планирования» администратором 23.10.2026.",
+      "updatedAtIso": "2026-10-23T10:58:35.892Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.9166009665642,
+          "longitude": 32.8426918387413
+        },
+        {
+          "latitude": 67.91694583407639,
+          "longitude": 32.84307539463043
+        },
+        {
+          "latitude": 67.91694583407639,
+          "longitude": 32.843094170093536
+        },
+        {
+          "latitude": 67.91688936489251,
+          "longitude": 32.84345358610153
+        },
+        {
+          "latitude": 67.91654147135895,
+          "longitude": 32.84306734800339
+        }
+      ],
+      "territoryNames": [],
+      "number": "4.4",
+      "installationName": "",
+      "inventoryNumber": "60002",
+      "planningDocuments": [
+        {
+          "id": "5ad8074d-d475-4060-87d5-851feebd20f0",
+          "kind": "ПТП",
+          "number": "9 (46/7)"
+        },
+        {
+          "id": "c866385e-7a11-4c0c-ac65-2f822241d290",
+          "kind": "ПМЛА",
+          "number": "8"
+        }
+      ],
+      "workshopFull": "Химико-металлургический цех",
+      "workshopShort": "ХМЦ",
+      "departments": [
+        {
+          "id": "e78d6e49-376a-45da-9a0d-b313ced0d535",
+          "fullName": "Административно-бытовой корпус ",
+          "shortName": "АБК ХМЦ"
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "dc3c21f2-b5fa-4a7c-89ef-6b74753f34a7",
+      "point": {
+        "latitude": 67.91718315130618,
+        "longitude": 32.84361486483437
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-23T11:21:31.324Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91730268065551,
+          "longitude": 32.84356612222545
+        },
+        {
+          "latitude": 67.91726074481181,
+          "longitude": 32.843861571850105
+        },
+        {
+          "latitude": 67.91706362195687,
+          "longitude": 32.8436636074433
+        },
+        {
+          "latitude": 67.91710555780057,
+          "longitude": 32.84336815781864
+        }
+      ],
+      "territoryNames": [],
+      "number": "4.5",
+      "installationName": "",
+      "inventoryNumber": "60004",
+      "planningDocuments": [],
+      "workshopFull": "Химико-металлургический цех",
+      "workshopShort": "ХМЦ",
+      "departments": [
+        {
+          "id": "48a79807-0d1d-49bb-945f-fb70280923cf",
+          "fullName": "Здание  распределительной подстанции № 25",
+          "shortName": "РП-25"
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "bb81df05-c0ca-45de-a58a-d97a1851de26",
+      "point": {
+        "latitude": 67.90472144362896,
+        "longitude": 32.8544340133667
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T09:56:09.073Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.904866373092,
+          "longitude": 32.85441309213638
+        },
+        {
+          "latitude": 67.90481012679143,
+          "longitude": 32.85470008850098
+        },
+        {
+          "latitude": 67.90480533449943,
+          "longitude": 32.85470008850098
+        },
+        {
+          "latitude": 67.9045339378261,
+          "longitude": 32.85432457923889
+        },
+        {
+          "latitude": 67.90459144593578,
+          "longitude": 32.85403221845627
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.19",
+      "installationName": "",
+      "inventoryNumber": "580335",
+      "planningDocuments": [],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "e1fba72f-7ced-464d-a447-516285048ac4",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "d3631914-b543-421c-9036-06129db03554",
+          "fullName": "Административно-бытовой корпус (бывшая ГСС)",
+          "shortName": "АБК (ГСС)"
+        }
+      ]
+    },
+    {
+      "id": "153ea280-822d-456c-ac09-58adf4cd363d",
+      "point": {
+        "latitude": 67.90397221549063,
+        "longitude": 32.85470363935646
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T10:46:43.805Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90385550404284,
+          "longitude": 32.85504765417772
+        },
+        {
+          "latitude": 67.90399559660277,
+          "longitude": 32.854244563557955
+        },
+        {
+          "latitude": 67.90408892693841,
+          "longitude": 32.854359624535185
+        },
+        {
+          "latitude": 67.90394883437848,
+          "longitude": 32.85516271515495
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.21",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [
+        {
+          "id": "d4d06efe-efee-4a41-b984-2bc1f5eb6ea4",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "f40db038-255d-4f23-9508-9347f875ce99",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "3feb4c7d-51e9-4ef6-8267-792fee498862",
+          "fullName": "Отделение по получению окиси углерода № 4",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "9c8cf65b-ad8e-438f-880f-30ef7224ba0b",
+      "point": {
+        "latitude": 67.90378935297016,
+        "longitude": 32.85428136131512
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T10:52:35.180Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90397347854022,
+          "longitude": 32.853729128837585
+        },
+        {
+          "latitude": 67.9037628961573,
+          "longitude": 32.8547897707098
+        },
+        {
+          "latitude": 67.90370484677734,
+          "longitude": 32.85470008850098
+        },
+        {
+          "latitude": 67.90364884990643,
+          "longitude": 32.854622304439545
+        },
+        {
+          "latitude": 67.90385669346958,
+          "longitude": 32.85356551408768
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.20",
+      "installationName": "",
+      "inventoryNumber": "80014",
+      "planningDocuments": [
+        {
+          "id": "5a5c816c-d707-491c-9c4c-866ff9f451c2",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "a2df48a4-f2ba-4e0c-8599-783e1c215550",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "fa5628ff-9e4f-492d-ba8a-067369d9f4bd",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "c26f2529-221d-47ec-8c62-08cf73cbbca1",
+          "fullName": "Здание склада термоантрацита",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "aaed1f61-3b06-4cd0-8703-dc12df4722be",
+      "point": {
+        "latitude": 67.90348512510033,
+        "longitude": 32.85527636851559
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T10:57:55.731Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90363649021859,
+          "longitude": 32.854957580566406
+        },
+        {
+          "latitude": 67.90348615553026,
+          "longitude": 32.855746150016785
+        },
+        {
+          "latitude": 67.90336497347226,
+          "longitude": 32.85559397169399
+        },
+        {
+          "latitude": 67.90342158194304,
+          "longitude": 32.855288833379745
+        },
+        {
+          "latitude": 67.90351642433757,
+          "longitude": 32.854795306921005
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.22",
+      "installationName": "",
+      "inventoryNumber": "80015",
+      "planningDocuments": [],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "00c7ceb7-54d8-4330-a3dd-920a46dee6e6",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "ead72549-c418-44b4-9a4a-229ac1f39e02",
+          "fullName": "Склад арматуры и запчастей высокого давления",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "10ea5e11-9884-4e37-9539-e9f1f8287647",
+      "point": {
+        "latitude": 67.9038150741374,
+        "longitude": 32.85602241754532
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T11:04:00.315Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90398253809064,
+          "longitude": 32.85577041877964
+        },
+        {
+          "latitude": 67.90385742823631,
+          "longitude": 32.85652143674833
+        },
+        {
+          "latitude": 67.90364761018414,
+          "longitude": 32.856274416310995
+        },
+        {
+          "latitude": 67.90377272003848,
+          "longitude": 32.85552339834231
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.23",
+      "installationName": "",
+      "inventoryNumber": "80002",
+      "planningDocuments": [
+        {
+          "id": "0831e3da-5b48-4b44-9abd-3b6b88581b43",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "d39dd88b-d7d8-41b3-8d67-0b5e8fe9f1dd",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "7453b3b6-4dd8-4169-a664-d2978efdb0b9",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "92667f16-310c-4886-9ead-3e89a1b857df",
+          "fullName": "Здание установки переплавки (переработки) остатков синтеза",
+          "shortName": "УОС"
+        }
+      ]
+    },
+    {
+      "id": "102387f0-0213-4857-b7cd-dfc03200bfda",
+      "point": {
+        "latitude": 67.90348221988572,
+        "longitude": 32.85792464017868
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T11:16:17.762Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90380914134444,
+          "longitude": 32.856552768125646
+        },
+        {
+          "latitude": 67.90359421121784,
+          "longitude": 32.85784841641201
+        },
+        {
+          "latitude": 67.90363620381203,
+          "longitude": 32.85789764521663
+        },
+        {
+          "latitude": 67.90347832178495,
+          "longitude": 32.85884939442495
+        },
+        {
+          "latitude": 67.90333682184202,
+          "longitude": 32.85868351105485
+        },
+        {
+          "latitude": 67.90329229191585,
+          "longitude": 32.858951947701925
+        },
+        {
+          "latitude": 67.90319064075369,
+          "longitude": 32.858832779898705
+        },
+        {
+          "latitude": 67.90339432094936,
+          "longitude": 32.85760494878599
+        },
+        {
+          "latitude": 67.90343829167647,
+          "longitude": 32.85765649659757
+        },
+        {
+          "latitude": 67.90365195356064,
+          "longitude": 32.856368493568525
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.24",
+      "installationName": "",
+      "inventoryNumber": "80013, 82584",
+      "planningDocuments": [
+        {
+          "id": "0da0f471-de42-4417-acbe-a4dd20f3979e",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "8627f4ff-f93c-4db6-89e7-25e88d856853",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "f174e3b5-bbdb-4a47-973c-1e28e9df0826",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "d87eb5b3-536f-4589-838c-ab9b7d00a46e",
+          "fullName": "Передел синтеза № 1",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "6205e22a-235e-45d8-9f56-5dfc4dd84c95",
+      "point": {
+        "latitude": 67.90305835456925,
+        "longitude": 32.860651097039984
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T11:23:54.906Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90330039507205,
+          "longitude": 32.85965053158098
+        },
+        {
+          "latitude": 67.90294326629983,
+          "longitude": 32.86180067360152
+        },
+        {
+          "latitude": 67.90281631406644,
+          "longitude": 32.861651662498986
+        },
+        {
+          "latitude": 67.90317344283866,
+          "longitude": 32.859501520478446
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.28",
+      "installationName": "",
+      "inventoryNumber": "80011, 82015",
+      "planningDocuments": [
+        {
+          "id": "d4eb6226-c649-45fc-8362-0655d2524a10",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "893438d0-0972-4951-8aa9-53ed15793563",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "43504399-c5ce-44fe-b2b2-7c8455521a38",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "9d57bec7-b563-48fe-9882-75ac9875a209",
+          "fullName": "Здание опытно-промышленной установки, передел № 3",
+          "shortName": "ОПУ"
+        }
+      ]
+    },
+    {
+      "id": "6648435d-97de-4106-b604-bafc0aba5b53",
+      "point": {
+        "latitude": 67.90268749408396,
+        "longitude": 32.861104759958664
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T11:36:29.984Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.9030406710807,
+          "longitude": 32.85937025077865
+        },
+        {
+          "latitude": 67.9026571355827,
+          "longitude": 32.861461088247815
+        },
+        {
+          "latitude": 67.902758763312,
+          "longitude": 32.86159282418178
+        },
+        {
+          "latitude": 67.90261801298085,
+          "longitude": 32.86236012230067
+        },
+        {
+          "latitude": 67.90244696783616,
+          "longitude": 32.86213840336585
+        },
+        {
+          "latitude": 67.90257948892435,
+          "longitude": 32.86141596682977
+        },
+        {
+          "latitude": 67.90250357410702,
+          "longitude": 32.86131756150837
+        },
+        {
+          "latitude": 67.90289533884797,
+          "longitude": 32.8591818624564
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.27",
+      "installationName": "",
+      "inventoryNumber": "80012, 82400",
+      "planningDocuments": [
+        {
+          "id": "65aa1c85-4d30-42ca-a43d-7d90cb81899e",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "2b3a5e55-d63c-48ae-9386-1bb3cfb6778d",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "7655f57d-c0cf-442b-b23c-18fedff19270",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "447f9bac-21b4-477c-bc27-ba8b5af8e84f",
+          "fullName": "Здание передела № 5, упаковка никелевого порошка, административно бытовой корпус",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "2e8242f4-ebf4-4e33-b6f1-3fa6ea03d2e7",
+      "point": {
+        "latitude": 67.90237158171455,
+        "longitude": 32.8626388387555
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T11:49:15.752Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.9024368125265,
+          "longitude": 32.86260958760977
+        },
+        {
+          "latitude": 67.90238194773798,
+          "longitude": 32.86289658397436
+        },
+        {
+          "latitude": 67.90234448825632,
+          "longitude": 32.86289658397436
+        },
+        {
+          "latitude": 67.90224724467387,
+          "longitude": 32.86276515573263
+        },
+        {
+          "latitude": 67.90234713690853,
+          "longitude": 32.86224748939276
+        },
+        {
+          "latitude": 67.90247186018414,
+          "longitude": 32.86241763184913
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.32",
+      "installationName": "",
+      "inventoryNumber": "80004",
+      "planningDocuments": [],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "a86ed8db-83d7-478b-811b-53ee4cfec4a4",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "bd5f7045-4c56-40c6-9bbb-e4976efe1fff",
+          "fullName": "Водородная станция",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "964813a2-c04d-41d3-9f1c-e9dd86f32876",
+      "point": {
+        "latitude": 67.90294236956707,
+        "longitude": 32.855645433068275
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T12:42:42.927Z",
+      "kind": "building",
+      "objectType": "installation",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90283334866791,
+          "longitude": 32.85567909479141
+        },
+        {
+          "latitude": 67.90283435765713,
+          "longitude": 32.855587899684906
+        },
+        {
+          "latitude": 67.90284646552402,
+          "longitude": 32.85550206899643
+        },
+        {
+          "latitude": 67.90286765427592,
+          "longitude": 32.85542964935303
+        },
+        {
+          "latitude": 67.90289590591516,
+          "longitude": 32.855378687381744
+        },
+        {
+          "latitude": 67.9029292024459,
+          "longitude": 32.85535454750061
+        },
+        {
+          "latitude": 67.90296350791257,
+          "longitude": 32.855357229709625
+        },
+        {
+          "latitude": 67.9029957953644,
+          "longitude": 32.855389416217804
+        },
+        {
+          "latitude": 67.90302303786703,
+          "longitude": 32.85544574260712
+        },
+        {
+          "latitude": 67.90304220849791,
+          "longitude": 32.85552352666855
+        },
+        {
+          "latitude": 67.90305229829727,
+          "longitude": 32.855609357357025
+        },
+        {
+          "latitude": 67.90305028033774,
+          "longitude": 32.855703234672546
+        },
+        {
+          "latitude": 67.90303817257691,
+          "longitude": 32.85578906536102
+        },
+        {
+          "latitude": 67.90301698398031,
+          "longitude": 32.855861485004425
+        },
+        {
+          "latitude": 67.90298873248813,
+          "longitude": 32.85591244697571
+        },
+        {
+          "latitude": 67.90295543604259,
+          "longitude": 32.85593658685684
+        },
+        {
+          "latitude": 67.90292113056404,
+          "longitude": 32.85593390464783
+        },
+        {
+          "latitude": 67.90288884300858,
+          "longitude": 32.85590171813965
+        },
+        {
+          "latitude": 67.90286160034879,
+          "longitude": 32.855845391750336
+        },
+        {
+          "latitude": 67.90284242956909,
+          "longitude": 32.855767607688904
+        }
+      ],
+      "territoryNames": [],
+      "number": "0",
+      "installationName": "Газгольдер № 5",
+      "inventoryNumber": "",
+      "planningDocuments": [
+        {
+          "id": "c9b3a46b-db9d-4a2f-86ff-6c562bfd8b93",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "8d599ea5-a0eb-4171-864d-1223d0c49653",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля, отделение карбонильного никеля",
+      "workshopShort": "ЦЭН ОКН",
+      "departments": [],
+      "sites": []
+    },
+    {
+      "id": "e2c06c62-401e-4534-9d11-9361fbc66101",
+      "point": {
+        "latitude": 67.90291284617818,
+        "longitude": 32.85666473601994
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T12:50:30.463Z",
+      "kind": "building",
+      "objectType": "installation",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90298066062692,
+          "longitude": 32.85651594400406
+        },
+        {
+          "latitude": 67.90299377739998,
+          "longitude": 32.856580317020416
+        },
+        {
+          "latitude": 67.9029988223107,
+          "longitude": 32.85665273666382
+        },
+        {
+          "latitude": 67.9029957953644,
+          "longitude": 32.85672515630722
+        },
+        {
+          "latitude": 67.90298368757522,
+          "longitude": 32.85679221153259
+        },
+        {
+          "latitude": 67.90296451689613,
+          "longitude": 32.856843173503876
+        },
+        {
+          "latitude": 67.9029403012789,
+          "longitude": 32.85687804222107
+        },
+        {
+          "latitude": 67.90291305867936,
+          "longitude": 32.856891453266144
+        },
+        {
+          "latitude": 67.90288581604796,
+          "longitude": 32.8568834066391
+        },
+        {
+          "latitude": 67.90286059136076,
+          "longitude": 32.85685122013092
+        },
+        {
+          "latitude": 67.90284142058024,
+          "longitude": 32.85680025815964
+        },
+        {
+          "latitude": 67.90282729473182,
+          "longitude": 32.856727838516235
+        },
+        {
+          "latitude": 67.90282325877357,
+          "longitude": 32.85664737224579
+        },
+        {
+          "latitude": 67.90282931271071,
+          "longitude": 32.85656958818436
+        },
+        {
+          "latitude": 67.90284646552402,
+          "longitude": 32.85649985074997
+        },
+        {
+          "latitude": 67.90287068123894,
+          "longitude": 32.8564515709877
+        },
+        {
+          "latitude": 67.90289994186082,
+          "longitude": 32.85642743110657
+        },
+        {
+          "latitude": 67.90293021143094,
+          "longitude": 32.85643011331558
+        },
+        {
+          "latitude": 67.90295846299418,
+          "longitude": 32.85646229982376
+        }
+      ],
+      "territoryNames": [],
+      "number": "0",
+      "installationName": "Газгольдер № 3",
+      "inventoryNumber": "",
+      "planningDocuments": [
+        {
+          "id": "1a1f7363-a9b9-4be0-893f-fe38ae15ab60",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "5252f9ab-9c60-4dd4-b371-b76a10a62b2a",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля, отделение карбонильного никеля",
+      "workshopShort": "ЦЭН ОКН",
+      "departments": [],
+      "sites": []
+    },
+    {
+      "id": "ed0de461-643b-4132-8d02-70a9251ce628",
+      "point": {
+        "latitude": 67.90269070885853,
+        "longitude": 32.857651224261836
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T12:52:51.751Z",
+      "kind": "building",
+      "objectType": "installation",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90273345852111,
+          "longitude": 32.857347428798676
+        },
+        {
+          "latitude": 67.90276776427646,
+          "longitude": 32.85740107297897
+        },
+        {
+          "latitude": 67.90279399805524,
+          "longitude": 32.85748153924942
+        },
+        {
+          "latitude": 67.90280913291414,
+          "longitude": 32.857578098773956
+        },
+        {
+          "latitude": 67.90281215988475,
+          "longitude": 32.85768538713455
+        },
+        {
+          "latitude": 67.90280106099061,
+          "longitude": 32.85778999328613
+        },
+        {
+          "latitude": 67.90277886318648,
+          "longitude": 32.85787582397461
+        },
+        {
+          "latitude": 67.90274657543353,
+          "longitude": 32.85794019699097
+        },
+        {
+          "latitude": 67.90270823366873,
+          "longitude": 32.857972383499146
+        },
+        {
+          "latitude": 67.90266787384803,
+          "longitude": 32.85796970129013
+        },
+        {
+          "latitude": 67.90262953195352,
+          "longitude": 32.85793215036392
+        },
+        {
+          "latitude": 67.90259926199212,
+          "longitude": 32.85786509513855
+        },
+        {
+          "latitude": 67.90257807299574,
+          "longitude": 32.85777390003204
+        },
+        {
+          "latitude": 67.90256899199136,
+          "longitude": 32.85766929388046
+        },
+        {
+          "latitude": 67.90257302799372,
+          "longitude": 32.85756468772888
+        },
+        {
+          "latitude": 67.90259018099601,
+          "longitude": 32.857468128204346
+        },
+        {
+          "latitude": 67.90261843297225,
+          "longitude": 32.857390344142914
+        },
+        {
+          "latitude": 67.90265374789422,
+          "longitude": 32.857342064380646
+        },
+        {
+          "latitude": 67.90269309874418,
+          "longitude": 32.857325971126556
+        }
+      ],
+      "territoryNames": [],
+      "number": "0",
+      "installationName": "Газгольдер № 2",
+      "inventoryNumber": "",
+      "planningDocuments": [
+        {
+          "id": "841fd84f-838a-4e77-aae5-fad2e721ef0d",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "50c0c56e-1475-41e0-becf-ae625bf85a18",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля, отделение карбонильного никеля",
+      "workshopShort": "ЦЭН ОКН",
+      "departments": [],
+      "sites": []
+    },
+    {
+      "id": "8b1256c0-e34d-4aa2-9862-aef7a814f09d",
+      "point": {
+        "latitude": 67.90248768753027,
+        "longitude": 32.85864999419764
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T12:55:02.927Z",
+      "kind": "building",
+      "objectType": "installation",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90244387557033,
+          "longitude": 32.858887016773224
+        },
+        {
+          "latitude": 67.90241764139674,
+          "longitude": 32.85883605480194
+        },
+        {
+          "latitude": 67.90239847025114,
+          "longitude": 32.858766317367554
+        },
+        {
+          "latitude": 67.90238938917665,
+          "longitude": 32.85868316888809
+        },
+        {
+          "latitude": 67.9023903981851,
+          "longitude": 32.858597338199615
+        },
+        {
+          "latitude": 67.9024025062831,
+          "longitude": 32.85851687192917
+        },
+        {
+          "latitude": 67.90242369543941,
+          "longitude": 32.858449816703796
+        },
+        {
+          "latitude": 67.90245093861205,
+          "longitude": 32.85840421915054
+        },
+        {
+          "latitude": 67.9024832267753,
+          "longitude": 32.858388125896454
+        },
+        {
+          "latitude": 67.90251551489376,
+          "longitude": 32.8583961725235
+        },
+        {
+          "latitude": 67.90254477596238,
+          "longitude": 32.85843372344971
+        },
+        {
+          "latitude": 67.90256798299066,
+          "longitude": 32.85849541425705
+        },
+        {
+          "latitude": 67.90258311799664,
+          "longitude": 32.85857319831848
+        },
+        {
+          "latitude": 67.90258715399656,
+          "longitude": 32.85865902900696
+        },
+        {
+          "latitude": 67.90258109999638,
+          "longitude": 32.858744859695435
+        },
+        {
+          "latitude": 67.90256394698739,
+          "longitude": 32.85881996154785
+        },
+        {
+          "latitude": 67.9025387219512,
+          "longitude": 32.858876287937164
+        },
+        {
+          "latitude": 67.90250845187168,
+          "longitude": 32.85890847444534
+        },
+        {
+          "latitude": 67.90247515473868,
+          "longitude": 32.85891383886337
+        }
+      ],
+      "territoryNames": [],
+      "number": "0",
+      "installationName": "Газгольдер № 1",
+      "inventoryNumber": "",
+      "planningDocuments": [
+        {
+          "id": "de13f887-eff0-45c7-92a4-863827dcea70",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "47d87130-60d8-4607-8339-6bcafe491c96",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля, отделение карбонильного никеля",
+      "workshopShort": "ЦЭН ОКН",
+      "departments": [],
+      "sites": []
+    },
+    {
+      "id": "43761fa7-8e30-4539-af01-ebd1f14d94bb",
+      "point": {
+        "latitude": 67.90209119858835,
+        "longitude": 32.86053431661505
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T12:56:32.406Z",
+      "kind": "building",
+      "objectType": "installation",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.9021906136584,
+          "longitude": 32.860625088214874
+        },
+        {
+          "latitude": 67.90217446937928,
+          "longitude": 32.86070019006729
+        },
+        {
+          "latitude": 67.90214924392075,
+          "longitude": 32.860761880874634
+        },
+        {
+          "latitude": 67.90211897333441,
+          "longitude": 32.86079674959183
+        },
+        {
+          "latitude": 67.90208668466556,
+          "longitude": 32.86080747842789
+        },
+        {
+          "latitude": 67.90205338692888,
+          "longitude": 32.86078870296478
+        },
+        {
+          "latitude": 67.90202513426641,
+          "longitude": 32.860745787620544
+        },
+        {
+          "latitude": 67.90200293572187,
+          "longitude": 32.86067873239517
+        },
+        {
+          "latitude": 67.9019888093643,
+          "longitude": 32.860598266124725
+        },
+        {
+          "latitude": 67.90198578228654,
+          "longitude": 32.86051243543625
+        },
+        {
+          "latitude": 67.90199385449299,
+          "longitude": 32.86041587591171
+        },
+        {
+          "latitude": 67.90201302597202,
+          "longitude": 32.86033272743225
+        },
+        {
+          "latitude": 67.90204329669623,
+          "longitude": 32.86027371883392
+        },
+        {
+          "latitude": 67.9020776034694,
+          "longitude": 32.86024421453476
+        },
+        {
+          "latitude": 67.90211493725326,
+          "longitude": 32.86024957895279
+        },
+        {
+          "latitude": 67.90214823490186,
+          "longitude": 32.860287129879
+        },
+        {
+          "latitude": 67.90217547839708,
+          "longitude": 32.86035418510437
+        },
+        {
+          "latitude": 67.90219263169249,
+          "longitude": 32.86044001579285
+        },
+        {
+          "latitude": 67.90219767677698,
+          "longitude": 32.8605392575264
+        }
+      ],
+      "territoryNames": [],
+      "number": "0",
+      "installationName": "Газгольдер № 6",
+      "inventoryNumber": "",
+      "planningDocuments": [
+        {
+          "id": "70cbf3fb-77d8-47a9-bbc3-0b07aad5295b",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "89b23d7c-310e-4ced-b26c-baacbaa9c78c",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля, отделение карбонильного никеля",
+      "workshopShort": "ЦЭН ОКН",
+      "departments": [],
+      "sites": []
+    },
+    {
+      "id": "c5cfc309-97a9-484b-a873-9a8da328edc3",
+      "point": {
+        "latitude": 67.90396322978808,
+        "longitude": 32.85867752213227
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T12:58:01.615Z",
+      "kind": "building",
+      "objectType": "installation",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90402695228619,
+          "longitude": 32.85863757133484
+        },
+        {
+          "latitude": 67.90402796122359,
+          "longitude": 32.85869389772415
+        },
+        {
+          "latitude": 67.9040219075984,
+          "longitude": 32.858744859695435
+        },
+        {
+          "latitude": 67.90401080928149,
+          "longitude": 32.85879045724869
+        },
+        {
+          "latitude": 67.90399466626559,
+          "longitude": 32.85882264375687
+        },
+        {
+          "latitude": 67.90397549641966,
+          "longitude": 32.85884141921997
+        },
+        {
+          "latitude": 67.90395430867684,
+          "longitude": 32.858844101428986
+        },
+        {
+          "latitude": 67.90393513879766,
+          "longitude": 32.858828008174896
+        },
+        {
+          "latitude": 67.90391798678709,
+          "longitude": 32.85879850387573
+        },
+        {
+          "latitude": 67.90390587947792,
+          "longitude": 32.858755588531494
+        },
+        {
+          "latitude": 67.90389881687798,
+          "longitude": 32.85870462656021
+        },
+        {
+          "latitude": 67.90389780793498,
+          "longitude": 32.85864561796188
+        },
+        {
+          "latitude": 67.90390587947792,
+          "longitude": 32.858586609363556
+        },
+        {
+          "latitude": 67.90392000467133,
+          "longitude": 32.8585410118103
+        },
+        {
+          "latitude": 67.90393917456302,
+          "longitude": 32.858508825302124
+        },
+        {
+          "latitude": 67.90396137125992,
+          "longitude": 32.858498096466064
+        },
+        {
+          "latitude": 67.90398457687496,
+          "longitude": 32.858508825302124
+        },
+        {
+          "latitude": 67.90400374671341,
+          "longitude": 32.85853832960129
+        },
+        {
+          "latitude": 67.90401888078523,
+          "longitude": 32.85858392715454
+        }
+      ],
+      "territoryNames": [],
+      "number": "0",
+      "installationName": "Газгольдер № 4",
+      "inventoryNumber": "",
+      "planningDocuments": [
+        {
+          "id": "4166ec47-c6c7-4aea-9c5a-1ccc67516afe",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "9507ca14-d4ef-4478-8e2f-4945fdab9ff4",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля, отделение карбонильного никеля",
+      "workshopShort": "ЦЭН ОКН",
+      "departments": [],
+      "sites": []
+    },
+    {
+      "id": "000c7727-0e27-4444-bf92-0ca734c75581",
+      "point": {
+        "latitude": 67.90245513395939,
+        "longitude": 32.86383108233521
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T13:10:52.783Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90276048143627,
+          "longitude": 32.86374954726829
+        },
+        {
+          "latitude": 67.90265410522512,
+          "longitude": 32.86427520998593
+        },
+        {
+          "latitude": 67.90243163533522,
+          "longitude": 32.86395707850544
+        },
+        {
+          "latitude": 67.90244579954242,
+          "longitude": 32.863887085453705
+        },
+        {
+          "latitude": 67.90236706435341,
+          "longitude": 32.86377449429696
+        },
+        {
+          "latitude": 67.90233255472515,
+          "longitude": 32.86394502514011
+        },
+        {
+          "latitude": 67.90226135471266,
+          "longitude": 32.86384320927015
+        },
+        {
+          "latitude": 67.90238807634488,
+          "longitude": 32.8632170087611
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.33",
+      "installationName": "",
+      "inventoryNumber": "82399",
+      "planningDocuments": [],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "5f1e759a-b8a4-47eb-94f4-06f63fc8a926",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "1f1c1cb0-1fe2-4355-ab6d-da6ab375deba",
+          "fullName": "Склад № 2, гараж",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "3aa47133-5301-4743-8cd2-2f47079b3fb5",
+      "point": {
+        "latitude": 67.90426581688773,
+        "longitude": 32.858779057860374
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T13:18:04.254Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90436727650687,
+          "longitude": 32.858575660034475
+        },
+        {
+          "latitude": 67.90427573798482,
+          "longitude": 32.85911584895288
+        },
+        {
+          "latitude": 67.90416435726858,
+          "longitude": 32.858982455686274
+        },
+        {
+          "latitude": 67.90425589579064,
+          "longitude": 32.85844226676787
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.25",
+      "installationName": "",
+      "inventoryNumber": "80001",
+      "planningDocuments": [
+        {
+          "id": "15c52862-9312-43b7-b955-5876ecc47f2a",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "f0808c69-756d-4a35-afbb-a6e84ae024ad",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "c57d4e4d-880e-40ec-baed-ee10d381d585",
+          "fullName": "Распределительная подстанция",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "7f9796e0-0ff1-42fb-95e3-e77a815b56c1",
+      "point": {
+        "latitude": 67.90380952510496,
+        "longitude": 32.85958170890808
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T13:21:07.742Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90392510399616,
+          "longitude": 32.85941781694869
+        },
+        {
+          "latitude": 67.9038252180342,
+          "longitude": 32.85992743635474
+        },
+        {
+          "latitude": 67.90369394621376,
+          "longitude": 32.85974560086747
+        },
+        {
+          "latitude": 67.90379383217572,
+          "longitude": 32.859235981461424
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.26",
+      "installationName": "",
+      "inventoryNumber": "80005",
+      "planningDocuments": [],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "5dbdedc2-991b-482d-903d-a36f91eba26d",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "be12da05-0670-47ef-9361-d3383d775716",
+          "fullName": "Центральная вентиляторная",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "e13f8716-5790-4ea7-bb7a-04ccfdaa0a6e",
+      "point": {
+        "latitude": 67.90364069394946,
+        "longitude": 32.86061480641366
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T13:33:22.661Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90363133608714,
+          "longitude": 32.86010804387911
+        },
+        {
+          "latitude": 67.90377247514606,
+          "longitude": 32.86028341206318
+        },
+        {
+          "latitude": 67.90373162043517,
+          "longitude": 32.86051578250685
+        },
+        {
+          "latitude": 67.90369175248772,
+          "longitude": 32.86046624576201
+        },
+        {
+          "latitude": 67.90355912532608,
+          "longitude": 32.861220592855
+        },
+        {
+          "latitude": 67.90345785421462,
+          "longitude": 32.86109476141576
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.29",
+      "installationName": "",
+      "inventoryNumber": "80010, 82582",
+      "planningDocuments": [
+        {
+          "id": "4584b738-932d-4fa8-8dd6-a08102396dc4",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "4f92c202-377e-44a5-9239-ee540863f9df",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "bc2a26b2-9896-434f-a8d5-e38b8c8ec862",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "3a3ef679-681a-4234-a2b0-fb691d7368bf",
+          "fullName": "Передел № 2, ректификация",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "d99daec9-373f-4002-8a96-ad8b50684850",
+      "point": {
+        "latitude": 67.9035026929727,
+        "longitude": 32.86131698062526
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T13:40:09.157Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.9034579046079,
+          "longitude": 32.86109447479248
+        },
+        {
+          "latitude": 67.90370106320924,
+          "longitude": 32.86139756441116
+        },
+        {
+          "latitude": 67.90364153498993,
+          "longitude": 32.861738204956055
+        },
+        {
+          "latitude": 67.90332572543572,
+          "longitude": 32.86135068555876
+        },
+        {
+          "latitude": 67.90338723662062,
+          "longitude": 32.86100397340786
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.30",
+      "installationName": "",
+      "inventoryNumber": "800016, 82568",
+      "planningDocuments": [
+        {
+          "id": "925867cd-5d49-4b78-a2eb-650ef0cb1ada",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "32054b71-829d-44e9-8f7f-4ce47a07d830",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "a70878b4-d00a-49d0-b96e-ed2140df8832",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "3b708023-0fa8-4da1-8e64-ddc9c7fccea0",
+          "fullName": "Здание отделения № 2а, термическая переработка кубовых остатков",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "f192f4b2-fdd5-4d1f-b4b1-596e56f6a68b",
+      "point": {
+        "latitude": 67.90333203603389,
+        "longitude": 32.86227196455002
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T13:47:37.492Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90347045231223,
+          "longitude": 32.86205236612181
+        },
+        {
+          "latitude": 67.90334846847698,
+          "longitude": 32.862698240288594
+        },
+        {
+          "latitude": 67.90319361975554,
+          "longitude": 32.86249156297823
+        },
+        {
+          "latitude": 67.9033156035908,
+          "longitude": 32.86184568881144
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.31",
+      "installationName": "",
+      "inventoryNumber": "82102, 82103",
+      "planningDocuments": [
+        {
+          "id": "b62585ba-770c-4f1e-83b3-398244c93c44",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "28c30553-978b-4367-b7f1-e32159e406b4",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "5b38b7c6-3be5-4ba4-ab58-a947f973e301",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "0cf56da3-5013-4ca4-9f2d-78c0ef575841",
+          "fullName": "Опытная промышленная установка получения никелевого порошка, распределительная подстанция № 135",
+          "shortName": "ОПУ НП, РП-135"
+        }
+      ]
     }
   ],
   "published": [
@@ -10869,11 +12947,11 @@
     {
       "id": "kml-hydrant-034b536d492912bd985e",
       "point": {
-        "latitude": 67.902627,
-        "longitude": 32.860675
+        "latitude": 67.90255272124654,
+        "longitude": 32.86042978291235
       },
-      "note": "Источник сведений о состоянии ПГ: акт проверки наружного противопожарного водоснабжения «Акт проверки ПГ Мончегорск  .docx». Дата загрузки: 16.10.2026.",
-      "updatedAtIso": "2026-10-16T06:06:23.130Z",
+      "note": "Изменения внесены в раздел «Координаты объекта» администратором 24.10.2026.",
+      "updatedAtIso": "2026-10-24T11:24:16.671Z",
       "kind": "hydrant",
       "number": "ПГ-96",
       "owner": "ЦЭН ОКН",
@@ -10893,11 +12971,11 @@
     {
       "id": "kml-hydrant-1a72b78d062912bd985e",
       "point": {
-        "latitude": 67.902502,
-        "longitude": 32.861756
+        "latitude": 67.90236340592249,
+        "longitude": 32.861531973149255
       },
-      "note": "Источник сведений о состоянии ПГ: акт проверки наружного противопожарного водоснабжения «Акт проверки ПГ Мончегорск  .docx». Дата загрузки: 16.10.2026.",
-      "updatedAtIso": "2026-10-16T06:06:23.130Z",
+      "note": "Изменения внесены в раздел «Координаты объекта» администратором 24.10.2026.",
+      "updatedAtIso": "2026-10-24T11:24:20.414Z",
       "kind": "hydrant",
       "number": "ПГ-97",
       "owner": "ЦЭН ОКН",
@@ -11109,11 +13187,11 @@
     {
       "id": "kml-hydrant-0b19b228f02912a0b8a9",
       "point": {
-        "latitude": 67.9043516163814,
-        "longitude": 32.85409065520097
+        "latitude": 67.90413271178878,
+        "longitude": 32.854010941929175
       },
-      "note": "Источник сведений о состоянии ПГ: акт проверки наружного противопожарного водоснабжения «Акт проверки ПГ Мончегорск  .docx». Дата загрузки: 16.10.2026.",
-      "updatedAtIso": "2026-10-16T06:06:23.130Z",
+      "note": "Изменения внесены в раздел «Координаты объекта» администратором 24.10.2026.",
+      "updatedAtIso": "2026-10-24T09:56:44.085Z",
       "kind": "hydrant",
       "number": "ПГ-88",
       "owner": "ЦЭН ОКН",
@@ -18075,8 +20153,8 @@
         "latitude": 67.91622130306068,
         "longitude": 32.84249469637871
       },
-      "note": "",
-      "updatedAtIso": "2026-10-22T12:53:57.115Z",
+      "note": "Изменения внесены в раздел «Документы предварительного планирования» администратором 23.10.2026.",
+      "updatedAtIso": "2026-10-23T10:59:49.940Z",
       "kind": "building",
       "objectType": "building",
       "mapRole": "ordinary",
@@ -18107,6 +20185,11 @@
           "id": "6f7e1e33-dfbb-4eff-86b0-3bae52101c9d",
           "kind": "ПТП",
           "number": "9 (46/7)"
+        },
+        {
+          "id": "f25fb18f-f1c7-4db1-8c36-f50b6d7a017e",
+          "kind": "ПМЛА",
+          "number": "8"
         }
       ],
       "workshopFull": "Химико-металлургический цех",
@@ -18222,8 +20305,2081 @@
       "workshopShort": "ЦЭН ОКН",
       "departments": [],
       "sites": []
+    },
+    {
+      "id": "d61f8729-0275-4239-8aaf-f2578f149b9c",
+      "point": {
+        "latitude": 67.920093771036,
+        "longitude": 32.84155257046223
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-23T08:56:06.156Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.9196773152699,
+          "longitude": 32.84142309765128
+        },
+        {
+          "latitude": 67.91976228859295,
+          "longitude": 32.840869526883004
+        },
+        {
+          "latitude": 67.92051022680208,
+          "longitude": 32.841682043273174
+        },
+        {
+          "latitude": 67.92042525347902,
+          "longitude": 32.84223561404145
+        }
+      ],
+      "territoryNames": [],
+      "number": "6.10",
+      "installationName": "",
+      "inventoryNumber": "200011",
+      "planningDocuments": [],
+      "workshopFull": "Цех материально-технического обеспечения",
+      "workshopShort": "ЦМТО",
+      "departments": [
+        {
+          "id": "e705560b-49a7-4993-b569-30b317f7a2eb",
+          "fullName": "Склад материальных ценностей»",
+          "shortName": ""
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "8d29cb5e-ba10-437e-b2b9-8be0e4ec763c",
+      "point": {
+        "latitude": 67.92109117521106,
+        "longitude": 32.84248312052545
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-23T09:04:36.611Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.92179058090781,
+          "longitude": 32.84357964992523
+        },
+        {
+          "latitude": 67.92079570953632,
+          "longitude": 32.84247310254182
+        },
+        {
+          "latitude": 67.92068743755414,
+          "longitude": 32.84235075019669
+        },
+        {
+          "latitude": 67.92074668079258,
+          "longitude": 32.84196194156689
+        },
+        {
+          "latitude": 67.92085699536267,
+          "longitude": 32.842078856013416
+        },
+        {
+          "latitude": 67.9208825310619,
+          "longitude": 32.84192115740203
+        },
+        {
+          "latitude": 67.92187829126206,
+          "longitude": 32.843016386032104
+        }
+      ],
+      "territoryNames": [],
+      "number": "6.12",
+      "installationName": "",
+      "inventoryNumber": "200723, 200724",
+      "planningDocuments": [
+        {
+          "id": "b994572b-4cbf-41af-8683-75bf6f193472",
+          "kind": "ПТП",
+          "number": "13 (46/11)"
+        }
+      ],
+      "workshopFull": "Цех материально-технического обеспечения",
+      "workshopShort": "ЦМТО",
+      "departments": [
+        {
+          "id": "b7a14e0b-37d3-4ccf-9874-626204badd4f",
+          "fullName": "Склад огнеупоров",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "b0dd3514-ca41-4521-a877-088fec38e68b",
+          "fullName": "Административно-бытовой корпус склада огнеупоров",
+          "shortName": "АБК склад огнеупоров"
+        }
+      ]
+    },
+    {
+      "id": "6e881fa5-584f-4cd9-a55f-f0d87624531f",
+      "point": {
+        "latitude": 67.91992448548622,
+        "longitude": 32.842288231745314
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-23T09:15:24.771Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.9204346030827,
+          "longitude": 32.842668626394314
+        },
+        {
+          "latitude": 67.92038119971673,
+          "longitude": 32.8430024456368
+        },
+        {
+          "latitude": 67.91941436788976,
+          "longitude": 32.841907837096315
+        },
+        {
+          "latitude": 67.91946777125573,
+          "longitude": 32.84157401785383
+        }
+      ],
+      "territoryNames": [],
+      "number": "6.9",
+      "installationName": "",
+      "inventoryNumber": "200019, 200020",
+      "planningDocuments": [],
+      "workshopFull": "Цех материально-технического обеспечения",
+      "workshopShort": "ЦМТО",
+      "departments": [
+        {
+          "id": "b91b7530-3777-40b5-abeb-7977c21ba836",
+          "fullName": "Склад",
+          "shortName": "Склад ЦМТО"
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "f1c71bc6-b603-431f-b890-47159bb2dc2a",
+      "point": {
+        "latitude": 67.92112850784615,
+        "longitude": 32.84355222966894
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-23T09:20:18.778Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.92140815567872,
+          "longitude": 32.84364633282772
+        },
+        {
+          "latitude": 67.92134709523495,
+          "longitude": 32.844025704272
+        },
+        {
+          "latitude": 67.92084886001358,
+          "longitude": 32.84345812651016
+        },
+        {
+          "latitude": 67.92090992045735,
+          "longitude": 32.843078755065875
+        }
+      ],
+      "territoryNames": [],
+      "number": "6.11",
+      "installationName": "",
+      "inventoryNumber": "200663",
+      "planningDocuments": [
+        {
+          "id": "fc01fd0e-3a09-4aff-9a29-573565bdf86f",
+          "kind": "ПТП",
+          "number": "13 (46/11)"
+        }
+      ],
+      "workshopFull": "Цех материально-технического обеспечения",
+      "workshopShort": "ЦМТО",
+      "departments": [
+        {
+          "id": "9e5903f4-ad07-4efc-91cb-b6816c629e67",
+          "fullName": "Модульный склад №2",
+          "shortName": "Склад №2"
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "4df56847-963c-49c4-abd9-b9bb095042d1",
+      "point": {
+        "latitude": 67.92205925559102,
+        "longitude": 32.842672392725945
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-23T09:25:01.714Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.92217473392957,
+          "longitude": 32.842658345130715
+        },
+        {
+          "latitude": 67.92215434801147,
+          "longitude": 32.842847270685255
+        },
+        {
+          "latitude": 67.92194377725245,
+          "longitude": 32.842686440321174
+        },
+        {
+          "latitude": 67.92196416317054,
+          "longitude": 32.842497514766634
+        }
+      ],
+      "territoryNames": [],
+      "number": "6.14",
+      "installationName": "",
+      "inventoryNumber": "200012",
+      "planningDocuments": [],
+      "workshopFull": "Цех материально-технического обеспечения",
+      "workshopShort": "ЦМТО",
+      "departments": [
+        {
+          "id": "23759adc-b2a2-4764-ab4e-4e6c168b21fa",
+          "fullName": "Склад ЦМТО",
+          "shortName": ""
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "5d3870a0-b9b3-4e5b-87c4-dd5d714d5660",
+      "point": {
+        "latitude": 67.9207818865471,
+        "longitude": 32.845174223184586
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-23T09:35:03.569Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.92107057249332,
+          "longitude": 32.84518614813458
+        },
+        {
+          "latitude": 67.92101747019791,
+          "longitude": 32.84561827329356
+        },
+        {
+          "latitude": 67.92049320060089,
+          "longitude": 32.84516229823459
+        },
+        {
+          "latitude": 67.9205463028963,
+          "longitude": 32.84473017307561
+        }
+      ],
+      "territoryNames": [],
+      "number": "6.15",
+      "installationName": "",
+      "inventoryNumber": "830984",
+      "planningDocuments": [],
+      "workshopFull": "Цех материально-технического обеспечения",
+      "workshopShort": "ЦМТО",
+      "departments": [
+        {
+          "id": "dec3baa8-485d-4bf6-8fed-b62b95f73f97",
+          "fullName": "Площадка временного хранения таможенных грузов",
+          "shortName": "Таможенный склад"
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "96d17d5a-8146-4bed-82d5-3b9336c3225a",
+      "point": {
+        "latitude": 67.92018728771012,
+        "longitude": 32.850867211818695
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-23T09:51:27.616Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.92002045114695,
+          "longitude": 32.85081922469603
+        },
+        {
+          "latitude": 67.92005309773087,
+          "longitude": 32.85059915641202
+        },
+        {
+          "latitude": 67.92035412427329,
+          "longitude": 32.85091519894136
+        },
+        {
+          "latitude": 67.92032147768937,
+          "longitude": 32.851135267225374
+        }
+      ],
+      "territoryNames": [],
+      "number": "5.36",
+      "installationName": "",
+      "inventoryNumber": "160019",
+      "planningDocuments": [
+        {
+          "id": "1bde3cf8-33ae-4039-8f3a-8da060909316",
+          "kind": "ПЛРН",
+          "number": "5"
+        }
+      ],
+      "workshopFull": "Цех энергообеспечения",
+      "workshopShort": "ЦЭО",
+      "departments": [
+        {
+          "id": "6c01508f-dfa3-419a-9843-06ec1c119308",
+          "fullName": "Здание главной понизительной подстанции -11Г",
+          "shortName": "ГПП-11Г"
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "94b43dd2-842b-419e-abca-d6a073f15ce5",
+      "point": {
+        "latitude": 67.9167846941937,
+        "longitude": 32.84307646751404
+      },
+      "note": "Изменения внесены в раздел «Документы предварительного планирования» администратором 23.10.2026.",
+      "updatedAtIso": "2026-10-23T10:58:35.892Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.9166009665642,
+          "longitude": 32.8426918387413
+        },
+        {
+          "latitude": 67.91694583407639,
+          "longitude": 32.84307539463043
+        },
+        {
+          "latitude": 67.91694583407639,
+          "longitude": 32.843094170093536
+        },
+        {
+          "latitude": 67.91688936489251,
+          "longitude": 32.84345358610153
+        },
+        {
+          "latitude": 67.91654147135895,
+          "longitude": 32.84306734800339
+        }
+      ],
+      "territoryNames": [],
+      "number": "4.4",
+      "installationName": "",
+      "inventoryNumber": "60002",
+      "planningDocuments": [
+        {
+          "id": "5ad8074d-d475-4060-87d5-851feebd20f0",
+          "kind": "ПТП",
+          "number": "9 (46/7)"
+        },
+        {
+          "id": "c866385e-7a11-4c0c-ac65-2f822241d290",
+          "kind": "ПМЛА",
+          "number": "8"
+        }
+      ],
+      "workshopFull": "Химико-металлургический цех",
+      "workshopShort": "ХМЦ",
+      "departments": [
+        {
+          "id": "e78d6e49-376a-45da-9a0d-b313ced0d535",
+          "fullName": "Административно-бытовой корпус ",
+          "shortName": "АБК ХМЦ"
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "dc3c21f2-b5fa-4a7c-89ef-6b74753f34a7",
+      "point": {
+        "latitude": 67.91718315130618,
+        "longitude": 32.84361486483437
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-23T11:21:31.324Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91730268065551,
+          "longitude": 32.84356612222545
+        },
+        {
+          "latitude": 67.91726074481181,
+          "longitude": 32.843861571850105
+        },
+        {
+          "latitude": 67.91706362195687,
+          "longitude": 32.8436636074433
+        },
+        {
+          "latitude": 67.91710555780057,
+          "longitude": 32.84336815781864
+        }
+      ],
+      "territoryNames": [],
+      "number": "4.5",
+      "installationName": "",
+      "inventoryNumber": "60004",
+      "planningDocuments": [],
+      "workshopFull": "Химико-металлургический цех",
+      "workshopShort": "ХМЦ",
+      "departments": [
+        {
+          "id": "48a79807-0d1d-49bb-945f-fb70280923cf",
+          "fullName": "Здание  распределительной подстанции № 25",
+          "shortName": "РП-25"
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "bb81df05-c0ca-45de-a58a-d97a1851de26",
+      "point": {
+        "latitude": 67.90472144362896,
+        "longitude": 32.8544340133667
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T09:56:09.073Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.904866373092,
+          "longitude": 32.85441309213638
+        },
+        {
+          "latitude": 67.90481012679143,
+          "longitude": 32.85470008850098
+        },
+        {
+          "latitude": 67.90480533449943,
+          "longitude": 32.85470008850098
+        },
+        {
+          "latitude": 67.9045339378261,
+          "longitude": 32.85432457923889
+        },
+        {
+          "latitude": 67.90459144593578,
+          "longitude": 32.85403221845627
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.19",
+      "installationName": "",
+      "inventoryNumber": "580335",
+      "planningDocuments": [],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "e1fba72f-7ced-464d-a447-516285048ac4",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "d3631914-b543-421c-9036-06129db03554",
+          "fullName": "Административно-бытовой корпус (бывшая ГСС)",
+          "shortName": "АБК (ГСС)"
+        }
+      ]
+    },
+    {
+      "id": "153ea280-822d-456c-ac09-58adf4cd363d",
+      "point": {
+        "latitude": 67.90397221549063,
+        "longitude": 32.85470363935646
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T10:46:43.805Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90385550404284,
+          "longitude": 32.85504765417772
+        },
+        {
+          "latitude": 67.90399559660277,
+          "longitude": 32.854244563557955
+        },
+        {
+          "latitude": 67.90408892693841,
+          "longitude": 32.854359624535185
+        },
+        {
+          "latitude": 67.90394883437848,
+          "longitude": 32.85516271515495
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.21",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [
+        {
+          "id": "d4d06efe-efee-4a41-b984-2bc1f5eb6ea4",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "f40db038-255d-4f23-9508-9347f875ce99",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "3feb4c7d-51e9-4ef6-8267-792fee498862",
+          "fullName": "Отделение по получению окиси углерода № 4",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "9c8cf65b-ad8e-438f-880f-30ef7224ba0b",
+      "point": {
+        "latitude": 67.90378935297016,
+        "longitude": 32.85428136131512
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T10:52:35.180Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90397347854022,
+          "longitude": 32.853729128837585
+        },
+        {
+          "latitude": 67.9037628961573,
+          "longitude": 32.8547897707098
+        },
+        {
+          "latitude": 67.90370484677734,
+          "longitude": 32.85470008850098
+        },
+        {
+          "latitude": 67.90364884990643,
+          "longitude": 32.854622304439545
+        },
+        {
+          "latitude": 67.90385669346958,
+          "longitude": 32.85356551408768
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.20",
+      "installationName": "",
+      "inventoryNumber": "80014",
+      "planningDocuments": [
+        {
+          "id": "5a5c816c-d707-491c-9c4c-866ff9f451c2",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "a2df48a4-f2ba-4e0c-8599-783e1c215550",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "fa5628ff-9e4f-492d-ba8a-067369d9f4bd",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "c26f2529-221d-47ec-8c62-08cf73cbbca1",
+          "fullName": "Здание склада термоантрацита",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "aaed1f61-3b06-4cd0-8703-dc12df4722be",
+      "point": {
+        "latitude": 67.90348512510033,
+        "longitude": 32.85527636851559
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T10:57:55.731Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90363649021859,
+          "longitude": 32.854957580566406
+        },
+        {
+          "latitude": 67.90348615553026,
+          "longitude": 32.855746150016785
+        },
+        {
+          "latitude": 67.90336497347226,
+          "longitude": 32.85559397169399
+        },
+        {
+          "latitude": 67.90342158194304,
+          "longitude": 32.855288833379745
+        },
+        {
+          "latitude": 67.90351642433757,
+          "longitude": 32.854795306921005
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.22",
+      "installationName": "",
+      "inventoryNumber": "80015",
+      "planningDocuments": [],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "00c7ceb7-54d8-4330-a3dd-920a46dee6e6",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "ead72549-c418-44b4-9a4a-229ac1f39e02",
+          "fullName": "Склад арматуры и запчастей высокого давления",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "10ea5e11-9884-4e37-9539-e9f1f8287647",
+      "point": {
+        "latitude": 67.9038150741374,
+        "longitude": 32.85602241754532
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T11:04:00.315Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90398253809064,
+          "longitude": 32.85577041877964
+        },
+        {
+          "latitude": 67.90385742823631,
+          "longitude": 32.85652143674833
+        },
+        {
+          "latitude": 67.90364761018414,
+          "longitude": 32.856274416310995
+        },
+        {
+          "latitude": 67.90377272003848,
+          "longitude": 32.85552339834231
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.23",
+      "installationName": "",
+      "inventoryNumber": "80002",
+      "planningDocuments": [
+        {
+          "id": "0831e3da-5b48-4b44-9abd-3b6b88581b43",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "d39dd88b-d7d8-41b3-8d67-0b5e8fe9f1dd",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "7453b3b6-4dd8-4169-a664-d2978efdb0b9",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "92667f16-310c-4886-9ead-3e89a1b857df",
+          "fullName": "Здание установки переплавки (переработки) остатков синтеза",
+          "shortName": "УОС"
+        }
+      ]
+    },
+    {
+      "id": "102387f0-0213-4857-b7cd-dfc03200bfda",
+      "point": {
+        "latitude": 67.90348221988572,
+        "longitude": 32.85792464017868
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T11:16:17.762Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90380914134444,
+          "longitude": 32.856552768125646
+        },
+        {
+          "latitude": 67.90359421121784,
+          "longitude": 32.85784841641201
+        },
+        {
+          "latitude": 67.90363620381203,
+          "longitude": 32.85789764521663
+        },
+        {
+          "latitude": 67.90347832178495,
+          "longitude": 32.85884939442495
+        },
+        {
+          "latitude": 67.90333682184202,
+          "longitude": 32.85868351105485
+        },
+        {
+          "latitude": 67.90329229191585,
+          "longitude": 32.858951947701925
+        },
+        {
+          "latitude": 67.90319064075369,
+          "longitude": 32.858832779898705
+        },
+        {
+          "latitude": 67.90339432094936,
+          "longitude": 32.85760494878599
+        },
+        {
+          "latitude": 67.90343829167647,
+          "longitude": 32.85765649659757
+        },
+        {
+          "latitude": 67.90365195356064,
+          "longitude": 32.856368493568525
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.24",
+      "installationName": "",
+      "inventoryNumber": "80013, 82584",
+      "planningDocuments": [
+        {
+          "id": "0da0f471-de42-4417-acbe-a4dd20f3979e",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "8627f4ff-f93c-4db6-89e7-25e88d856853",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "f174e3b5-bbdb-4a47-973c-1e28e9df0826",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "d87eb5b3-536f-4589-838c-ab9b7d00a46e",
+          "fullName": "Передел синтеза № 1",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "6205e22a-235e-45d8-9f56-5dfc4dd84c95",
+      "point": {
+        "latitude": 67.90305835456925,
+        "longitude": 32.860651097039984
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T11:23:54.906Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90330039507205,
+          "longitude": 32.85965053158098
+        },
+        {
+          "latitude": 67.90294326629983,
+          "longitude": 32.86180067360152
+        },
+        {
+          "latitude": 67.90281631406644,
+          "longitude": 32.861651662498986
+        },
+        {
+          "latitude": 67.90317344283866,
+          "longitude": 32.859501520478446
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.28",
+      "installationName": "",
+      "inventoryNumber": "80011, 82015",
+      "planningDocuments": [
+        {
+          "id": "d4eb6226-c649-45fc-8362-0655d2524a10",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "893438d0-0972-4951-8aa9-53ed15793563",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "43504399-c5ce-44fe-b2b2-7c8455521a38",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "9d57bec7-b563-48fe-9882-75ac9875a209",
+          "fullName": "Здание опытно-промышленной установки, передел № 3",
+          "shortName": "ОПУ"
+        }
+      ]
+    },
+    {
+      "id": "6648435d-97de-4106-b604-bafc0aba5b53",
+      "point": {
+        "latitude": 67.90268749408396,
+        "longitude": 32.861104759958664
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T11:36:29.984Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.9030406710807,
+          "longitude": 32.85937025077865
+        },
+        {
+          "latitude": 67.9026571355827,
+          "longitude": 32.861461088247815
+        },
+        {
+          "latitude": 67.902758763312,
+          "longitude": 32.86159282418178
+        },
+        {
+          "latitude": 67.90261801298085,
+          "longitude": 32.86236012230067
+        },
+        {
+          "latitude": 67.90244696783616,
+          "longitude": 32.86213840336585
+        },
+        {
+          "latitude": 67.90257948892435,
+          "longitude": 32.86141596682977
+        },
+        {
+          "latitude": 67.90250357410702,
+          "longitude": 32.86131756150837
+        },
+        {
+          "latitude": 67.90289533884797,
+          "longitude": 32.8591818624564
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.27",
+      "installationName": "",
+      "inventoryNumber": "80012, 82400",
+      "planningDocuments": [
+        {
+          "id": "65aa1c85-4d30-42ca-a43d-7d90cb81899e",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "2b3a5e55-d63c-48ae-9386-1bb3cfb6778d",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "7655f57d-c0cf-442b-b23c-18fedff19270",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "447f9bac-21b4-477c-bc27-ba8b5af8e84f",
+          "fullName": "Здание передела № 5, упаковка никелевого порошка, административно бытовой корпус",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "2e8242f4-ebf4-4e33-b6f1-3fa6ea03d2e7",
+      "point": {
+        "latitude": 67.90237158171455,
+        "longitude": 32.8626388387555
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T11:49:15.752Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.9024368125265,
+          "longitude": 32.86260958760977
+        },
+        {
+          "latitude": 67.90238194773798,
+          "longitude": 32.86289658397436
+        },
+        {
+          "latitude": 67.90234448825632,
+          "longitude": 32.86289658397436
+        },
+        {
+          "latitude": 67.90224724467387,
+          "longitude": 32.86276515573263
+        },
+        {
+          "latitude": 67.90234713690853,
+          "longitude": 32.86224748939276
+        },
+        {
+          "latitude": 67.90247186018414,
+          "longitude": 32.86241763184913
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.32",
+      "installationName": "",
+      "inventoryNumber": "80004",
+      "planningDocuments": [],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "a86ed8db-83d7-478b-811b-53ee4cfec4a4",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "bd5f7045-4c56-40c6-9bbb-e4976efe1fff",
+          "fullName": "Водородная станция",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "964813a2-c04d-41d3-9f1c-e9dd86f32876",
+      "point": {
+        "latitude": 67.90294236956707,
+        "longitude": 32.855645433068275
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T12:42:42.927Z",
+      "kind": "building",
+      "objectType": "installation",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90283334866791,
+          "longitude": 32.85567909479141
+        },
+        {
+          "latitude": 67.90283435765713,
+          "longitude": 32.855587899684906
+        },
+        {
+          "latitude": 67.90284646552402,
+          "longitude": 32.85550206899643
+        },
+        {
+          "latitude": 67.90286765427592,
+          "longitude": 32.85542964935303
+        },
+        {
+          "latitude": 67.90289590591516,
+          "longitude": 32.855378687381744
+        },
+        {
+          "latitude": 67.9029292024459,
+          "longitude": 32.85535454750061
+        },
+        {
+          "latitude": 67.90296350791257,
+          "longitude": 32.855357229709625
+        },
+        {
+          "latitude": 67.9029957953644,
+          "longitude": 32.855389416217804
+        },
+        {
+          "latitude": 67.90302303786703,
+          "longitude": 32.85544574260712
+        },
+        {
+          "latitude": 67.90304220849791,
+          "longitude": 32.85552352666855
+        },
+        {
+          "latitude": 67.90305229829727,
+          "longitude": 32.855609357357025
+        },
+        {
+          "latitude": 67.90305028033774,
+          "longitude": 32.855703234672546
+        },
+        {
+          "latitude": 67.90303817257691,
+          "longitude": 32.85578906536102
+        },
+        {
+          "latitude": 67.90301698398031,
+          "longitude": 32.855861485004425
+        },
+        {
+          "latitude": 67.90298873248813,
+          "longitude": 32.85591244697571
+        },
+        {
+          "latitude": 67.90295543604259,
+          "longitude": 32.85593658685684
+        },
+        {
+          "latitude": 67.90292113056404,
+          "longitude": 32.85593390464783
+        },
+        {
+          "latitude": 67.90288884300858,
+          "longitude": 32.85590171813965
+        },
+        {
+          "latitude": 67.90286160034879,
+          "longitude": 32.855845391750336
+        },
+        {
+          "latitude": 67.90284242956909,
+          "longitude": 32.855767607688904
+        }
+      ],
+      "territoryNames": [],
+      "number": "0",
+      "installationName": "Газгольдер № 5",
+      "inventoryNumber": "",
+      "planningDocuments": [
+        {
+          "id": "c9b3a46b-db9d-4a2f-86ff-6c562bfd8b93",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "8d599ea5-a0eb-4171-864d-1223d0c49653",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля, отделение карбонильного никеля",
+      "workshopShort": "ЦЭН ОКН",
+      "departments": [],
+      "sites": []
+    },
+    {
+      "id": "e2c06c62-401e-4534-9d11-9361fbc66101",
+      "point": {
+        "latitude": 67.90291284617818,
+        "longitude": 32.85666473601994
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T12:50:30.463Z",
+      "kind": "building",
+      "objectType": "installation",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90298066062692,
+          "longitude": 32.85651594400406
+        },
+        {
+          "latitude": 67.90299377739998,
+          "longitude": 32.856580317020416
+        },
+        {
+          "latitude": 67.9029988223107,
+          "longitude": 32.85665273666382
+        },
+        {
+          "latitude": 67.9029957953644,
+          "longitude": 32.85672515630722
+        },
+        {
+          "latitude": 67.90298368757522,
+          "longitude": 32.85679221153259
+        },
+        {
+          "latitude": 67.90296451689613,
+          "longitude": 32.856843173503876
+        },
+        {
+          "latitude": 67.9029403012789,
+          "longitude": 32.85687804222107
+        },
+        {
+          "latitude": 67.90291305867936,
+          "longitude": 32.856891453266144
+        },
+        {
+          "latitude": 67.90288581604796,
+          "longitude": 32.8568834066391
+        },
+        {
+          "latitude": 67.90286059136076,
+          "longitude": 32.85685122013092
+        },
+        {
+          "latitude": 67.90284142058024,
+          "longitude": 32.85680025815964
+        },
+        {
+          "latitude": 67.90282729473182,
+          "longitude": 32.856727838516235
+        },
+        {
+          "latitude": 67.90282325877357,
+          "longitude": 32.85664737224579
+        },
+        {
+          "latitude": 67.90282931271071,
+          "longitude": 32.85656958818436
+        },
+        {
+          "latitude": 67.90284646552402,
+          "longitude": 32.85649985074997
+        },
+        {
+          "latitude": 67.90287068123894,
+          "longitude": 32.8564515709877
+        },
+        {
+          "latitude": 67.90289994186082,
+          "longitude": 32.85642743110657
+        },
+        {
+          "latitude": 67.90293021143094,
+          "longitude": 32.85643011331558
+        },
+        {
+          "latitude": 67.90295846299418,
+          "longitude": 32.85646229982376
+        }
+      ],
+      "territoryNames": [],
+      "number": "0",
+      "installationName": "Газгольдер № 3",
+      "inventoryNumber": "",
+      "planningDocuments": [
+        {
+          "id": "1a1f7363-a9b9-4be0-893f-fe38ae15ab60",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "5252f9ab-9c60-4dd4-b371-b76a10a62b2a",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля, отделение карбонильного никеля",
+      "workshopShort": "ЦЭН ОКН",
+      "departments": [],
+      "sites": []
+    },
+    {
+      "id": "ed0de461-643b-4132-8d02-70a9251ce628",
+      "point": {
+        "latitude": 67.90269070885853,
+        "longitude": 32.857651224261836
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T12:52:51.751Z",
+      "kind": "building",
+      "objectType": "installation",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90273345852111,
+          "longitude": 32.857347428798676
+        },
+        {
+          "latitude": 67.90276776427646,
+          "longitude": 32.85740107297897
+        },
+        {
+          "latitude": 67.90279399805524,
+          "longitude": 32.85748153924942
+        },
+        {
+          "latitude": 67.90280913291414,
+          "longitude": 32.857578098773956
+        },
+        {
+          "latitude": 67.90281215988475,
+          "longitude": 32.85768538713455
+        },
+        {
+          "latitude": 67.90280106099061,
+          "longitude": 32.85778999328613
+        },
+        {
+          "latitude": 67.90277886318648,
+          "longitude": 32.85787582397461
+        },
+        {
+          "latitude": 67.90274657543353,
+          "longitude": 32.85794019699097
+        },
+        {
+          "latitude": 67.90270823366873,
+          "longitude": 32.857972383499146
+        },
+        {
+          "latitude": 67.90266787384803,
+          "longitude": 32.85796970129013
+        },
+        {
+          "latitude": 67.90262953195352,
+          "longitude": 32.85793215036392
+        },
+        {
+          "latitude": 67.90259926199212,
+          "longitude": 32.85786509513855
+        },
+        {
+          "latitude": 67.90257807299574,
+          "longitude": 32.85777390003204
+        },
+        {
+          "latitude": 67.90256899199136,
+          "longitude": 32.85766929388046
+        },
+        {
+          "latitude": 67.90257302799372,
+          "longitude": 32.85756468772888
+        },
+        {
+          "latitude": 67.90259018099601,
+          "longitude": 32.857468128204346
+        },
+        {
+          "latitude": 67.90261843297225,
+          "longitude": 32.857390344142914
+        },
+        {
+          "latitude": 67.90265374789422,
+          "longitude": 32.857342064380646
+        },
+        {
+          "latitude": 67.90269309874418,
+          "longitude": 32.857325971126556
+        }
+      ],
+      "territoryNames": [],
+      "number": "0",
+      "installationName": "Газгольдер № 2",
+      "inventoryNumber": "",
+      "planningDocuments": [
+        {
+          "id": "841fd84f-838a-4e77-aae5-fad2e721ef0d",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "50c0c56e-1475-41e0-becf-ae625bf85a18",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля, отделение карбонильного никеля",
+      "workshopShort": "ЦЭН ОКН",
+      "departments": [],
+      "sites": []
+    },
+    {
+      "id": "8b1256c0-e34d-4aa2-9862-aef7a814f09d",
+      "point": {
+        "latitude": 67.90248768753027,
+        "longitude": 32.85864999419764
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T12:55:02.927Z",
+      "kind": "building",
+      "objectType": "installation",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90244387557033,
+          "longitude": 32.858887016773224
+        },
+        {
+          "latitude": 67.90241764139674,
+          "longitude": 32.85883605480194
+        },
+        {
+          "latitude": 67.90239847025114,
+          "longitude": 32.858766317367554
+        },
+        {
+          "latitude": 67.90238938917665,
+          "longitude": 32.85868316888809
+        },
+        {
+          "latitude": 67.9023903981851,
+          "longitude": 32.858597338199615
+        },
+        {
+          "latitude": 67.9024025062831,
+          "longitude": 32.85851687192917
+        },
+        {
+          "latitude": 67.90242369543941,
+          "longitude": 32.858449816703796
+        },
+        {
+          "latitude": 67.90245093861205,
+          "longitude": 32.85840421915054
+        },
+        {
+          "latitude": 67.9024832267753,
+          "longitude": 32.858388125896454
+        },
+        {
+          "latitude": 67.90251551489376,
+          "longitude": 32.8583961725235
+        },
+        {
+          "latitude": 67.90254477596238,
+          "longitude": 32.85843372344971
+        },
+        {
+          "latitude": 67.90256798299066,
+          "longitude": 32.85849541425705
+        },
+        {
+          "latitude": 67.90258311799664,
+          "longitude": 32.85857319831848
+        },
+        {
+          "latitude": 67.90258715399656,
+          "longitude": 32.85865902900696
+        },
+        {
+          "latitude": 67.90258109999638,
+          "longitude": 32.858744859695435
+        },
+        {
+          "latitude": 67.90256394698739,
+          "longitude": 32.85881996154785
+        },
+        {
+          "latitude": 67.9025387219512,
+          "longitude": 32.858876287937164
+        },
+        {
+          "latitude": 67.90250845187168,
+          "longitude": 32.85890847444534
+        },
+        {
+          "latitude": 67.90247515473868,
+          "longitude": 32.85891383886337
+        }
+      ],
+      "territoryNames": [],
+      "number": "0",
+      "installationName": "Газгольдер № 1",
+      "inventoryNumber": "",
+      "planningDocuments": [
+        {
+          "id": "de13f887-eff0-45c7-92a4-863827dcea70",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "47d87130-60d8-4607-8339-6bcafe491c96",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля, отделение карбонильного никеля",
+      "workshopShort": "ЦЭН ОКН",
+      "departments": [],
+      "sites": []
+    },
+    {
+      "id": "43761fa7-8e30-4539-af01-ebd1f14d94bb",
+      "point": {
+        "latitude": 67.90209119858835,
+        "longitude": 32.86053431661505
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T12:56:32.406Z",
+      "kind": "building",
+      "objectType": "installation",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.9021906136584,
+          "longitude": 32.860625088214874
+        },
+        {
+          "latitude": 67.90217446937928,
+          "longitude": 32.86070019006729
+        },
+        {
+          "latitude": 67.90214924392075,
+          "longitude": 32.860761880874634
+        },
+        {
+          "latitude": 67.90211897333441,
+          "longitude": 32.86079674959183
+        },
+        {
+          "latitude": 67.90208668466556,
+          "longitude": 32.86080747842789
+        },
+        {
+          "latitude": 67.90205338692888,
+          "longitude": 32.86078870296478
+        },
+        {
+          "latitude": 67.90202513426641,
+          "longitude": 32.860745787620544
+        },
+        {
+          "latitude": 67.90200293572187,
+          "longitude": 32.86067873239517
+        },
+        {
+          "latitude": 67.9019888093643,
+          "longitude": 32.860598266124725
+        },
+        {
+          "latitude": 67.90198578228654,
+          "longitude": 32.86051243543625
+        },
+        {
+          "latitude": 67.90199385449299,
+          "longitude": 32.86041587591171
+        },
+        {
+          "latitude": 67.90201302597202,
+          "longitude": 32.86033272743225
+        },
+        {
+          "latitude": 67.90204329669623,
+          "longitude": 32.86027371883392
+        },
+        {
+          "latitude": 67.9020776034694,
+          "longitude": 32.86024421453476
+        },
+        {
+          "latitude": 67.90211493725326,
+          "longitude": 32.86024957895279
+        },
+        {
+          "latitude": 67.90214823490186,
+          "longitude": 32.860287129879
+        },
+        {
+          "latitude": 67.90217547839708,
+          "longitude": 32.86035418510437
+        },
+        {
+          "latitude": 67.90219263169249,
+          "longitude": 32.86044001579285
+        },
+        {
+          "latitude": 67.90219767677698,
+          "longitude": 32.8605392575264
+        }
+      ],
+      "territoryNames": [],
+      "number": "0",
+      "installationName": "Газгольдер № 6",
+      "inventoryNumber": "",
+      "planningDocuments": [
+        {
+          "id": "70cbf3fb-77d8-47a9-bbc3-0b07aad5295b",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "89b23d7c-310e-4ced-b26c-baacbaa9c78c",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля, отделение карбонильного никеля",
+      "workshopShort": "ЦЭН ОКН",
+      "departments": [],
+      "sites": []
+    },
+    {
+      "id": "c5cfc309-97a9-484b-a873-9a8da328edc3",
+      "point": {
+        "latitude": 67.90396322978808,
+        "longitude": 32.85867752213227
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T12:58:01.615Z",
+      "kind": "building",
+      "objectType": "installation",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90402695228619,
+          "longitude": 32.85863757133484
+        },
+        {
+          "latitude": 67.90402796122359,
+          "longitude": 32.85869389772415
+        },
+        {
+          "latitude": 67.9040219075984,
+          "longitude": 32.858744859695435
+        },
+        {
+          "latitude": 67.90401080928149,
+          "longitude": 32.85879045724869
+        },
+        {
+          "latitude": 67.90399466626559,
+          "longitude": 32.85882264375687
+        },
+        {
+          "latitude": 67.90397549641966,
+          "longitude": 32.85884141921997
+        },
+        {
+          "latitude": 67.90395430867684,
+          "longitude": 32.858844101428986
+        },
+        {
+          "latitude": 67.90393513879766,
+          "longitude": 32.858828008174896
+        },
+        {
+          "latitude": 67.90391798678709,
+          "longitude": 32.85879850387573
+        },
+        {
+          "latitude": 67.90390587947792,
+          "longitude": 32.858755588531494
+        },
+        {
+          "latitude": 67.90389881687798,
+          "longitude": 32.85870462656021
+        },
+        {
+          "latitude": 67.90389780793498,
+          "longitude": 32.85864561796188
+        },
+        {
+          "latitude": 67.90390587947792,
+          "longitude": 32.858586609363556
+        },
+        {
+          "latitude": 67.90392000467133,
+          "longitude": 32.8585410118103
+        },
+        {
+          "latitude": 67.90393917456302,
+          "longitude": 32.858508825302124
+        },
+        {
+          "latitude": 67.90396137125992,
+          "longitude": 32.858498096466064
+        },
+        {
+          "latitude": 67.90398457687496,
+          "longitude": 32.858508825302124
+        },
+        {
+          "latitude": 67.90400374671341,
+          "longitude": 32.85853832960129
+        },
+        {
+          "latitude": 67.90401888078523,
+          "longitude": 32.85858392715454
+        }
+      ],
+      "territoryNames": [],
+      "number": "0",
+      "installationName": "Газгольдер № 4",
+      "inventoryNumber": "",
+      "planningDocuments": [
+        {
+          "id": "4166ec47-c6c7-4aea-9c5a-1ccc67516afe",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "9507ca14-d4ef-4478-8e2f-4945fdab9ff4",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля, отделение карбонильного никеля",
+      "workshopShort": "ЦЭН ОКН",
+      "departments": [],
+      "sites": []
+    },
+    {
+      "id": "000c7727-0e27-4444-bf92-0ca734c75581",
+      "point": {
+        "latitude": 67.90245513395939,
+        "longitude": 32.86383108233521
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T13:10:52.783Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90276048143627,
+          "longitude": 32.86374954726829
+        },
+        {
+          "latitude": 67.90265410522512,
+          "longitude": 32.86427520998593
+        },
+        {
+          "latitude": 67.90243163533522,
+          "longitude": 32.86395707850544
+        },
+        {
+          "latitude": 67.90244579954242,
+          "longitude": 32.863887085453705
+        },
+        {
+          "latitude": 67.90236706435341,
+          "longitude": 32.86377449429696
+        },
+        {
+          "latitude": 67.90233255472515,
+          "longitude": 32.86394502514011
+        },
+        {
+          "latitude": 67.90226135471266,
+          "longitude": 32.86384320927015
+        },
+        {
+          "latitude": 67.90238807634488,
+          "longitude": 32.8632170087611
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.33",
+      "installationName": "",
+      "inventoryNumber": "82399",
+      "planningDocuments": [],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "5f1e759a-b8a4-47eb-94f4-06f63fc8a926",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "1f1c1cb0-1fe2-4355-ab6d-da6ab375deba",
+          "fullName": "Склад № 2, гараж",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "3aa47133-5301-4743-8cd2-2f47079b3fb5",
+      "point": {
+        "latitude": 67.90426581688773,
+        "longitude": 32.858779057860374
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T13:18:04.254Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90436727650687,
+          "longitude": 32.858575660034475
+        },
+        {
+          "latitude": 67.90427573798482,
+          "longitude": 32.85911584895288
+        },
+        {
+          "latitude": 67.90416435726858,
+          "longitude": 32.858982455686274
+        },
+        {
+          "latitude": 67.90425589579064,
+          "longitude": 32.85844226676787
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.25",
+      "installationName": "",
+      "inventoryNumber": "80001",
+      "planningDocuments": [
+        {
+          "id": "15c52862-9312-43b7-b955-5876ecc47f2a",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "f0808c69-756d-4a35-afbb-a6e84ae024ad",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "c57d4e4d-880e-40ec-baed-ee10d381d585",
+          "fullName": "Распределительная подстанция",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "7f9796e0-0ff1-42fb-95e3-e77a815b56c1",
+      "point": {
+        "latitude": 67.90380952510496,
+        "longitude": 32.85958170890808
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T13:21:07.742Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90392510399616,
+          "longitude": 32.85941781694869
+        },
+        {
+          "latitude": 67.9038252180342,
+          "longitude": 32.85992743635474
+        },
+        {
+          "latitude": 67.90369394621376,
+          "longitude": 32.85974560086747
+        },
+        {
+          "latitude": 67.90379383217572,
+          "longitude": 32.859235981461424
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.26",
+      "installationName": "",
+      "inventoryNumber": "80005",
+      "planningDocuments": [],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "5dbdedc2-991b-482d-903d-a36f91eba26d",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "be12da05-0670-47ef-9361-d3383d775716",
+          "fullName": "Центральная вентиляторная",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "e13f8716-5790-4ea7-bb7a-04ccfdaa0a6e",
+      "point": {
+        "latitude": 67.90364069394946,
+        "longitude": 32.86061480641366
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T13:33:22.661Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90363133608714,
+          "longitude": 32.86010804387911
+        },
+        {
+          "latitude": 67.90377247514606,
+          "longitude": 32.86028341206318
+        },
+        {
+          "latitude": 67.90373162043517,
+          "longitude": 32.86051578250685
+        },
+        {
+          "latitude": 67.90369175248772,
+          "longitude": 32.86046624576201
+        },
+        {
+          "latitude": 67.90355912532608,
+          "longitude": 32.861220592855
+        },
+        {
+          "latitude": 67.90345785421462,
+          "longitude": 32.86109476141576
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.29",
+      "installationName": "",
+      "inventoryNumber": "80010, 82582",
+      "planningDocuments": [
+        {
+          "id": "4584b738-932d-4fa8-8dd6-a08102396dc4",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "4f92c202-377e-44a5-9239-ee540863f9df",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "bc2a26b2-9896-434f-a8d5-e38b8c8ec862",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "3a3ef679-681a-4234-a2b0-fb691d7368bf",
+          "fullName": "Передел № 2, ректификация",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "d99daec9-373f-4002-8a96-ad8b50684850",
+      "point": {
+        "latitude": 67.9035026929727,
+        "longitude": 32.86131698062526
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T13:40:09.157Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.9034579046079,
+          "longitude": 32.86109447479248
+        },
+        {
+          "latitude": 67.90370106320924,
+          "longitude": 32.86139756441116
+        },
+        {
+          "latitude": 67.90364153498993,
+          "longitude": 32.861738204956055
+        },
+        {
+          "latitude": 67.90332572543572,
+          "longitude": 32.86135068555876
+        },
+        {
+          "latitude": 67.90338723662062,
+          "longitude": 32.86100397340786
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.30",
+      "installationName": "",
+      "inventoryNumber": "800016, 82568",
+      "planningDocuments": [
+        {
+          "id": "925867cd-5d49-4b78-a2eb-650ef0cb1ada",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "32054b71-829d-44e9-8f7f-4ce47a07d830",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "a70878b4-d00a-49d0-b96e-ed2140df8832",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "3b708023-0fa8-4da1-8e64-ddc9c7fccea0",
+          "fullName": "Здание отделения № 2а, термическая переработка кубовых остатков",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "f192f4b2-fdd5-4d1f-b4b1-596e56f6a68b",
+      "point": {
+        "latitude": 67.90333203603389,
+        "longitude": 32.86227196455002
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-24T13:47:37.492Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.90347045231223,
+          "longitude": 32.86205236612181
+        },
+        {
+          "latitude": 67.90334846847698,
+          "longitude": 32.862698240288594
+        },
+        {
+          "latitude": 67.90319361975554,
+          "longitude": 32.86249156297823
+        },
+        {
+          "latitude": 67.9033156035908,
+          "longitude": 32.86184568881144
+        }
+      ],
+      "territoryNames": [],
+      "number": "2.31",
+      "installationName": "",
+      "inventoryNumber": "82102, 82103",
+      "planningDocuments": [
+        {
+          "id": "b62585ba-770c-4f1e-83b3-398244c93c44",
+          "kind": "ПТП",
+          "number": "6"
+        },
+        {
+          "id": "28c30553-978b-4367-b7f1-e32159e406b4",
+          "kind": "ПМЛА",
+          "number": "2"
+        }
+      ],
+      "workshopFull": "Цех электролиза никеля",
+      "workshopShort": "ЦЭН",
+      "departments": [
+        {
+          "id": "5b38b7c6-3be5-4ba4-ab58-a947f973e301",
+          "fullName": "Отделение карбонильного никеля",
+          "shortName": "ОКН"
+        }
+      ],
+      "sites": [
+        {
+          "id": "0cf56da3-5013-4ca4-9f2d-78c0ef575841",
+          "fullName": "Опытная промышленная установка получения никелевого порошка, распределительная подстанция № 135",
+          "shortName": "ОПУ НП, РП-135"
+        }
+      ]
     }
   ],
-  "draftSavedAtIso": "2026-10-24T17:13:56.805Z",
-  "publishedAtIso": "2026-10-24T17:13:56.805Z"
+  "draftSavedAtIso": "2026-10-25T22:12:33.985Z",
+  "publishedAtIso": "2026-10-25T22:12:33.985Z"
 }
