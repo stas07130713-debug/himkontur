@@ -81,6 +81,63 @@ export type DistrictFireReservoir = DistrictObjectBase & Readonly<{
 
 export type DistrictMapObject = DistrictBuilding | DistrictHydrant | DistrictFireReservoir;
 
+export type DistrictMapObjectCounts = Readonly<{
+  buildings: number;
+  territories: number;
+  installations: number;
+  demolished: number;
+  waterSources: number;
+  standardHydrants: number;
+  foamHydrants: number;
+  reservoirs: number;
+  total: number;
+}>;
+
+export type DistrictMapObjectComparison = Readonly<{
+  localOnly: number;
+  sharedOnly: number;
+  changed: number;
+}>;
+
+export function districtMapObjectCounts(objects: readonly DistrictMapObject[]): DistrictMapObjectCounts {
+  const buildings = objects.filter((object) => object.kind === 'building' && object.objectType === 'building').length;
+  const territories = objects.filter((object) => object.kind === 'building' && object.objectType === 'territory').length;
+  const installations = objects.filter((object) => object.kind === 'building' && object.objectType === 'installation').length;
+  const demolished = objects.filter((object) => object.kind === 'building' && object.objectType === 'demolished').length;
+  const standardHydrants = objects.filter((object) => object.kind === 'hydrant' && object.hydrantType !== 'foam').length;
+  const foamHydrants = objects.filter((object) => object.kind === 'hydrant' && object.hydrantType === 'foam').length;
+  const reservoirs = objects.filter((object) => object.kind === 'reservoir').length;
+  return {
+    buildings,
+    territories,
+    installations,
+    demolished,
+    waterSources: standardHydrants + foamHydrants + reservoirs,
+    standardHydrants,
+    foamHydrants,
+    reservoirs,
+    total: objects.length,
+  };
+}
+
+export function compareDistrictMapObjects(
+  localObjects: readonly DistrictMapObject[],
+  sharedObjects: readonly DistrictMapObject[],
+): DistrictMapObjectComparison {
+  const localById = new Map(localObjects.map((object) => [object.id, object]));
+  const sharedById = new Map(sharedObjects.map((object) => [object.id, object]));
+  let changed = 0;
+  for (const [id, localObject] of localById) {
+    const sharedObject = sharedById.get(id);
+    if (sharedObject !== undefined && JSON.stringify(localObject) !== JSON.stringify(sharedObject)) changed += 1;
+  }
+  return {
+    localOnly: [...localById.keys()].filter((id) => !sharedById.has(id)).length,
+    sharedOnly: [...sharedById.keys()].filter((id) => !localById.has(id)).length,
+    changed,
+  };
+}
+
 export function buildingPrefix(number: string): string {
   return /^\s*([0-9])(?:\.|$)/u.exec(number)?.[1] ?? '1';
 }

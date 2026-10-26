@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  compareDistrictMapObjects,
   createPendingDistrictMapOperation,
+  districtMapObjectCounts,
   districtObjectTitle,
   isPublishedProjectNewer,
   localOnlyDistrictMapObjects,
@@ -52,6 +54,42 @@ describe('published district project ordering', () => {
     const shared = project(20, '2026-10-26T10:00:00Z');
     expect(localOnlyDistrictMapObjects(local, shared)).toEqual([localBuilding]);
     expect(localOnlyDistrictMapObjects(shared, local)).toEqual([]);
+  });
+});
+
+describe('district map composition comparison', () => {
+  const building = {
+    id: 'building-1', kind: 'building' as const, objectType: 'building' as const,
+    point: { latitude: 67.9, longitude: 32.8 }, contour: [], territoryNames: [], number: '1.1',
+    inventoryNumber: '', planningDocuments: [], workshopFull: '', workshopShort: '', departments: [], sites: [], note: '',
+    updatedAtIso: '2026-10-26T10:00:00Z',
+  };
+  const foamHydrant = {
+    id: 'hydrant-foam', kind: 'hydrant' as const, number: 'ПГ-1', owner: '', status: 'serviceable' as const,
+    faultDescription: '', network: 'ring' as const, hydrantType: 'foam' as const, pattern: 'moscow' as const,
+    diameterMm: 150, pressureAtm: null, heightMm: null, signDistanceLeftM: null, signDistanceRightM: null,
+    signDistanceForwardM: null, lastInspectionDate: '', point: { latitude: 67.91, longitude: 32.81 }, note: '',
+    updatedAtIso: '2026-10-26T10:00:00Z',
+  };
+
+  it('counts map object groups without double-counting the total', () => {
+    expect(districtMapObjectCounts([building, foamHydrant])).toMatchObject({
+      buildings: 1,
+      waterSources: 1,
+      standardHydrants: 0,
+      foamHydrants: 1,
+      reservoirs: 0,
+      total: 2,
+    });
+  });
+
+  it('reports local-only, server-only, and changed objects separately', () => {
+    const changedBuilding = { ...building, number: '1.2', updatedAtIso: '2026-10-26T11:00:00Z' };
+    expect(compareDistrictMapObjects([building], [changedBuilding, foamHydrant])).toEqual({
+      localOnly: 0,
+      sharedOnly: 1,
+      changed: 1,
+    });
   });
 });
 

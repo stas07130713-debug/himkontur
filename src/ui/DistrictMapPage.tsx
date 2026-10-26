@@ -24,8 +24,11 @@ import type {
   DistrictPlanningDocumentKind,
 } from './district-map-model';
 import {
+  compareDistrictMapObjects,
+  districtMapObjectCounts,
   districtObjectTitle,
   buildingPrefix,
+  fetchCoordinatedDistrictMapProject,
   FIRE_RESERVOIR_TYPE_LABELS,
   HYDRANT_STATUS_LABELS,
   HYDRANT_TYPE_LABELS,
@@ -672,6 +675,10 @@ export function DistrictMapPage(props: Props) {
   const [actImporting, setActImporting] = useState(false);
   const [mapBackupStatus, setMapBackupStatus] = useState('');
   const [sharedPublishStatus, setSharedPublishStatus] = useState<Readonly<{ success: boolean; message: string }> | null>(null);
+  const [compositionCheckOpen, setCompositionCheckOpen] = useState(false);
+  const [compositionCheckBusy, setCompositionCheckBusy] = useState(false);
+  const [compositionCheckError, setCompositionCheckError] = useState('');
+  const [sharedCompositionProject, setSharedCompositionProject] = useState<DistrictMapProject | null>(null);
   const [contourStatus, setContourStatus] = useState('');
   const [pendingHydrantAct, setPendingHydrantAct] = useState<Readonly<{ fileName: string; result: HydrantActParseResult }> | null>(null);
   const [panning, setPanning] = useState(false);
@@ -700,6 +707,21 @@ export function DistrictMapPage(props: Props) {
     setSharedPublishStatus(null);
     const result = await props.onPublishForAll();
     setSharedPublishStatus(result);
+  };
+  const checkMapComposition = async () => {
+    setCompositionCheckOpen(true);
+    setCompositionCheckBusy(true);
+    setCompositionCheckError('');
+    try {
+      const sharedProject = await fetchCoordinatedDistrictMapProject();
+      if (sharedProject === null) throw new Error('Общий сервер не вернул карту. Повторите сверку немного позже.');
+      setSharedCompositionProject(sharedProject);
+    } catch (error) {
+      setSharedCompositionProject(null);
+      setCompositionCheckError(error instanceof Error ? error.message : 'Не удалось получить состав общей карты.');
+    } finally {
+      setCompositionCheckBusy(false);
+    }
   };
   const buildingContourResolverRef = useRef<((point: GeoPoint) => readonly GeoPoint[] | null) | null>(null);
   const contourDragRef = useRef<ContourDragState | null>(null);
@@ -755,6 +777,30 @@ export function DistrictMapPage(props: Props) {
   const scaleDistanceKm = niceScale(viewSize.width / projection.scale / 5);
   const scalePixels = scaleDistanceKm * projection.scale;
   const selected = props.objects.find((object) => object.id === selectedId) ?? null;
+  const localComposition = useMemo(() => districtMapObjectCounts(props.project.published), [props.project.published]);
+  const sharedComposition = useMemo(
+    () => sharedCompositionProject === null ? null : districtMapObjectCounts(sharedCompositionProject.published),
+    [sharedCompositionProject],
+  );
+  const compositionObjectComparison = useMemo(
+    () => sharedCompositionProject === null ? null : compareDistrictMapObjects(props.project.published, sharedCompositionProject.published),
+    [props.project.published, sharedCompositionProject],
+  );
+  const compositionRows = sharedComposition === null ? [] : [
+    ['Здания', localComposition.buildings, sharedComposition.buildings],
+    ['Территории', localComposition.territories, sharedComposition.territories],
+    ['Наружные установки', localComposition.installations, sharedComposition.installations],
+    ['Демонтированные объекты', localComposition.demolished, sharedComposition.demolished],
+    ['Все объекты НППВ', localComposition.waterSources, sharedComposition.waterSources],
+    ['Пожарные гидранты', localComposition.standardHydrants, sharedComposition.standardHydrants],
+    ['Пенные пожарные гидранты', localComposition.foamHydrants, sharedComposition.foamHydrants],
+    ['Пожарные водоёмы', localComposition.reservoirs, sharedComposition.reservoirs],
+    ['Всего объектов', localComposition.total, sharedComposition.total],
+  ] as const;
+  const compositionMatches = compositionObjectComparison !== null
+    && compositionObjectComparison.localOnly === 0
+    && compositionObjectComparison.sharedOnly === 0
+    && compositionObjectComparison.changed === 0;
   const selectObject = (id: string) => {
     setSelectedId(id);
     setLegendCollapsed(true);
@@ -1560,6 +1606,7 @@ export function DistrictMapPage(props: Props) {
               <span className="district-sync-local-state"><small>Только на этом устройстве</small><strong className={props.localPendingOperations > 0 ? 'is-error' : ''}>{localSynchronizationPacketCount(props.localPendingOperations)}</strong></span>
             </div>
             <small className="district-sync-queue-note">После изменения объекта программа сразу сохраняет новую редакцию общей карты в доступном облачном сервисе. Поэтому значение «Все изменения отправлены» означает, что актуальная карта уже доступна другим устройствам. Обмен между облачными сервисами выполняется автоматически и не требует ожидания пользователя.</small>
+            <button type="button" className="secondary district-composition-check-open" onClick={() => void checkMapComposition()}><UiIcon name="check" /><span>Сверить состав карты</span></button>
             {props.conflictBackupCount > 0 && <div className="district-conflict-backup"><p>Это журнал уже разрешённых конфликтов. Для каждого объекта в общую карту выбрана его более поздняя редакция, а обе версии оставлены здесь для проверки. Очистка удалит только записи журнала и не изменит карту.</p><div><button type="button" className="secondary" onClick={props.onDownloadConflictBackup}>Скачать журнал ({props.conflictBackupCount})</button><button type="button" className="secondary danger" onClick={props.onClearConflictBackup}>Очистить журнал</button></div></div>}
           </section>
           {mapBackupStatus !== '' && <p className="district-act-status district-map-backup-status">{mapBackupStatus}</p>}
@@ -1569,6 +1616,38 @@ export function DistrictMapPage(props: Props) {
           <div className="district-management-footer-actions">
             <button type="button" className="primary publish-shared-map" disabled={props.publishBusy} onClick={() => void publishForAllDevices()}><UiIcon name="upload" /><span>{props.publishBusy ? 'Загружаю изменения…' : 'Опубликовать для всех устройств'}</span></button>
             <button className="secondary exit-admin" onClick={() => { props.onCloseManagement(); props.onExitAdmin(); }}>Завершить режим настройки</button>
+          </div>
+        </section>
+      </div>}
+      {compositionCheckOpen && <div className="dialog-backdrop district-composition-check-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCompositionCheckOpen(false); }}>
+        <section className="district-composition-check-dialog" role="dialog" aria-modal="true" aria-labelledby="district-composition-check-title">
+          <button type="button" className="dialog-close" aria-label="Закрыть" onClick={() => setCompositionCheckOpen(false)}><UiIcon name="close" /></button>
+          <div className="admin-login-icon"><UiIcon name="check" /></div>
+          <h2 id="district-composition-check-title">Сверка состава карты</h2>
+          <p>Сравнение карты, открытой на этом устройстве, с актуальной картой на общем сервере.</p>
+          {compositionCheckBusy && <div className="district-composition-check-loading" role="status">Получаю общую карту и сверяю объекты…</div>}
+          {!compositionCheckBusy && compositionCheckError !== '' && <div className="district-composition-check-error" role="alert">{compositionCheckError}</div>}
+          {!compositionCheckBusy && sharedComposition !== null && compositionObjectComparison !== null && <>
+            <div className={`district-composition-check-result ${compositionMatches ? 'is-success' : 'has-differences'}`}>
+              <strong>{compositionMatches ? 'Карты полностью совпадают' : 'Обнаружены различия'}</strong>
+              <span>{compositionMatches
+                ? 'На устройстве и на сервере одинаковый набор и одинаковые редакции объектов.'
+                : `Только на устройстве: ${compositionObjectComparison.localOnly} · Только на сервере: ${compositionObjectComparison.sharedOnly} · Отличаются: ${compositionObjectComparison.changed}`}</span>
+            </div>
+            <div className="district-composition-table-wrap">
+              <table className="district-composition-table">
+                <thead><tr><th>Тип объекта</th><th>На устройстве</th><th>На сервере</th><th>Разница</th></tr></thead>
+                <tbody>{compositionRows.map(([label, localCount, sharedCount]) => {
+                  const difference = localCount - sharedCount;
+                  return <tr key={label} className={difference === 0 ? '' : 'has-difference'}><th>{label}</th><td>{localCount}</td><td>{sharedCount}</td><td>{difference > 0 ? `+${difference}` : difference}</td></tr>;
+                })}</tbody>
+              </table>
+            </div>
+            <p className="district-composition-server-time">Общая карта обновлена: <strong>{synchronizationTime(sharedCompositionProject?.publishedAtIso ?? '')}</strong></p>
+          </>}
+          <div className="district-composition-check-actions">
+            <button type="button" className="primary" disabled={compositionCheckBusy} onClick={() => void checkMapComposition()}>{compositionCheckBusy ? 'Сверяю…' : 'Обновить сверку'}</button>
+            <button type="button" className="secondary" onClick={() => setCompositionCheckOpen(false)}>Закрыть</button>
           </div>
         </section>
       </div>}

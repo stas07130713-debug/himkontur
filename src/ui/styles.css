@@ -2842,6 +2842,58 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-sync-diagnostics-grid .district-sync-local-state { grid-column: 1 / -1; }
 .district-sync-diagnostics-grid em { color: #71868b; font-size: 8px; font-style: normal; }
 .district-sync-queue-note { display: block; margin-top: 8px; color: #607a80; font-size: 8.5px; line-height: 1.4; }
+.district-composition-check-open {
+  width: 100%;
+  min-height: 34px;
+  margin-top: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-color: #679da7;
+  background: #fff;
+  color: #145b68;
+  font-size: 10px;
+  font-weight: 850;
+}
+.district-composition-check-open .ui-mini-icon { width: 16px; height: 16px; stroke: currentColor; }
+.district-composition-check-backdrop { z-index: 70; }
+.district-composition-check-dialog {
+  position: relative;
+  width: min(650px, calc(100vw - 28px));
+  max-height: min(760px, calc(100dvh - 28px));
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid #7aa2aa;
+  border-radius: 12px;
+  background: #f7fbfb;
+  color: #214b54;
+  box-shadow: 0 18px 60px #00131f88;
+}
+.district-composition-check-dialog h2 { margin: 2px 0 6px; color: #073c58; font-size: 21px; }
+.district-composition-check-dialog > p { margin: 0 0 14px; color: #60787d; font-size: 11px; line-height: 1.45; }
+.district-composition-check-loading,
+.district-composition-check-error { padding: 16px; border-radius: 9px; background: #edf6f7; color: #325e67; font-size: 12px; text-align: center; }
+.district-composition-check-error { border-left: 3px solid #c93c45; background: #fff0f0; color: #902d34; text-align: left; }
+.district-composition-check-result { margin-bottom: 10px; padding: 10px 12px; display: grid; gap: 3px; border-left: 4px solid #168e99; border-radius: 7px; background: #e5f6f7; }
+.district-composition-check-result strong { color: #105b65; font-size: 13px; }
+.district-composition-check-result span { color: #4d6f75; font-size: 10px; line-height: 1.4; }
+.district-composition-check-result.has-differences { border-left-color: #d89321; background: #fff5d9; }
+.district-composition-check-result.has-differences strong { color: #815610; }
+.district-composition-table-wrap { overflow-x: auto; border: 1px solid #bdd5da; border-radius: 8px; background: #fff; }
+.district-composition-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.district-composition-table th,
+.district-composition-table td { padding: 8px 9px; border-bottom: 1px solid #dce8ea; text-align: center; }
+.district-composition-table thead th { background: #e7f2f4; color: #385d65; font-size: 9px; white-space: nowrap; }
+.district-composition-table tbody th { color: #274e57; font-weight: 750; text-align: left; }
+.district-composition-table tbody td { color: #365f67; font-weight: 750; }
+.district-composition-table tbody tr:last-child th,
+.district-composition-table tbody tr:last-child td { border-bottom: 0; background: #eef6f7; font-weight: 900; }
+.district-composition-table tbody tr.has-difference th,
+.district-composition-table tbody tr.has-difference td:last-child { color: #a86213; }
+.district-composition-server-time { margin: 9px 0 0 !important; font-size: 9px !important; }
+.district-composition-check-actions { margin-top: 13px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.district-composition-check-actions button { min-height: 40px; margin: 0; border-radius: 7px; font-size: 10px; font-weight: 850; }
 .district-management-dialog .district-act-apply {
   width: 100%;
   min-height: 44px;
@@ -2910,6 +2962,28 @@ button.wide { width: 100%; margin-top: 10px; }
 [data-theme="dark"] .district-sync-diagnostics-grid strong { color: #a8eef0; }
 [data-theme="dark"] .district-sync-diagnostics-grid strong.is-error { color: #ffaaa8; }
 [data-theme="dark"] .district-sync-queue-note { color: #aac5ca; }
+[data-theme="dark"] .district-composition-check-open { border-color: #4d8792; background: #0d4652; color: #dff7f8; }
+[data-theme="dark"] .district-composition-check-dialog { border-color: #3b6b77; background: #082633; color: #e7f3f5; }
+[data-theme="dark"] .district-composition-check-dialog h2 { color: #eefafb; }
+[data-theme="dark"] .district-composition-check-dialog > p,
+[data-theme="dark"] .district-composition-server-time { color: #aac5ca; }
+[data-theme="dark"] .district-composition-check-loading { background: #0d4652; color: #dff7f8; }
+[data-theme="dark"] .district-composition-check-error { background: #4a2027; color: #ffd6d5; }
+[data-theme="dark"] .district-composition-check-result { background: #0d4652; }
+[data-theme="dark"] .district-composition-check-result strong { color: #c6f3f5; }
+[data-theme="dark"] .district-composition-check-result span { color: #afd0d4; }
+[data-theme="dark"] .district-composition-check-result.has-differences { background: #4a3919; }
+[data-theme="dark"] .district-composition-check-result.has-differences strong { color: #ffe0a3; }
+[data-theme="dark"] .district-composition-table-wrap { border-color: #376873; background: #0b3541; }
+[data-theme="dark"] .district-composition-table th,
+[data-theme="dark"] .district-composition-table td { border-color: #285560; }
+[data-theme="dark"] .district-composition-table thead th,
+[data-theme="dark"] .district-composition-table tbody tr:last-child th,
+[data-theme="dark"] .district-composition-table tbody tr:last-child td { background: #0d4652; color: #dff7f8; }
+[data-theme="dark"] .district-composition-table tbody th,
+[data-theme="dark"] .district-composition-table tbody td { color: #c6dfe2; }
+[data-theme="dark"] .district-composition-table tbody tr.has-difference th,
+[data-theme="dark"] .district-composition-table tbody tr.has-difference td:last-child { color: #ffd38a; }
 
 @media (max-width: 720px), (orientation: landscape) and (max-height: 520px) and (max-width: 1000px) {
   .file-actions.district-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2920,6 +2994,9 @@ button.wide { width: 100%; margin-top: 10px; }
   .district-map-surface > .district-zoom { top: 75px; right: 14px; width: 44px; }
   .district-marker-hover-card { display: none; }
   .district-management-dialog { padding: 16px; }
+  .district-composition-check-dialog { padding: 16px; }
+  .district-composition-table th,
+  .district-composition-table td { padding: 7px 6px; font-size: 9px; }
 }
 
 /* Раздельный компактный поиск зданий и элементов НППВ. */
