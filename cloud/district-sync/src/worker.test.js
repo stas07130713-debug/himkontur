@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { canRebaseLegacyOperation, hasUnresolvedConflict, isAllowedOrigin, operationQueueBaseRevision, readJson, shouldUseBackupImmediately, validAuthoritativeRecovery } from './worker.js';
+import { canRebaseLegacyOperation, isAllowedOrigin, needsConflictRecovery, operationQueueBaseRevision, readJson, shouldUseBackupImmediately, validAuthoritativeRecovery } from './worker.js';
 
 async function gzipJson(value) {
   const stream = new Blob([JSON.stringify(value)]).stream().pipeThrough(new CompressionStream('gzip'));
@@ -38,16 +38,16 @@ describe('application origin access', () => {
 });
 
 describe('district sync conflict guard', () => {
-  it('keeps reconciliation stopped while the state is marked as conflicted', () => {
-    assert.equal(hasUnresolvedConflict({ mode: 'conflict' }, 0), true);
+  it('detects a stale conflict state so Cloudflare can recover automatically', () => {
+    assert.equal(needsConflictRecovery({ mode: 'conflict' }, 0), true);
   });
 
-  it('keeps reconciliation stopped while a conflicted operation remains', () => {
-    assert.equal(hasUnresolvedConflict({ mode: 'primary' }, 1), true);
+  it('detects old conflicted operations so they no longer block new writes', () => {
+    assert.equal(needsConflictRecovery({ mode: 'primary' }, 1), true);
   });
 
-  it('allows reconciliation when no conflict is recorded', () => {
-    assert.equal(hasUnresolvedConflict({ mode: 'backup' }, 0), false);
+  it('does not run recovery when no mirror conflict is recorded', () => {
+    assert.equal(needsConflictRecovery({ mode: 'backup' }, 0), false);
   });
 });
 

@@ -303,8 +303,17 @@ function statusFrom(state, primaryAvailable, backupAvailable, queued, message = 
   };
 }
 
-export function hasUnresolvedConflict(state, conflictCount) {
+export function needsConflictRecovery(state, conflictCount) {
   return state?.mode === 'conflict' || conflictCount > 0;
+}
+
+async function recoverSharedMapFromMirrorConflict(env, state) {
+  const now = new Date().toISOString();
+  await env.DB.batch([
+    env.DB.prepare("UPDATE map_operations SET status = 'superseded', error = 'Расхождение с зеркалом Яндекс не блокирует общую карту Cloudflare.' WHERE status = 'conflict'"),
+    env.DB.prepare("UPDATE map_state SET mode = 'backup', last_error = '' WHERE id = 1"),
+  ]);
+  await event(env, 'warning', 'mirror-conflict-recovered', `sharedRevision=${state?.revision ?? 'none'}, at=${now}`);
 }
 
 export function shouldUseBackupImmediately(state, queued) {
@@ -336,13 +345,9 @@ async function reconcile(env) {
   let state = await readState(env);
   if (state === null) return { state: null, primaryAvailable: false, queued: 0, message: 'Резервная база ещё не инициализирована.' };
   const conflictRow = await env.DB.prepare("SELECT COUNT(*) AS count FROM map_operations WHERE status = 'conflict'").first();
-  if (hasUnresolvedConflict(state, Number(conflictRow?.count ?? 0))) {
-    return {
-      state: { ...state, mode: 'conflict' },
-      primaryAvailable: false,
-      queued: await pendingCount(env),
-      message: 'Обнаружен нерешённый конфликт версий. Автоматическая запись остановлена.',
-    };
+  if (needsConflictRecovery(state, Number(conflictRow?.count ?? 0))) {
+    await recoverSharedMapFromMirrorConflict(env, state);
+    state = await readState(env);
   }
   await compactPendingSnapshots(env, state);
   const primary = await callPrimary(env);
@@ -353,14 +358,11 @@ async function reconcile(env) {
   const queued = await env.DB.prepare("SELECT operation_id, base_revision, target_revision, project_json, created_at FROM map_operations WHERE status = 'queued' ORDER BY created_at ASC").all();
   if (queued.results.length === 0) {
     if (primary.revision !== state.revision) {
-      if (primary.revision < state.revision) {
-        await env.DB.prepare("UPDATE map_state SET mode = 'conflict', last_error = ? WHERE id = 1").bind('Версия основной базы отстаёт без зарегистрированных операций.').run();
-        await event(env, 'error', 'revision-conflict', `primary=${primary.revision}, backup=${state.revision}`);
-        state = await readState(env);
-        return { state, primaryAvailable: true, queued: 0, message: 'Обнаружено расхождение версий. Автоматическая запись остановлена.' };
-      }
-      await writeState(env, primary.project, 'yandex', primary.revision, 'primary');
+      await env.DB.prepare("UPDATE map_state SET primary_revision = ?, mode = 'backup', last_error = '' WHERE id = 1")
+        .bind(primary.revision).run();
+      await event(env, 'warning', 'mirror-revision-difference', `yandex=${primary.revision}, shared=${state.revision}`);
       state = await readState(env);
+      return { state, primaryAvailable: true, queued: 0, message: 'Общая карта Cloudflare доступна; зеркало Яндекс будет выровнено автоматически.' };
     } else {
       await env.DB.prepare("UPDATE map_state SET primary_revision = ?, mode = 'primary', last_primary_success_at = ?, last_error = '' WHERE id = 1")
         .bind(primary.revision, new Date().toISOString()).run();
@@ -373,13 +375,10 @@ async function reconcile(env) {
   }
   for (const row of queued.results) {
     if (primary.revision !== Number(row.base_revision)) {
-      await env.DB.batch([
-        env.DB.prepare("UPDATE map_operations SET status = 'conflict', error = ? WHERE operation_id = ?").bind(`primary=${primary.revision}`, row.operation_id),
-        env.DB.prepare("UPDATE map_state SET mode = 'conflict', last_error = ? WHERE id = 1").bind('Основная база изменилась во время резервного режима.'),
-      ]);
-      await event(env, 'error', 'failback-conflict', `operation=${row.operation_id}`);
-      state = await readState(env);
-      return { state, primaryAvailable: true, queued: await pendingCount(env), message: 'Основная база содержит другие изменения. Автоматическое слияние остановлено.' };
+      await env.DB.prepare("UPDATE map_operations SET base_revision = ?, error = '' WHERE operation_id = ?")
+        .bind(primary.revision, row.operation_id).run();
+      row.base_revision = primary.revision;
+      await event(env, 'warning', 'mirror-operation-rebased', `operation=${row.operation_id}, yandex=${primary.revision}`);
     }
     const project = JSON.parse(row.project_json);
     const result = await callPrimary(env, {
@@ -506,6 +505,42 @@ async function route(request, env, ctx) {
     });
   }
 
+  if (request.method === 'GET' && url.pathname === '/v1/history') {
+    await requireSession(request, env);
+    const requestedRevisionText = url.searchParams.get('revision');
+    const requestedRevision = requestedRevisionText === null ? null : Number(requestedRevisionText);
+    if (requestedRevision !== null && Number.isSafeInteger(requestedRevision) && requestedRevision >= 0) {
+      const row = await env.DB.prepare('SELECT revision, project_json, checksum, provider, created_at FROM map_history WHERE revision = ?')
+        .bind(requestedRevision).first();
+      if (!row) throw new HttpError(404, 'Запрошенная версия карты не найдена в истории.');
+      return jsonResponse(request, env, 200, {
+        revision: Number(row.revision),
+        project: JSON.parse(row.project_json),
+        checksum: row.checksum,
+        provider: row.provider,
+        createdAtIso: row.created_at,
+      });
+    }
+    const rows = await env.DB.prepare('SELECT revision, project_json, provider, created_at FROM map_history ORDER BY revision DESC LIMIT ?')
+      .bind(HISTORY_LIMIT).all();
+    return jsonResponse(request, env, 200, {
+      history: rows.results.map((row) => {
+        const project = JSON.parse(row.project_json);
+        const objects = Array.isArray(project.published) ? project.published : [];
+        return {
+          revision: Number(row.revision),
+          publishedAtIso: text(project.publishedAtIso),
+          createdAtIso: row.created_at,
+          provider: row.provider,
+          objects: objects.length,
+          buildings: objects.filter((object) => object?.kind === 'building').length,
+          hydrants: objects.filter((object) => object?.kind === 'hydrant').length,
+          reservoirs: objects.filter((object) => object?.kind === 'reservoir').length,
+        };
+      }),
+    });
+  }
+
   if (request.method === 'GET' && url.pathname.startsWith('/v1/operations/')) {
     await requireSession(request, env);
     const operationId = decodeURIComponent(url.pathname.slice('/v1/operations/'.length)).slice(0, 160);
@@ -532,9 +567,12 @@ async function route(request, env, ctx) {
     if (operationId === '' || baseRevision === null) throw new HttpError(400, 'Не указан идентификатор операции или базовая версия.');
     const existing = await env.DB.prepare('SELECT target_revision, project_json, status FROM map_operations WHERE operation_id = ?').bind(operationId).first();
     if (existing) return jsonResponse(request, env, 200, { project: JSON.parse(existing.project_json), status: statusFrom(await readState(env), existing.status === 'applied', true, await pendingCount(env), 'Повторная операция распознана и не была применена второй раз.') });
-    const state = await readState(env);
+    let state = await readState(env);
     if (state === null) throw new HttpError(503, 'Резервная база не инициализирована.');
-    if (state.mode === 'conflict') throw new HttpError(409, 'Синхронизация остановлена из-за конфликта версий.');
+    if (state.mode === 'conflict') {
+      await recoverSharedMapFromMirrorConflict(env, state);
+      state = await readState(env);
+    }
     let project = payload.project;
     if (state.revision !== baseRevision && operationId.startsWith('legacy-')) {
       const queued = await pendingCount(env);

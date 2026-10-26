@@ -39,6 +39,7 @@ import {
   fetchPublishedDistrictMapProject,
   loadDistrictMapProject,
   loadPendingDistrictMapOperations,
+  localOnlyDistrictMapObjects,
   publishDistrictMapOperation,
   saveDistrictMapProject,
   savePendingDistrictMapOperations,
@@ -162,6 +163,30 @@ export function App() {
     const shared = remote;
     if (pendingDistrictOperationsRef.current.length > 0 || districtChangeRememberedRef.current) {
       setDistrictSyncState("pending");
+      return false;
+    }
+    const currentLocal = districtProjectRef.current;
+    const localOnlyObjects = authoritative ? localOnlyDistrictMapObjects(currentLocal, shared) : [];
+    if (authoritative && localOnlyObjects.length > 0 && currentLocal.published.length > shared.published.length) {
+      const recovered = mergeDistrictMapProjects(null, currentLocal, shared);
+      if (recovered.conflicts.length > 0) {
+        const total = saveDistrictMapConflictArchive({
+          createdAtIso: new Date().toISOString(),
+          baseRevision: null,
+          localRevision: currentLocal.revision,
+          remoteRevision: shared.revision,
+          conflicts: recovered.conflicts,
+        });
+        setDistrictConflictCount(total);
+      }
+      const operation = createPendingDistrictMapOperation(shared.revision, recovered.project, shared);
+      pendingDistrictOperationsRef.current = [operation];
+      savePendingDistrictMapOperations(pendingDistrictOperationsRef.current);
+      districtProjectRef.current = recovered.project;
+      setDistrictProject(recovered.project);
+      saveDistrictMapProject(recovered.project);
+      setDistrictSyncState("pending");
+      setNotice(`Сохранены локальные объекты, отсутствовавшие в общей карте: ${localOnlyObjects.length}. Выполняется безопасное объединение.`);
       return false;
     }
     setDistrictSyncState("ready");
