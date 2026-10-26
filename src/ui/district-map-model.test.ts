@@ -7,6 +7,7 @@ import {
   parseDistrictMapBackup,
   savePendingDistrictMapOperations,
   serializeDistrictMapBackup,
+  shouldAdoptSharedDistrictMap,
   type DistrictMapProject,
 } from './district-map-model';
 
@@ -30,6 +31,13 @@ describe('published district project ordering', () => {
   it('uses publication time when revisions are equal', () => {
     expect(isPublishedProjectNewer(project(3, '2026-02-01T00:00:00Z'), project(3, '2026-01-01T00:00:00Z'))).toBe(true);
     expect(isPublishedProjectNewer(project(3, '2025-12-01T00:00:00Z'), project(3, '2026-01-01T00:00:00Z'))).toBe(false);
+  });
+
+  it('accepts the authoritative shared map over a stale local revision', () => {
+    const shared = project(100, '2026-10-26T10:00:00Z');
+    const staleLocal = project(999_999, '2026-10-22T10:00:00Z');
+    expect(shouldAdoptSharedDistrictMap(shared, staleLocal, true)).toBe(true);
+    expect(shouldAdoptSharedDistrictMap(shared, staleLocal, false)).toBe(false);
   });
 });
 

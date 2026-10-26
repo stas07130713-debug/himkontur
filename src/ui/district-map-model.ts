@@ -559,6 +559,10 @@ export async function fetchPublishedDistrictMapProject(): Promise<DistrictMapPro
   const coordinated = config?.coordinatorEnabled === true
     ? await fetchCoordinatedMap().then((value) => normalizeDistrictMapProject(value.project)).catch(() => null)
     : null;
+  // The coordinator is the shared map that all browsers write to. When it is
+  // available, return it immediately instead of waiting for stale fallbacks or
+  // an unavailable provider on every 30-second refresh.
+  if (coordinated !== null) return coordinated;
   const [cloud, synchronized, bundled, direct] = await Promise.all([
     fetchCloudDistrictMapProject(),
     fetchSynchronizedDistrictMapProject(),
@@ -566,7 +570,7 @@ export async function fetchPublishedDistrictMapProject(): Promise<DistrictMapPro
     fetchDirectPublishedDistrictMapProject(),
   ]);
   const remote = direct ?? await fetchGithubDistrictMapProject();
-  return [coordinated, cloud, synchronized, remote, bundled]
+  return [cloud, synchronized, remote, bundled]
     .filter((project): project is DistrictMapProject => project !== null)
     .reduce<DistrictMapProject | null>((newest, project) => (
       newest === null || isPublishedProjectNewer(project, newest) ? project : newest
@@ -627,6 +631,17 @@ export function isPublishedProjectNewer(candidate: DistrictMapProject, current: 
   const candidateTime = Date.parse(candidate.publishedAtIso);
   const currentTime = Date.parse(current.publishedAtIso);
   return Number.isFinite(candidateTime) && (!Number.isFinite(currentTime) || candidateTime > currentTime);
+}
+
+export function shouldAdoptSharedDistrictMap(
+  candidate: DistrictMapProject,
+  current: DistrictMapProject,
+  authoritative: boolean,
+): boolean {
+  if (!authoritative) return isPublishedProjectNewer(candidate, current);
+  // With no local pending operation, the coordinator is authoritative even if
+  // an old browser once stored an invalidly high local revision number.
+  return candidate.revision !== current.revision || candidate.publishedAtIso !== current.publishedAtIso;
 }
 
 export function saveDistrictMapProject(project: DistrictMapProject): void {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import packageInformation from "../../package.json";
 import { calculate } from "../core/calculation";
 import { verifyCalculation } from "../core/verifier";
@@ -37,12 +37,12 @@ import {
   createPendingDistrictMapOperation,
   fetchCoordinatedDistrictMapProject,
   fetchPublishedDistrictMapProject,
-  isPublishedProjectNewer,
   loadDistrictMapProject,
   loadPendingDistrictMapOperations,
   publishDistrictMapOperation,
   saveDistrictMapProject,
   savePendingDistrictMapOperations,
+  shouldAdoptSharedDistrictMap,
   type DistrictMapObject,
   type PendingDistrictMapOperation,
   type DistrictMapProject,
@@ -146,23 +146,39 @@ export function App() {
   useEffect(() => {
     if (tab !== "district") setDistrictManagementOpen(false);
   }, [tab]);
+  const refreshDistrictMapFromServer = useCallback(async (): Promise<boolean> => {
+    let authoritative = false;
+    let remote: DistrictMapProject | null = null;
+    try {
+      remote = await fetchCoordinatedDistrictMapProject();
+      authoritative = remote !== null;
+    } catch {
+      remote = await fetchPublishedDistrictMapProject();
+    }
+    if (remote === null) {
+      if (pendingDistrictOperationsRef.current.length === 0) setDistrictSyncState("error");
+      return false;
+    }
+    const shared = remote;
+    if (pendingDistrictOperationsRef.current.length > 0 || districtChangeRememberedRef.current) {
+      setDistrictSyncState("pending");
+      return false;
+    }
+    setDistrictSyncState("ready");
+    setDistrictProject((current) => {
+      if (!shouldAdoptSharedDistrictMap(shared, current, authoritative)) return current;
+      const next = { ...shared, draft: shared.published };
+      districtProjectRef.current = next;
+      saveDistrictMapProject(next);
+      return next;
+    });
+    return true;
+  }, []);
   useEffect(() => {
-    if (districtAdmin) return;
     let cancelled = false;
     const refresh = async () => {
-      const remote = await fetchPublishedDistrictMapProject();
-      if (cancelled || remote === null) return;
-      if (pendingDistrictOperationsRef.current.length > 0) {
-        setDistrictSyncState("pending");
-        return;
-      }
-      setDistrictSyncState("ready");
-      setDistrictProject((current) => {
-        if (!isPublishedProjectNewer(remote, current)) return current;
-        const next = { ...remote, draft: remote.published };
-        saveDistrictMapProject(next);
-        return next;
-      });
+      if (cancelled) return;
+      await refreshDistrictMapFromServer();
     };
     const onVisibility = () => { if (document.visibilityState === "visible") void refresh(); };
     void refresh();
@@ -179,11 +195,12 @@ export function App() {
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [districtAdmin]);
+  }, [districtAdmin, refreshDistrictMapFromServer]);
 
   const refreshMapSyncStatus = async () => {
     setMapSyncCheckBusy(true);
     try {
+      await refreshDistrictMapFromServer();
       const config = await loadMapSyncConfig();
       if (config?.coordinatorEnabled !== true) {
         setMapSyncStatus(disabledMapSyncStatus('Резервный облачный сервис подготовлен, но ещё не включён.'));
@@ -633,10 +650,22 @@ export function App() {
     }
   }
   useEffect(() => {
-    if (pendingDistrictOperationsRef.current.length === 0) return;
-    adminCredentialRef.current ??= { password: MAP_ADMIN_PASSWORD, sessionToken: "" };
-    void publishPendingDistrictProject();
-    // The locally persisted queue must resume once when this browser starts.
+    const resumePendingPublication = () => {
+      if (pendingDistrictOperationsRef.current.length === 0) return;
+      adminCredentialRef.current ??= { password: MAP_ADMIN_PASSWORD, sessionToken: "" };
+      void publishPendingDistrictProject();
+    };
+    const onVisibility = () => { if (document.visibilityState === "visible") resumePendingPublication(); };
+    resumePendingPublication();
+    const interval = window.setInterval(resumePendingPublication, 15_000);
+    window.addEventListener("online", resumePendingPublication);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("online", resumePendingPublication);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+    // The locally persisted queue resumes until the server confirms it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const commitDistrictObjects = (objects: readonly DistrictMapObject[]) => {
