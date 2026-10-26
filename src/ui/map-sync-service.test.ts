@@ -3,6 +3,7 @@ import {
   authenticateMapAdmin,
   clearMapSyncConfigCache,
   MapSyncRequestError,
+  normalizeMapSyncStatus,
   publishCoordinatedMap,
   withRenewedMapAdminSession,
 } from './map-sync-service';
@@ -29,6 +30,21 @@ afterEach(() => {
 });
 
 describe('map synchronization sessions', () => {
+  it('keeps the confirmed shared-server revision and save time in diagnostics', () => {
+    expect(normalizeMapSyncStatus({
+      mode: 'backup',
+      activeProvider: 'cloudflare',
+      backupAvailable: true,
+      pendingOperations: 1,
+      sharedRevision: 123,
+      sharedUpdatedAtIso: '2026-10-26T10:20:30.000Z',
+    })).toMatchObject({
+      sharedRevision: 123,
+      sharedUpdatedAtIso: '2026-10-26T10:20:30.000Z',
+      pendingOperations: 1,
+    });
+  });
+
   it('retries loading synchronization settings after a temporary fetch failure', async () => {
     const fetchMock = vi.fn()
       .mockRejectedValueOnce(new TypeError('temporary network failure'))

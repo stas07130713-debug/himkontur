@@ -118,6 +118,27 @@ const KM_PER_LONGITUDE_DEGREE = KM_PER_LATITUDE_DEGREE * Math.cos((CENTER_LATITU
 const BASE_WIDTH_KM = (MAP_BOUNDS.east - MAP_BOUNDS.west) * KM_PER_LONGITUDE_DEGREE;
 const BASE_HEIGHT_KM = (MAP_BOUNDS.north - MAP_BOUNDS.south) * KM_PER_LATITUDE_DEGREE;
 
+function synchronizationTime(value: string): string {
+  if (value === '') return '';
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return '';
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(timestamp));
+}
+
+function synchronizationPacketCount(count: number, action: 'waiting' | 'local'): string {
+  if (count === 0) return action === 'waiting' ? 'Всё передано' : 'Все изменения отправлены';
+  const lastTwo = count % 100;
+  const last = count % 10;
+  const noun = lastTwo >= 11 && lastTwo <= 14 ? 'пакетов' : last === 1 ? 'пакет' : last >= 2 && last <= 4 ? 'пакета' : 'пакетов';
+  const verb = action === 'waiting' ? (last === 1 && lastTwo !== 11 ? 'ожидает' : 'ожидают') : (last === 1 && lastTwo !== 11 ? 'не отправлен' : 'не отправлены');
+  return `${count} ${noun} ${verb}`;
+}
+
 function worldCoordinate(point: GeoPoint): Readonly<{ x: number; y: number }> {
   const radians = (Math.max(-85.05112878, Math.min(85.05112878, point.latitude)) * Math.PI) / 180;
   return { x: (point.longitude + 180) / 360, y: (1 - Math.asinh(Math.tan(radians)) / Math.PI) / 2 };
@@ -1535,11 +1556,11 @@ export function DistrictMapPage(props: Props) {
             <div className="district-sync-diagnostics-grid">
               <span><small>Основная база</small><strong className={props.syncStatus.primaryAvailable === false ? 'is-error' : ''}>{props.syncStatus.primaryAvailable === true ? 'Яндекс доступен' : props.syncStatus.primaryAvailable === false ? 'Яндекс недоступен' : 'Не проверена'}</strong></span>
               <span><small>Резервная база</small><strong className={props.syncStatus.backupAvailable === false ? 'is-error' : ''}>{props.syncStatus.backupAvailable === true ? 'Cloudflare доступен' : props.syncStatus.backupAvailable === false ? 'Cloudflare недоступен' : 'Не включена'}</strong></span>
-              <span><small>Текущий режим</small><strong>{props.syncStatus.mode === 'primary' ? 'Основная база' : props.syncStatus.mode === 'backup' ? 'Резервный режим' : props.syncStatus.mode === 'recovering' ? 'Восстановление' : props.syncStatus.mode === 'conflict' ? 'Требуется проверка' : props.syncStatus.mode === 'disabled' ? 'Резерв выключен' : 'Автономно'}</strong></span>
-              <span><small>Ожидают передачи в Яндекс</small><strong>{props.syncStatus.pendingOperations} измен.</strong></span>
-              <span><small>Только на этом устройстве</small><strong className={props.localPendingOperations > 0 ? 'is-error' : ''}>{props.localPendingOperations} измен.</strong></span>
+              <span className="district-sync-shared-state"><small>Общая карта на сервере</small><strong className={props.syncStatus.backupAvailable === false ? 'is-error' : ''}>{props.syncStatus.backupAvailable === true ? 'Данные сохранены' : 'Сервер недоступен'}</strong>{props.syncStatus.sharedUpdatedAtIso !== '' && <em>Обновлено {synchronizationTime(props.syncStatus.sharedUpdatedAtIso)}</em>}</span>
+              <span><small>С сервера в Яндекс</small><strong>{synchronizationPacketCount(props.syncStatus.pendingOperations, 'waiting')}</strong></span>
+              <span><small>Только на этом устройстве</small><strong className={props.localPendingOperations > 0 ? 'is-error' : ''}>{synchronizationPacketCount(props.localPendingOperations, 'local')}</strong></span>
             </div>
-            <small className="district-sync-queue-note">«Измен.» — сохранённый пакет изменений карты. Общая резервная карта Cloudflare уже доступна другим устройствам, даже пока Яндекс недоступен.</small>
+            <small className="district-sync-queue-note">После изменения объекта программа сразу отправляет новую редакцию общей карты в Cloudflare. Поэтому значение «Только на этом устройстве: 0» означает, что локальных неотправленных изменений нет. Другие устройства получают общую карту автоматически, даже пока Яндекс недоступен.</small>
             {props.conflictBackupCount > 0 && <div className="district-conflict-backup"><p>Это журнал уже разрешённых конфликтов. Для каждого объекта в общую карту выбрана его более поздняя редакция, а обе версии оставлены здесь для проверки. Очистка удалит только записи журнала и не изменит карту.</p><div><button type="button" className="secondary" onClick={props.onDownloadConflictBackup}>Скачать журнал ({props.conflictBackupCount})</button><button type="button" className="secondary danger" onClick={props.onClearConflictBackup}>Очистить журнал</button></div></div>}
           </section>
           {mapBackupStatus !== '' && <p className="district-act-status district-map-backup-status">{mapBackupStatus}</p>}

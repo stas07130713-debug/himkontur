@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { DistrictBuilding, DistrictMapProject } from './district-map-model';
+import type { DistrictBuilding, DistrictHydrant, DistrictMapObject, DistrictMapProject } from './district-map-model';
 import { clearDistrictMapConflictArchives, districtMapConflictArchiveCount, mergeDistrictMapProjects, saveDistrictMapConflictArchive, serializeDistrictMapConflictReport } from './district-map-merge';
 
 function building(id: string, name: string, updatedAtIso: string): DistrictBuilding {
@@ -22,7 +22,31 @@ function building(id: string, name: string, updatedAtIso: string): DistrictBuild
   };
 }
 
-function project(revision: number, objects: readonly DistrictBuilding[]): DistrictMapProject {
+function hydrant(id: string, updatedAtIso: string): DistrictHydrant {
+  return {
+    id,
+    kind: 'hydrant',
+    point: { latitude: 67.9, longitude: 32.8 },
+    number: 'ПГ-1',
+    owner: '',
+    status: 'serviceable',
+    faultDescription: '',
+    network: 'ring',
+    hydrantType: 'standard',
+    pattern: 'moscow',
+    diameterMm: 100,
+    pressureAtm: null,
+    heightMm: null,
+    signDistanceLeftM: null,
+    signDistanceRightM: null,
+    signDistanceForwardM: null,
+    lastInspectionDate: '',
+    note: '',
+    updatedAtIso,
+  };
+}
+
+function project(revision: number, objects: readonly DistrictMapObject[]): DistrictMapProject {
   return {
     id: 'district-map-main',
     name: 'Карта района выезда',
@@ -47,6 +71,20 @@ describe('conflict-safe district map merge', () => {
     expect(merged.project.published).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: '1.1', note: 'Изменено дома' }),
       expect.objectContaining({ id: '2.1', note: 'Изменено на работе' }),
+    ]));
+  });
+
+  it('keeps a moved hydrant together with an unrelated remote object edit', () => {
+    const sourceHydrant = hydrant('hydrant-1', '2026-10-23T08:00:00.000Z');
+    const sourceBuilding = building('1.1', 'Цех 1', '2026-10-23T08:00:00.000Z');
+    const base = project(10, [sourceHydrant, sourceBuilding]);
+    const movedHydrant = { ...sourceHydrant, point: { latitude: 67.91, longitude: 32.81 }, updatedAtIso: '2026-10-23T10:00:00.000Z' };
+    const editedBuilding = { ...sourceBuilding, note: 'Изменено на другом устройстве', updatedAtIso: '2026-10-23T09:00:00.000Z' };
+    const merged = mergeDistrictMapProjects(project(10, base.published), project(11, [movedHydrant, sourceBuilding]), project(12, [sourceHydrant, editedBuilding]));
+    expect(merged.conflicts).toHaveLength(0);
+    expect(merged.project.published).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'hydrant-1', point: movedHydrant.point }),
+      expect.objectContaining({ id: '1.1', note: editedBuilding.note }),
     ]));
   });
 

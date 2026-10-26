@@ -2838,6 +2838,8 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-sync-diagnostics-grid small { color: #71868b; font-size: 8px; }
 .district-sync-diagnostics-grid strong { overflow: hidden; color: #176372; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .district-sync-diagnostics-grid strong.is-error { color: #b82d37; }
+.district-sync-diagnostics-grid .district-sync-shared-state { grid-column: 1 / -1; }
+.district-sync-diagnostics-grid em { color: #71868b; font-size: 8px; font-style: normal; }
 .district-sync-queue-note { display: block; margin-top: 8px; color: #607a80; font-size: 8.5px; line-height: 1.4; }
 .district-management-dialog .district-act-apply {
   width: 100%;

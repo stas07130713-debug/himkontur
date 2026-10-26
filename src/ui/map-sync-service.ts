@@ -15,6 +15,8 @@ export type MapSyncStatus = Readonly<{
   backupAvailable: boolean | null;
   synchronized: boolean;
   pendingOperations: number;
+  sharedRevision: number | null;
+  sharedUpdatedAtIso: string;
   lastSuccessAtIso: string;
   message: string;
 }>;
@@ -89,6 +91,12 @@ function normalizeStatus(value: unknown, fallback: Partial<MapSyncStatus> = {}):
     pendingOperations: typeof source.pendingOperations === 'number' && Number.isFinite(source.pendingOperations)
       ? Math.max(0, Math.trunc(source.pendingOperations))
       : fallback.pendingOperations ?? 0,
+    sharedRevision: typeof source.sharedRevision === 'number' && Number.isSafeInteger(source.sharedRevision)
+      ? source.sharedRevision
+      : fallback.sharedRevision ?? null,
+    sharedUpdatedAtIso: stringValue(source.sharedUpdatedAtIso) !== ''
+      ? stringValue(source.sharedUpdatedAtIso)
+      : (fallback.sharedUpdatedAtIso ?? ''),
     lastSuccessAtIso: stringValue(source.lastSuccessAtIso) !== ''
       ? stringValue(source.lastSuccessAtIso)
       : (fallback.lastSuccessAtIso ?? ''),
@@ -105,6 +113,8 @@ export function disabledMapSyncStatus(message = 'Резервный облачн
     backupAvailable: null,
     synchronized: false,
     pendingOperations: 0,
+    sharedRevision: null,
+    sharedUpdatedAtIso: '',
     lastSuccessAtIso: '',
     message,
   });

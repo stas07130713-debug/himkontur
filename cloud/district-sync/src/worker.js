@@ -296,6 +296,8 @@ function statusFrom(state, primaryAvailable, backupAvailable, queued, message = 
     backupAvailable,
     synchronized: Boolean(primaryAvailable && backupAvailable && queued === 0 && state && state.revision === state.primaryRevision),
     pendingOperations: queued,
+    sharedRevision: state?.revision ?? null,
+    sharedUpdatedAtIso: state?.updatedAt || '',
     lastSuccessAtIso: state?.lastPrimarySuccessAt || state?.updatedAt || '',
     message: message || state?.lastError || (mode === 'primary' ? 'Основная и резервная базы работают.' : mode === 'backup' ? 'Яндекс недоступен: используется резервная база.' : ''),
   };
