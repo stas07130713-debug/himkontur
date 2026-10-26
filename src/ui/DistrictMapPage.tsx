@@ -74,6 +74,7 @@ type Props = Readonly<{
   onCloseManagement: () => void;
   onExitAdmin: () => void;
   syncStatus: MapSyncStatus;
+  localPendingOperations: number;
   syncCheckBusy: boolean;
   onCheckSynchronization: () => void;
   publishBusy: boolean;
@@ -1535,8 +1536,10 @@ export function DistrictMapPage(props: Props) {
               <span><small>Основная база</small><strong className={props.syncStatus.primaryAvailable === false ? 'is-error' : ''}>{props.syncStatus.primaryAvailable === true ? 'Яндекс доступен' : props.syncStatus.primaryAvailable === false ? 'Яндекс недоступен' : 'Не проверена'}</strong></span>
               <span><small>Резервная база</small><strong className={props.syncStatus.backupAvailable === false ? 'is-error' : ''}>{props.syncStatus.backupAvailable === true ? 'Cloudflare доступен' : props.syncStatus.backupAvailable === false ? 'Cloudflare недоступен' : 'Не включена'}</strong></span>
               <span><small>Текущий режим</small><strong>{props.syncStatus.mode === 'primary' ? 'Основная база' : props.syncStatus.mode === 'backup' ? 'Резервный режим' : props.syncStatus.mode === 'recovering' ? 'Восстановление' : props.syncStatus.mode === 'conflict' ? 'Требуется проверка' : props.syncStatus.mode === 'disabled' ? 'Резерв выключен' : 'Автономно'}</strong></span>
-              <span><small>Локальная очередь</small><strong>{props.syncStatus.pendingOperations} оп.</strong></span>
+              <span><small>Ожидают передачи в Яндекс</small><strong>{props.syncStatus.pendingOperations} измен.</strong></span>
+              <span><small>Только на этом устройстве</small><strong className={props.localPendingOperations > 0 ? 'is-error' : ''}>{props.localPendingOperations} измен.</strong></span>
             </div>
+            <small className="district-sync-queue-note">«Измен.» — сохранённый пакет изменений карты. Общая резервная карта Cloudflare уже доступна другим устройствам, даже пока Яндекс недоступен.</small>
             {props.conflictBackupCount > 0 && <div className="district-conflict-backup"><p>Это журнал уже разрешённых конфликтов. Для каждого объекта в общую карту выбрана его более поздняя редакция, а обе версии оставлены здесь для проверки. Очистка удалит только записи журнала и не изменит карту.</p><div><button type="button" className="secondary" onClick={props.onDownloadConflictBackup}>Скачать журнал ({props.conflictBackupCount})</button><button type="button" className="secondary danger" onClick={props.onClearConflictBackup}>Очистить журнал</button></div></div>}
           </section>
           {mapBackupStatus !== '' && <p className="district-act-status district-map-backup-status">{mapBackupStatus}</p>}

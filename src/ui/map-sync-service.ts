@@ -2,6 +2,7 @@ import type { DistrictMapProject } from './district-map-model';
 
 const MAP_SYNC_CONFIG_URL = './data/map-sync.json';
 const DEFAULT_POLL_INTERVAL_MS = 60_000;
+const COMPRESS_REQUEST_THRESHOLD_BYTES = 32 * 1024;
 
 export type MapSyncProvider = 'yandex' | 'cloudflare' | 'local';
 export type MapSyncMode = 'primary' | 'backup' | 'recovering' | 'offline' | 'conflict' | 'disabled';
@@ -197,6 +198,22 @@ async function coordinatorRequest(path: string, init: RequestInit, timeoutMs: nu
   throw lastError ?? new MapSyncRequestError('Нет связи с сервисом синхронизации.');
 }
 
+async function encodedJsonRequest(value: unknown): Promise<Readonly<{ body: BodyInit; contentType: string }>> {
+  const json = JSON.stringify(value);
+  if (json.length < COMPRESS_REQUEST_THRESHOLD_BYTES || typeof CompressionStream === 'undefined') {
+    return { body: json, contentType: 'application/json' };
+  }
+  try {
+    const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));
+    return {
+      body: await new Response(stream).arrayBuffer(),
+      contentType: 'application/vnd.himkontur+json+gzip',
+    };
+  } catch {
+    return { body: json, contentType: 'application/json' };
+  }
+}
+
 export async function fetchCoordinatedMap(): Promise<CoordinatedMapResponse> {
   const payload = await coordinatorRequest('/v1/map', { method: 'GET' }, 12_000);
   if (!isObject(payload) || !('project' in payload)) throw new MapSyncRequestError('Резервный сервис вернул некорректную карту.', 502, 'invalid');
@@ -237,21 +254,22 @@ export async function withRenewedMapAdminSession<T>(
 }
 
 export async function publishCoordinatedMap(request: CoordinatedPublishRequest): Promise<CoordinatedMapResponse> {
+  const encoded = await encodedJsonRequest({
+    operationId: request.operationId,
+    baseRevision: request.baseRevision,
+    project: request.project,
+    updatedBy: 'Администратор ХИМКОНТУР',
+  });
   let payload: unknown;
   try {
     payload = await coordinatorRequest('/v1/map', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': encoded.contentType,
         Authorization: `Bearer ${request.credential.sessionToken}`,
       },
-      body: JSON.stringify({
-        operationId: request.operationId,
-        baseRevision: request.baseRevision,
-        project: request.project,
-        updatedBy: 'Администратор ХИМКОНТУР',
-      }),
-    }, 25_000);
+      body: encoded.body,
+    }, 60_000);
   } catch (error) {
     if (!(error instanceof MapSyncRequestError) || error.kind !== 'unavailable') throw error;
     // A timeout can happen after D1 has already committed the operation but
@@ -260,7 +278,7 @@ export async function publishCoordinatedMap(request: CoordinatedPublishRequest):
     const verified = await coordinatorRequest(`/v1/operations/${encodeURIComponent(request.operationId)}`, {
       method: 'GET',
       headers: { Authorization: `Bearer ${request.credential.sessionToken}` },
-    }, 8_000, 1).catch(() => null);
+    }, 15_000, 1).catch(() => null);
     if (!isObject(verified) || !('project' in verified)) throw error;
     payload = verified;
   }

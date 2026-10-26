@@ -825,7 +825,8 @@ export function App() {
             setDistrictManagementOpen(false);
             setDistrictAdmin(false);
           }}
-          syncStatus={{ ...mapSyncStatus, pendingOperations: pendingDistrictOperationsRef.current.length + mapSyncStatus.pendingOperations }}
+          syncStatus={mapSyncStatus}
+          localPendingOperations={pendingDistrictOperationsRef.current.length}
           syncCheckBusy={mapSyncCheckBusy}
           onCheckSynchronization={() => void refreshMapSyncStatus()}
           publishBusy={districtSyncState === "publishing"}

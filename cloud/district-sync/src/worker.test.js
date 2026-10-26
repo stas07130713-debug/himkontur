@@ -1,6 +1,23 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { canRebaseLegacyOperation, hasUnresolvedConflict, isAllowedOrigin, shouldUseBackupImmediately, validAuthoritativeRecovery } from './worker.js';
+import { canRebaseLegacyOperation, hasUnresolvedConflict, isAllowedOrigin, operationQueueBaseRevision, readJson, shouldUseBackupImmediately, validAuthoritativeRecovery } from './worker.js';
+
+async function gzipJson(value) {
+  const stream = new Blob([JSON.stringify(value)]).stream().pipeThrough(new CompressionStream('gzip'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+describe('compressed synchronization requests', () => {
+  it('restores a gzip-compressed map request', async () => {
+    const payload = { operationId: 'map-test', project: { id: 'district-map-main', published: [1, 2, 3] } };
+    const request = new Request('https://sync.example.test/v1/map', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/vnd.himkontur+json+gzip' },
+      body: await gzipJson(payload),
+    });
+    assert.deepEqual(await readJson(request), payload);
+  });
+});
 
 describe('application origin access', () => {
   const configured = 'https://stas07130713-debug.github.io,null';
@@ -45,6 +62,11 @@ describe('fast backup routing', () => {
 
   it('uses the primary write path only for a synchronized state', () => {
     assert.equal(shouldUseBackupImmediately({ mode: 'primary' }, 0), false);
+  });
+
+  it('stores one backup checkpoint against the last confirmed Yandex revision', () => {
+    assert.equal(operationQueueBaseRevision('queued', 150, 100), 100);
+    assert.equal(operationQueueBaseRevision('applied', 150, 100), 150);
   });
 });
 

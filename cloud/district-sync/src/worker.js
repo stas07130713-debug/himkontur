@@ -55,8 +55,19 @@ function integer(value) {
   return Number.isSafeInteger(value) ? value : null;
 }
 
-async function readJson(request) {
-  const raw = await request.text();
+export async function readJson(request) {
+  const compressed = request.headers.get('Content-Type')?.toLowerCase().includes('application/vnd.himkontur+json+gzip') === true;
+  let raw;
+  try {
+    if (compressed) {
+      if (request.body === null) raw = '';
+      else raw = await new Response(request.body.pipeThrough(new DecompressionStream('gzip'))).text();
+    } else {
+      raw = await request.text();
+    }
+  } catch {
+    throw new HttpError(400, 'Не удалось распаковать данные карты.');
+  }
   if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) throw new HttpError(413, 'Объём данных превышает 2 МБ.');
   try {
     return raw === '' ? {} : JSON.parse(raw);
@@ -238,16 +249,41 @@ async function conditionalBackupCommit(env, operation, status, primaryRevision, 
   const projectJson = JSON.stringify(operation.project);
   const checksum = await sha256(projectJson);
   const now = new Date().toISOString();
-  const results = await env.DB.batch([
+  const compactQueued = status === 'queued';
+  const queueBaseRevision = operationQueueBaseRevision(status, operation.baseRevision, primaryRevision);
+  const statements = [];
+  if (compactQueued) {
+    // Every queued record contains a complete map snapshot. Keep only the
+    // newest snapshot in the active failback queue; older records remain as
+    // superseded audit entries and no longer inflate the synchronization count.
+    statements.push(env.DB.prepare("UPDATE map_operations SET status = 'superseded', error = 'Объединена с более новой полной копией карты.' WHERE status = 'queued' AND EXISTS (SELECT 1 FROM map_state WHERE id = 1 AND revision = ?)")
+      .bind(operation.baseRevision));
+  }
+  statements.push(
     env.DB.prepare('INSERT OR REPLACE INTO map_operations (operation_id, base_revision, target_revision, project_json, checksum, status, created_at, applied_at, error) SELECT ?, ?, ?, ?, ?, ?, ?, ?, \'\' WHERE EXISTS (SELECT 1 FROM map_state WHERE id = 1 AND revision = ?)')
-      .bind(operation.operationId, operation.baseRevision, operation.project.revision, projectJson, checksum, status, operation.createdAt, status === 'applied' ? now : '', operation.baseRevision),
+      .bind(operation.operationId, queueBaseRevision, operation.project.revision, projectJson, checksum, status, operation.createdAt, status === 'applied' ? now : '', operation.baseRevision),
     env.DB.prepare('INSERT OR REPLACE INTO map_history (revision, project_json, checksum, provider, created_at) SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM map_state WHERE id = 1 AND revision = ?)')
       .bind(operation.project.revision, projectJson, checksum, mode === 'primary' ? 'yandex' : 'cloudflare', now, operation.baseRevision),
     env.DB.prepare('UPDATE map_state SET revision = ?, project_json = ?, checksum = ?, primary_revision = ?, mode = ?, updated_at = ?, last_primary_success_at = CASE WHEN ? = \'primary\' THEN ? ELSE last_primary_success_at END, last_error = \'\' WHERE id = 1 AND revision = ?')
       .bind(operation.project.revision, projectJson, checksum, primaryRevision, mode, now, mode, now, operation.baseRevision),
     env.DB.prepare('DELETE FROM map_history WHERE revision NOT IN (SELECT revision FROM map_history ORDER BY revision DESC LIMIT ?)').bind(HISTORY_LIMIT),
+  );
+  const results = await env.DB.batch(statements);
+  const stateUpdateIndex = compactQueued ? 3 : 2;
+  if (Number(results[stateUpdateIndex]?.meta?.changes ?? 0) !== 1) throw new HttpError(409, 'Карта уже изменена в другом браузере. Сначала обновите данные.');
+}
+
+async function compactPendingSnapshots(env, state) {
+  const queued = await env.DB.prepare("SELECT operation_id FROM map_operations WHERE status = 'queued' ORDER BY created_at DESC, operation_id DESC LIMIT 2").all();
+  if (queued.results.length <= 1) return;
+  const newestOperationId = queued.results[0].operation_id;
+  await env.DB.batch([
+    env.DB.prepare("UPDATE map_operations SET status = 'superseded', error = 'Объединена с более новой полной копией карты.' WHERE status = 'queued' AND operation_id <> ?")
+      .bind(newestOperationId),
+    env.DB.prepare("UPDATE map_operations SET base_revision = ?, error = '' WHERE operation_id = ? AND status = 'queued'")
+      .bind(state.primaryRevision, newestOperationId),
   ]);
-  if (Number(results[2]?.meta?.changes ?? 0) !== 1) throw new HttpError(409, 'Карта уже изменена в другом браузере. Сначала обновите данные.');
+  await event(env, 'info', 'queue-compacted', `latest=${newestOperationId}, base=${state.primaryRevision}`);
 }
 
 function statusFrom(state, primaryAvailable, backupAvailable, queued, message = '') {
@@ -273,6 +309,10 @@ export function shouldUseBackupImmediately(state, queued) {
   return state !== null && (state.mode === 'backup' || queued > 0);
 }
 
+export function operationQueueBaseRevision(status, operationBaseRevision, primaryRevision) {
+  return status === 'queued' ? primaryRevision : operationBaseRevision;
+}
+
 export function canRebaseLegacyOperation(operationId, incomingProject, sharedProject, queued) {
   if (!operationId.startsWith('legacy-') || queued !== 0) return false;
   const incomingPublishedAt = Date.parse(incomingProject.publishedAtIso);
@@ -293,16 +333,17 @@ export function validAuthoritativeRecovery(payload) {
 async function reconcile(env) {
   let state = await readState(env);
   if (state === null) return { state: null, primaryAvailable: false, queued: 0, message: 'Резервная база ещё не инициализирована.' };
-  const primary = await callPrimary(env);
   const conflictRow = await env.DB.prepare("SELECT COUNT(*) AS count FROM map_operations WHERE status = 'conflict'").first();
   if (hasUnresolvedConflict(state, Number(conflictRow?.count ?? 0))) {
     return {
       state: { ...state, mode: 'conflict' },
-      primaryAvailable: primary.ok,
+      primaryAvailable: false,
       queued: await pendingCount(env),
       message: 'Обнаружен нерешённый конфликт версий. Автоматическая запись остановлена.',
     };
   }
+  await compactPendingSnapshots(env, state);
+  const primary = await callPrimary(env);
   if (!primary.ok) {
     await env.DB.prepare("UPDATE map_state SET mode = 'backup', last_error = ? WHERE id = 1").bind('Основная база Яндекс временно недоступна.').run();
     return { state: { ...state, mode: 'backup' }, primaryAvailable: false, queued: await pendingCount(env), message: 'Основная база Яндекс временно недоступна.' };

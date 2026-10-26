@@ -129,6 +129,36 @@ describe('map synchronization sessions', () => {
     expect(fetchMock.mock.calls[3]?.[0]).toBe('https://coordinator.example.test/v1/operations/operation-committed');
   });
 
+  it('compresses a full map before sending it to the coordinator', async () => {
+    const largeText = 'Карта'.repeat(20_000);
+    const project = {
+      id: 'district-map-main',
+      name: 'Карта района выезда',
+      revision: 2,
+      draft: [{ id: 'large-object', kind: 'building', notes: largeText }],
+      published: [{ id: 'large-object', kind: 'building', notes: largeText }],
+      draftSavedAtIso: '2026-10-26T09:00:00.000Z',
+      publishedAtIso: '2026-10-26T09:00:00.000Z',
+    } as unknown as DistrictMapProject;
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(configResponse))
+      .mockResolvedValueOnce(jsonResponse({ project, status: { mode: 'backup', activeProvider: 'cloudflare' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('window', { setTimeout, clearTimeout });
+
+    await publishCoordinatedMap({
+      operationId: 'large-operation',
+      baseRevision: 1,
+      project,
+      credential: { password: 'administrator-password', sessionToken: 'active-session' },
+    });
+
+    const request = fetchMock.mock.calls[1]?.[1] as RequestInit;
+    expect((request.headers as Record<string, string>)['Content-Type']).toBe('application/vnd.himkontur+json+gzip');
+    expect(request.body).toBeInstanceOf(ArrayBuffer);
+    expect((request.body as ArrayBuffer).byteLength).toBeLessThan(32_000);
+  });
+
   it('renews an expired session and repeats the interrupted operation once', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse(configResponse))
