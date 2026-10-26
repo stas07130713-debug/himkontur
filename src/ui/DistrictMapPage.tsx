@@ -130,12 +130,12 @@ function synchronizationTime(value: string): string {
   }).format(new Date(timestamp));
 }
 
-function synchronizationPacketCount(count: number, action: 'waiting' | 'local'): string {
-  if (count === 0) return action === 'waiting' ? 'Всё передано' : 'Все изменения отправлены';
+function localSynchronizationPacketCount(count: number): string {
+  if (count === 0) return 'Все изменения отправлены';
   const lastTwo = count % 100;
   const last = count % 10;
   const noun = lastTwo >= 11 && lastTwo <= 14 ? 'пакетов' : last === 1 ? 'пакет' : last >= 2 && last <= 4 ? 'пакета' : 'пакетов';
-  const verb = action === 'waiting' ? (last === 1 && lastTwo !== 11 ? 'ожидает' : 'ожидают') : (last === 1 && lastTwo !== 11 ? 'не отправлен' : 'не отправлены');
+  const verb = last === 1 && lastTwo !== 11 ? 'не отправлен' : 'не отправлены';
   return `${count} ${noun} ${verb}`;
 }
 
@@ -1550,17 +1550,16 @@ export function DistrictMapPage(props: Props) {
           </div>
           <section className="district-sync-diagnostics" aria-label="Состояние синхронизации карты">
             <div className="district-sync-diagnostics-heading">
-              <div><strong>Синхронизация карты</strong><small>{props.syncStatus.message || 'Проверка основной и резервной базы данных.'}</small></div>
+              <div><strong>Синхронизация карты</strong><small>{props.syncStatus.backupAvailable === true ? 'Общая карта доступна. Другие устройства получают актуальную версию автоматически.' : props.syncStatus.message || 'Проверка облачных сервисов карты.'}</small></div>
               <button type="button" className="secondary" disabled={props.syncCheckBusy} onClick={props.onCheckSynchronization}>{props.syncCheckBusy ? 'Проверяю…' : 'Проверить'}</button>
             </div>
             <div className="district-sync-diagnostics-grid">
-              <span><small>Основная база</small><strong className={props.syncStatus.primaryAvailable === false ? 'is-error' : ''}>{props.syncStatus.primaryAvailable === true ? 'Яндекс доступен' : props.syncStatus.primaryAvailable === false ? 'Яндекс недоступен' : 'Не проверена'}</strong></span>
-              <span><small>Резервная база</small><strong className={props.syncStatus.backupAvailable === false ? 'is-error' : ''}>{props.syncStatus.backupAvailable === true ? 'Cloudflare доступен' : props.syncStatus.backupAvailable === false ? 'Cloudflare недоступен' : 'Не включена'}</strong></span>
+              <span><small>Сервис Яндекс</small><strong className={props.syncStatus.primaryAvailable === false ? 'is-error' : ''}>{props.syncStatus.primaryAvailable === true ? 'Доступен' : props.syncStatus.primaryAvailable === false ? 'Недоступен' : 'Не проверен'}</strong></span>
+              <span><small>Сервис Cloudflare</small><strong className={props.syncStatus.backupAvailable === false ? 'is-error' : ''}>{props.syncStatus.backupAvailable === true ? 'Доступен' : props.syncStatus.backupAvailable === false ? 'Недоступен' : 'Не включён'}</strong></span>
               <span className="district-sync-shared-state"><small>Общая карта на сервере</small><strong className={props.syncStatus.backupAvailable === false ? 'is-error' : ''}>{props.syncStatus.backupAvailable === true ? 'Данные сохранены' : 'Сервер недоступен'}</strong>{props.syncStatus.sharedUpdatedAtIso !== '' && <em>Обновлено {synchronizationTime(props.syncStatus.sharedUpdatedAtIso)}</em>}</span>
-              <span><small>С сервера в Яндекс</small><strong>{synchronizationPacketCount(props.syncStatus.pendingOperations, 'waiting')}</strong></span>
-              <span><small>Только на этом устройстве</small><strong className={props.localPendingOperations > 0 ? 'is-error' : ''}>{synchronizationPacketCount(props.localPendingOperations, 'local')}</strong></span>
+              <span className="district-sync-local-state"><small>Только на этом устройстве</small><strong className={props.localPendingOperations > 0 ? 'is-error' : ''}>{localSynchronizationPacketCount(props.localPendingOperations)}</strong></span>
             </div>
-            <small className="district-sync-queue-note">После изменения объекта программа сразу отправляет новую редакцию общей карты в Cloudflare. Поэтому значение «Только на этом устройстве: 0» означает, что локальных неотправленных изменений нет. Другие устройства получают общую карту автоматически, даже пока Яндекс недоступен.</small>
+            <small className="district-sync-queue-note">После изменения объекта программа сразу сохраняет новую редакцию общей карты в доступном облачном сервисе. Поэтому значение «Все изменения отправлены» означает, что актуальная карта уже доступна другим устройствам. Обмен между облачными сервисами выполняется автоматически и не требует ожидания пользователя.</small>
             {props.conflictBackupCount > 0 && <div className="district-conflict-backup"><p>Это журнал уже разрешённых конфликтов. Для каждого объекта в общую карту выбрана его более поздняя редакция, а обе версии оставлены здесь для проверки. Очистка удалит только записи журнала и не изменит карту.</p><div><button type="button" className="secondary" onClick={props.onDownloadConflictBackup}>Скачать журнал ({props.conflictBackupCount})</button><button type="button" className="secondary danger" onClick={props.onClearConflictBackup}>Очистить журнал</button></div></div>}
           </section>
           {mapBackupStatus !== '' && <p className="district-act-status district-map-backup-status">{mapBackupStatus}</p>}
