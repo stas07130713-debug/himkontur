@@ -1,7 +1,7 @@
 {
   "id": "district-map-main",
   "name": "Карта района выезда",
-  "revision": 1792966353985,
+  "revision": 1793022089808,
   "draft": [
     {
       "id": "kml-hydrant-095f40d67c2912bd9832",
@@ -2934,11 +2934,11 @@
     {
       "id": "kml-hydrant-13964c93c12912bd9872",
       "point": {
-        "latitude": 67.89816187369868,
-        "longitude": 32.854849441402536
+        "latitude": 67.90219169721932,
+        "longitude": 32.85263275787841
       },
-      "note": "Изменения внесены в раздел «Координаты объекта» администратором 24.10.2026.",
-      "updatedAtIso": "2026-10-24T07:55:23.355Z",
+      "note": "Изменения внесены в раздел «Координаты объекта» администратором 26.10.2026.",
+      "updatedAtIso": "2026-10-26T10:03:30.733Z",
       "kind": "hydrant",
       "number": "ПГ-16",
       "owner": "ЦЭО",
@@ -6394,11 +6394,11 @@
     {
       "id": "24cc31b7-7c86-44ae-8078-916652473eb3",
       "point": {
-        "latitude": 67.90729976537789,
-        "longitude": 32.832020737675634
+        "latitude": 67.90729976463938,
+        "longitude": 32.832746174495384
       },
-      "note": "Изменения внесены в раздел «Расположение таблички» администратором 24.10.2026.",
-      "updatedAtIso": "2026-10-24T11:31:33.679Z",
+      "note": "Изменения внесены в раздел «Расположение таблички» администратором 26.10.2026.",
+      "updatedAtIso": "2026-10-26T09:51:57.625Z",
       "kind": "building",
       "objectType": "building",
       "mapRole": "ordinary",
@@ -8105,11 +8105,11 @@
     {
       "id": "36953746-4353-415a-bf9d-dfccba6bd904",
       "point": {
-        "latitude": 67.9226073863437,
-        "longitude": 32.838949495968336
+        "latitude": 67.9229907019673,
+        "longitude": 32.839279282111875
       },
-      "note": "Изменения внесены в раздел «Расположение таблички» администратором 21.10.2026.",
-      "updatedAtIso": "2026-10-21T12:34:00.331Z",
+      "note": "Изменения внесены в раздел «Расположение таблички» администратором 23.10.2026.",
+      "updatedAtIso": "2026-10-23T18:19:51.945Z",
       "kind": "building",
       "objectType": "building",
       "mapRole": "ordinary",
@@ -11189,6 +11189,51 @@
           "shortName": "ОПУ НП, РП-135"
         }
       ]
+    },
+    {
+      "id": "5d4dcb38-735e-45a7-85a5-b770747f39bb",
+      "point": {
+        "latitude": 67.91988792088046,
+        "longitude": 32.846909622078776
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-17T16:27:17.183Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.92006225392235,
+          "longitude": 32.84726923335015
+        },
+        {
+          "latitude": 67.91966829269822,
+          "longitude": 32.84683048725128
+        },
+        {
+          "latitude": 67.9197136643071,
+          "longitude": 32.84654885530472
+        },
+        {
+          "latitude": 67.92010747259418,
+          "longitude": 32.84698991240896
+        }
+      ],
+      "territoryNames": [],
+      "number": "4.2",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "Химико-металлургический цех",
+      "workshopShort": "ХМЦ",
+      "departments": [
+        {
+          "id": "f7e8edf8-70de-45f0-a581-78b85518a036",
+          "fullName": "Аффинаж",
+          "shortName": ""
+        }
+      ],
+      "sites": []
     }
   ],
   "published": [
@@ -14123,11 +14168,11 @@
     {
       "id": "kml-hydrant-13964c93c12912bd9872",
       "point": {
-        "latitude": 67.89816187369868,
-        "longitude": 32.854849441402536
+        "latitude": 67.90219169721932,
+        "longitude": 32.85263275787841
       },
-      "note": "Изменения внесены в раздел «Координаты объекта» администратором 24.10.2026.",
-      "updatedAtIso": "2026-10-24T07:55:23.355Z",
+      "note": "Изменения внесены в раздел «Координаты объекта» администратором 26.10.2026.",
+      "updatedAtIso": "2026-10-26T10:03:30.733Z",
       "kind": "hydrant",
       "number": "ПГ-16",
       "owner": "ЦЭО",
@@ -17583,11 +17628,11 @@
     {
       "id": "24cc31b7-7c86-44ae-8078-916652473eb3",
       "point": {
-        "latitude": 67.90729976537789,
-        "longitude": 32.832020737675634
+        "latitude": 67.90729976463938,
+        "longitude": 32.832746174495384
       },
-      "note": "Изменения внесены в раздел «Расположение таблички» администратором 24.10.2026.",
-      "updatedAtIso": "2026-10-24T11:31:33.679Z",
+      "note": "Изменения внесены в раздел «Расположение таблички» администратором 26.10.2026.",
+      "updatedAtIso": "2026-10-26T09:51:57.625Z",
       "kind": "building",
       "objectType": "building",
       "mapRole": "ordinary",
@@ -19294,11 +19339,11 @@
     {
       "id": "36953746-4353-415a-bf9d-dfccba6bd904",
       "point": {
-        "latitude": 67.9226073863437,
-        "longitude": 32.838949495968336
+        "latitude": 67.9229907019673,
+        "longitude": 32.839279282111875
       },
-      "note": "Изменения внесены в раздел «Расположение таблички» администратором 21.10.2026.",
-      "updatedAtIso": "2026-10-21T12:34:00.331Z",
+      "note": "Изменения внесены в раздел «Расположение таблички» администратором 23.10.2026.",
+      "updatedAtIso": "2026-10-23T18:19:51.945Z",
       "kind": "building",
       "objectType": "building",
       "mapRole": "ordinary",
@@ -22378,8 +22423,53 @@
           "shortName": "ОПУ НП, РП-135"
         }
       ]
+    },
+    {
+      "id": "5d4dcb38-735e-45a7-85a5-b770747f39bb",
+      "point": {
+        "latitude": 67.91988792088046,
+        "longitude": 32.846909622078776
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-17T16:27:17.183Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.92006225392235,
+          "longitude": 32.84726923335015
+        },
+        {
+          "latitude": 67.91966829269822,
+          "longitude": 32.84683048725128
+        },
+        {
+          "latitude": 67.9197136643071,
+          "longitude": 32.84654885530472
+        },
+        {
+          "latitude": 67.92010747259418,
+          "longitude": 32.84698991240896
+        }
+      ],
+      "territoryNames": [],
+      "number": "4.2",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "Химико-металлургический цех",
+      "workshopShort": "ХМЦ",
+      "departments": [
+        {
+          "id": "f7e8edf8-70de-45f0-a581-78b85518a036",
+          "fullName": "Аффинаж",
+          "shortName": ""
+        }
+      ],
+      "sites": []
     }
   ],
-  "draftSavedAtIso": "2026-10-25T22:12:33.985Z",
-  "publishedAtIso": "2026-10-25T22:12:33.985Z"
+  "draftSavedAtIso": "2026-10-26T13:41:29.808Z",
+  "publishedAtIso": "2026-10-26T13:41:29.808Z"
 }
