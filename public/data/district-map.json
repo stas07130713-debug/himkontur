@@ -1,7 +1,7 @@
 {
   "id": "district-map-main",
   "name": "Карта района выезда",
-  "revision": 1793111790759,
+  "revision": 1793122707179,
   "draft": [
     {
       "id": "kml-hydrant-095f40d67c2912bd9832",
@@ -11804,101 +11804,6 @@
       ]
     },
     {
-      "id": "271b8c99-d106-4c57-bac7-1842bd5aa7f5",
-      "point": {
-        "latitude": 67.91415080273869,
-        "longitude": 32.84555365869576
-      },
-      "note": "Изменения внесены в разделы: «Отделения», «Участки» администратором 18.10.2026.",
-      "updatedAtIso": "2026-10-18T19:02:25.033Z",
-      "kind": "building",
-      "objectType": "building",
-      "mapRole": "ordinary",
-      "contour": [
-        {
-          "latitude": 67.91332346147652,
-          "longitude": 32.84495562314987
-        },
-        {
-          "latitude": 67.91338498198084,
-          "longitude": 32.84453719854355
-        },
-        {
-          "latitude": 67.91347272405778,
-          "longitude": 32.844628393650055
-        },
-        {
-          "latitude": 67.91349188607651,
-          "longitude": 32.84449964761734
-        },
-        {
-          "latitude": 67.91426137935633,
-          "longitude": 32.84530699253082
-        },
-        {
-          "latitude": 67.91435012661557,
-          "longitude": 32.84471154212952
-        },
-        {
-          "latitude": 67.91483823048569,
-          "longitude": 32.84522384405136
-        },
-        {
-          "latitude": 67.91468510365273,
-          "longitude": 32.84628091354213
-        },
-        {
-          "latitude": 67.91477634824588,
-          "longitude": 32.8463840235635
-        },
-        {
-          "latitude": 67.91475212404599,
-          "longitude": 32.846532243936565
-        },
-        {
-          "latitude": 67.91465973087878,
-          "longitude": 32.84642547369003
-        },
-        {
-          "latitude": 67.91431482945075,
-          "longitude": 32.84606337547302
-        },
-        {
-          "latitude": 67.91427146428921,
-          "longitude": 32.846355736255646
-        },
-        {
-          "latitude": 67.91381360392728,
-          "longitude": 32.84587562084198
-        },
-        {
-          "latitude": 67.9138660465405,
-          "longitude": 32.84552425146103
-        }
-      ],
-      "territoryNames": [],
-      "number": "5.7",
-      "installationName": "",
-      "inventoryNumber": "",
-      "planningDocuments": [],
-      "workshopFull": "Цех энергообеспечения",
-      "workshopShort": "ЦЭО",
-      "departments": [
-        {
-          "id": "60dd0918-bf19-4631-8172-c28c59f64962",
-          "fullName": "Карбололо ",
-          "shortName": "КЛО"
-        }
-      ],
-      "sites": [
-        {
-          "id": "0a7b05e3-af26-44bb-b3a3-a9c0076a6145",
-          "fullName": "Резки",
-          "shortName": "РЕЗ"
-        }
-      ]
-    },
-    {
       "id": "669ae0ae-2435-45c5-9aa7-776c7d6ef06d",
       "point": {
         "latitude": 67.90475735164634,
@@ -13300,11 +13205,13 @@
     },
     {
       "id": "df44df0f-7f19-4f50-9fc0-f9962d5c275a",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.864476007384496,
-        "latitude": 67.9147644217473
+        "latitude": 67.9147644217473,
+        "longitude": 32.864476007384496
       },
+      "note": "Изменения внесены в раздел «Техническое состояние» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:46:14.038Z",
+      "kind": "hydrant",
       "number": "1",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -13318,17 +13225,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Техническое состояние» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:46:14.038Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "f71442cc-21e3-4d93-96b0-6088765c59a1",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.864047560354436,
-        "latitude": 67.91432084724424
+        "latitude": 67.91432084724424,
+        "longitude": 32.864047560354436
       },
+      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:46:03.597Z",
+      "kind": "hydrant",
       "number": "2",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -13342,17 +13249,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:46:03.597Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "a96bfd59-7a8a-4129-b8eb-6bae0e298d87",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.863828395395785,
-        "latitude": 67.91392064857406
+        "latitude": 67.91392064857406,
+        "longitude": 32.863828395395785
       },
+      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:45:56.221Z",
+      "kind": "hydrant",
       "number": "3",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -13366,17 +13273,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:45:56.221Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "75f3ab56-260c-447b-9254-4ac047cdf639",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.863671810400206,
-        "latitude": 67.91353221711053
+        "latitude": 67.91353221711053,
+        "longitude": 32.863671810400206
       },
+      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:45:50.917Z",
+      "kind": "hydrant",
       "number": "4",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -13390,17 +13297,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:45:50.917Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "6b6bb6d3-f365-414f-bfed-0c15b1f07724",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.86360919140466,
-        "latitude": 67.91309669025206
+        "latitude": 67.91309669025206,
+        "longitude": 32.86360919140466
       },
+      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:45:45.533Z",
+      "kind": "hydrant",
       "number": "5",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -13414,17 +13321,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:45:45.533Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "2e210c75-2b22-4713-af93-c23a5444fc69",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.86345264391585,
-        "latitude": 67.91280241082521
+        "latitude": 67.91280241082521,
+        "longitude": 32.86345264391585
       },
+      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:45:39.701Z",
+      "kind": "hydrant",
       "number": "6",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -13438,17 +13345,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:45:39.701Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "3a8606d1-5df6-4cfb-b59a-e1c31e61a281",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.85788335688437,
-        "latitude": 67.91376211131998
+        "latitude": 67.91236003420194,
+        "longitude": 32.86372696927879
       },
+      "note": "Изменения внесены в раздел «Координаты объекта» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T12:05:08.996Z",
+      "kind": "hydrant",
       "number": "7",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -13462,17 +13369,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Координаты объекта» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T12:03:41.483Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "1313bf2a-6f75-4855-9731-9b907e5459d5",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.8702126487984,
-        "latitude": 67.91442678730023
+        "latitude": 67.91442678730023,
+        "longitude": 32.8702126487984
       },
+      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:45:27.029Z",
+      "kind": "hydrant",
       "number": "8",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -13486,17 +13393,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:45:27.029Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "1d38920a-76e3-48dd-9c7b-9e646200b78d",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.869933691034106,
-        "latitude": 67.91396773581059
+        "latitude": 67.91396773581059,
+        "longitude": 32.869933691034106
       },
+      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:45:21.453Z",
+      "kind": "hydrant",
       "number": "9",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -13510,17 +13417,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:45:21.453Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "298570c9-6ee1-45cf-95f2-e55df4efecda",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.869839762540806,
-        "latitude": 67.91357930042308
+        "latitude": 67.91357930042308,
+        "longitude": 32.869839762540806
       },
+      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:45:16.165Z",
+      "kind": "hydrant",
       "number": "10",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -13534,17 +13441,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:45:16.165Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "e6fc2896-e781-46de-9447-4287d9b8ea91",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.86965190641419,
-        "latitude": 67.9131202325229
+        "latitude": 67.9131202325229,
+        "longitude": 32.86965190641419
       },
+      "note": "Изменения внесены в разделы: «Техническое состояние», «Характер неисправности» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:52:17.773Z",
+      "kind": "hydrant",
       "number": "11",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "faulty",
@@ -13558,17 +13465,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в разделы: «Техническое состояние», «Характер неисправности» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:52:17.773Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "5dd00df1-4dc2-4076-80a1-640aa6ae8142",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.86953639024941,
-        "latitude": 67.91271177264161
+        "latitude": 67.91271177264161,
+        "longitude": 32.86953639024941
       },
+      "note": "",
+      "updatedAtIso": "2026-10-27T11:46:54.557Z",
+      "kind": "hydrant",
       "number": "12",
       "owner": "ЦСМ,РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -13582,17 +13489,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "",
-      "updatedAtIso": "2026-10-27T11:46:54.557Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "12ae51b2-a571-4dd9-ae52-9fbd92c8887c",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.86930750467559,
-        "latitude": 67.91235509907654
+        "latitude": 67.91235509907654,
+        "longitude": 32.86930750467559
       },
+      "note": "Изменения внесены в раздел «Координаты объекта» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:47:31.554Z",
+      "kind": "hydrant",
       "number": "13",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -13606,73 +13513,87 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Координаты объекта» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:47:31.554Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "7690f98d-de44-41f2-b0a4-d0464736da3e",
-      "kind": "reservoir",
       "point": {
-        "longitude": 32.867286197139435,
-        "latitude": 67.91207298316706
+        "latitude": 67.91207298316706,
+        "longitude": 32.867286197139435
       },
-      "number": "150634",
+      "note": "Изменения внесены в раздел «Номер пожарного водоёма» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T12:06:57.555Z",
+      "kind": "reservoir",
+      "number": "РРПО (150634)",
       "owner": "ЦСМ,РСМ КУ ЦЭОЗ",
       "status": "faulty",
       "volumeM3": 40,
       "faultDescription": "",
-      "reservoirType": "foam-solution",
-      "note": "Изменения внесены в разделы: «Номер пожарного водоёма», «Техническое состояние» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:58:12.700Z"
+      "reservoirType": "foam-solution"
     },
     {
       "id": "add79463-f366-4a88-a14e-9ca055cff18e",
-      "kind": "reservoir",
       "point": {
-        "longitude": 32.872475048446546,
-        "latitude": 67.9138750809567
+        "latitude": 67.9138750809567,
+        "longitude": 32.872475048446546
       },
+      "note": "Изменения внесены в раздел «Координаты объекта» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:59:05.337Z",
+      "kind": "reservoir",
       "number": "2",
       "owner": "ЦСМ,РСМ КУ ЦЭОЗ",
       "status": "unknown",
       "volumeM3": 750,
       "faultDescription": "",
-      "reservoirType": "artificial",
-      "note": "Изменения внесены в раздел «Координаты объекта» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:59:05.337Z"
+      "reservoirType": "artificial"
     },
     {
       "id": "6e238e26-81f8-4776-9fe6-a7cc90f18c3a",
-      "kind": "reservoir",
       "point": {
-        "longitude": 32.86996451082166,
-        "latitude": 67.91187001976364
+        "latitude": 67.91164323455429,
+        "longitude": 32.86719949704295
       },
-      "number": "150635",
+      "note": "Изменения внесены в раздел «Номер пожарного водоёма» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T12:09:36.723Z",
+      "kind": "reservoir",
+      "number": "РРПО (150635)",
       "owner": "ЦСМ,РСМ КУ ЦЭОЗ",
       "status": "faulty",
       "volumeM3": 40,
       "faultDescription": "",
-      "reservoirType": "foam-solution",
-      "note": "Изменения внесены в раздел «Номер пожарного водоёма» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:58:31.340Z"
+      "reservoirType": "foam-solution"
     },
     {
       "id": "3b305724-6e06-4bf9-a2f0-6786bae33de2",
-      "kind": "reservoir",
       "point": {
-        "longitude": 32.872498317548775,
-        "latitude": 67.91428621968045
+        "latitude": 67.91428621968045,
+        "longitude": 32.872498317548775
       },
+      "note": "Изменения внесены в раздел «Координаты объекта» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:59:03.710Z",
+      "kind": "reservoir",
       "number": "1",
       "owner": "ЦСМ,РСМ КУ ЦЭОЗ",
       "status": "serviceable",
       "volumeM3": 750,
       "faultDescription": "",
-      "reservoirType": "artificial",
-      "note": "Изменения внесены в раздел «Координаты объекта» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:59:03.710Z"
+      "reservoirType": "artificial"
+    },
+    {
+      "id": "a06e6506-ea95-4c89-b43b-8a214ccf41f8",
+      "point": {
+        "latitude": 67.91200261935761,
+        "longitude": 32.871900950056585
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-27T12:06:19.507Z",
+      "kind": "reservoir",
+      "number": "Резервуар ПО",
+      "owner": "ЦСМ,РСМ КУ ЦЭОЗ",
+      "status": "serviceable",
+      "volumeM3": 30,
+      "faultDescription": "",
+      "reservoirType": "foam-solution"
     }
   ],
   "published": [
@@ -25477,101 +25398,6 @@
       ]
     },
     {
-      "id": "271b8c99-d106-4c57-bac7-1842bd5aa7f5",
-      "point": {
-        "latitude": 67.91415080273869,
-        "longitude": 32.84555365869576
-      },
-      "note": "Изменения внесены в разделы: «Отделения», «Участки» администратором 18.10.2026.",
-      "updatedAtIso": "2026-10-18T19:02:25.033Z",
-      "kind": "building",
-      "objectType": "building",
-      "mapRole": "ordinary",
-      "contour": [
-        {
-          "latitude": 67.91332346147652,
-          "longitude": 32.84495562314987
-        },
-        {
-          "latitude": 67.91338498198084,
-          "longitude": 32.84453719854355
-        },
-        {
-          "latitude": 67.91347272405778,
-          "longitude": 32.844628393650055
-        },
-        {
-          "latitude": 67.91349188607651,
-          "longitude": 32.84449964761734
-        },
-        {
-          "latitude": 67.91426137935633,
-          "longitude": 32.84530699253082
-        },
-        {
-          "latitude": 67.91435012661557,
-          "longitude": 32.84471154212952
-        },
-        {
-          "latitude": 67.91483823048569,
-          "longitude": 32.84522384405136
-        },
-        {
-          "latitude": 67.91468510365273,
-          "longitude": 32.84628091354213
-        },
-        {
-          "latitude": 67.91477634824588,
-          "longitude": 32.8463840235635
-        },
-        {
-          "latitude": 67.91475212404599,
-          "longitude": 32.846532243936565
-        },
-        {
-          "latitude": 67.91465973087878,
-          "longitude": 32.84642547369003
-        },
-        {
-          "latitude": 67.91431482945075,
-          "longitude": 32.84606337547302
-        },
-        {
-          "latitude": 67.91427146428921,
-          "longitude": 32.846355736255646
-        },
-        {
-          "latitude": 67.91381360392728,
-          "longitude": 32.84587562084198
-        },
-        {
-          "latitude": 67.9138660465405,
-          "longitude": 32.84552425146103
-        }
-      ],
-      "territoryNames": [],
-      "number": "5.7",
-      "installationName": "",
-      "inventoryNumber": "",
-      "planningDocuments": [],
-      "workshopFull": "Цех энергообеспечения",
-      "workshopShort": "ЦЭО",
-      "departments": [
-        {
-          "id": "60dd0918-bf19-4631-8172-c28c59f64962",
-          "fullName": "Карбололо ",
-          "shortName": "КЛО"
-        }
-      ],
-      "sites": [
-        {
-          "id": "0a7b05e3-af26-44bb-b3a3-a9c0076a6145",
-          "fullName": "Резки",
-          "shortName": "РЕЗ"
-        }
-      ]
-    },
-    {
       "id": "669ae0ae-2435-45c5-9aa7-776c7d6ef06d",
       "point": {
         "latitude": 67.90475735164634,
@@ -26973,11 +26799,13 @@
     },
     {
       "id": "df44df0f-7f19-4f50-9fc0-f9962d5c275a",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.864476007384496,
-        "latitude": 67.9147644217473
+        "latitude": 67.9147644217473,
+        "longitude": 32.864476007384496
       },
+      "note": "Изменения внесены в раздел «Техническое состояние» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:46:14.038Z",
+      "kind": "hydrant",
       "number": "1",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -26991,17 +26819,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Техническое состояние» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:46:14.038Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "f71442cc-21e3-4d93-96b0-6088765c59a1",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.864047560354436,
-        "latitude": 67.91432084724424
+        "latitude": 67.91432084724424,
+        "longitude": 32.864047560354436
       },
+      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:46:03.597Z",
+      "kind": "hydrant",
       "number": "2",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -27015,17 +26843,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:46:03.597Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "a96bfd59-7a8a-4129-b8eb-6bae0e298d87",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.863828395395785,
-        "latitude": 67.91392064857406
+        "latitude": 67.91392064857406,
+        "longitude": 32.863828395395785
       },
+      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:45:56.221Z",
+      "kind": "hydrant",
       "number": "3",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -27039,17 +26867,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:45:56.221Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "75f3ab56-260c-447b-9254-4ac047cdf639",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.863671810400206,
-        "latitude": 67.91353221711053
+        "latitude": 67.91353221711053,
+        "longitude": 32.863671810400206
       },
+      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:45:50.917Z",
+      "kind": "hydrant",
       "number": "4",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -27063,17 +26891,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:45:50.917Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "6b6bb6d3-f365-414f-bfed-0c15b1f07724",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.86360919140466,
-        "latitude": 67.91309669025206
+        "latitude": 67.91309669025206,
+        "longitude": 32.86360919140466
       },
+      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:45:45.533Z",
+      "kind": "hydrant",
       "number": "5",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -27087,17 +26915,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:45:45.533Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "2e210c75-2b22-4713-af93-c23a5444fc69",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.86345264391585,
-        "latitude": 67.91280241082521
+        "latitude": 67.91280241082521,
+        "longitude": 32.86345264391585
       },
+      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:45:39.701Z",
+      "kind": "hydrant",
       "number": "6",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -27111,17 +26939,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:45:39.701Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "3a8606d1-5df6-4cfb-b59a-e1c31e61a281",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.85788335688437,
-        "latitude": 67.91376211131998
+        "latitude": 67.91236003420194,
+        "longitude": 32.86372696927879
       },
+      "note": "Изменения внесены в раздел «Координаты объекта» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T12:05:08.996Z",
+      "kind": "hydrant",
       "number": "7",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -27135,17 +26963,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Координаты объекта» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T12:03:41.483Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "1313bf2a-6f75-4855-9731-9b907e5459d5",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.8702126487984,
-        "latitude": 67.91442678730023
+        "latitude": 67.91442678730023,
+        "longitude": 32.8702126487984
       },
+      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:45:27.029Z",
+      "kind": "hydrant",
       "number": "8",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -27159,17 +26987,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:45:27.029Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "1d38920a-76e3-48dd-9c7b-9e646200b78d",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.869933691034106,
-        "latitude": 67.91396773581059
+        "latitude": 67.91396773581059,
+        "longitude": 32.869933691034106
       },
+      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:45:21.453Z",
+      "kind": "hydrant",
       "number": "9",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -27183,17 +27011,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:45:21.453Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "298570c9-6ee1-45cf-95f2-e55df4efecda",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.869839762540806,
-        "latitude": 67.91357930042308
+        "latitude": 67.91357930042308,
+        "longitude": 32.869839762540806
       },
+      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:45:16.165Z",
+      "kind": "hydrant",
       "number": "10",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -27207,17 +27035,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Принадлежность» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:45:16.165Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "e6fc2896-e781-46de-9447-4287d9b8ea91",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.86965190641419,
-        "latitude": 67.9131202325229
+        "latitude": 67.9131202325229,
+        "longitude": 32.86965190641419
       },
+      "note": "Изменения внесены в разделы: «Техническое состояние», «Характер неисправности» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:52:17.773Z",
+      "kind": "hydrant",
       "number": "11",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "faulty",
@@ -27231,17 +27059,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в разделы: «Техническое состояние», «Характер неисправности» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:52:17.773Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "5dd00df1-4dc2-4076-80a1-640aa6ae8142",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.86953639024941,
-        "latitude": 67.91271177264161
+        "latitude": 67.91271177264161,
+        "longitude": 32.86953639024941
       },
+      "note": "",
+      "updatedAtIso": "2026-10-27T11:46:54.557Z",
+      "kind": "hydrant",
       "number": "12",
       "owner": "ЦСМ,РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -27255,17 +27083,17 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "",
-      "updatedAtIso": "2026-10-27T11:46:54.557Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "12ae51b2-a571-4dd9-ae52-9fbd92c8887c",
-      "kind": "hydrant",
       "point": {
-        "longitude": 32.86930750467559,
-        "latitude": 67.91235509907654
+        "latitude": 67.91235509907654,
+        "longitude": 32.86930750467559
       },
+      "note": "Изменения внесены в раздел «Координаты объекта» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:47:31.554Z",
+      "kind": "hydrant",
       "number": "13",
       "owner": "ЦСМ, РСМ КУ ЦЭОЗ",
       "status": "serviceable",
@@ -27279,75 +27107,89 @@
       "signDistanceLeftM": null,
       "signDistanceRightM": null,
       "signDistanceForwardM": null,
-      "lastInspectionDate": "",
-      "note": "Изменения внесены в раздел «Координаты объекта» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:47:31.554Z"
+      "lastInspectionDate": ""
     },
     {
       "id": "7690f98d-de44-41f2-b0a4-d0464736da3e",
-      "kind": "reservoir",
       "point": {
-        "longitude": 32.867286197139435,
-        "latitude": 67.91207298316706
+        "latitude": 67.91207298316706,
+        "longitude": 32.867286197139435
       },
-      "number": "150634",
+      "note": "Изменения внесены в раздел «Номер пожарного водоёма» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T12:06:57.555Z",
+      "kind": "reservoir",
+      "number": "РРПО (150634)",
       "owner": "ЦСМ,РСМ КУ ЦЭОЗ",
       "status": "faulty",
       "volumeM3": 40,
       "faultDescription": "",
-      "reservoirType": "foam-solution",
-      "note": "Изменения внесены в разделы: «Номер пожарного водоёма», «Техническое состояние» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:58:12.700Z"
+      "reservoirType": "foam-solution"
     },
     {
       "id": "add79463-f366-4a88-a14e-9ca055cff18e",
-      "kind": "reservoir",
       "point": {
-        "longitude": 32.872475048446546,
-        "latitude": 67.9138750809567
+        "latitude": 67.9138750809567,
+        "longitude": 32.872475048446546
       },
+      "note": "Изменения внесены в раздел «Координаты объекта» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:59:05.337Z",
+      "kind": "reservoir",
       "number": "2",
       "owner": "ЦСМ,РСМ КУ ЦЭОЗ",
       "status": "unknown",
       "volumeM3": 750,
       "faultDescription": "",
-      "reservoirType": "artificial",
-      "note": "Изменения внесены в раздел «Координаты объекта» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:59:05.337Z"
+      "reservoirType": "artificial"
     },
     {
       "id": "6e238e26-81f8-4776-9fe6-a7cc90f18c3a",
-      "kind": "reservoir",
       "point": {
-        "longitude": 32.86996451082166,
-        "latitude": 67.91187001976364
+        "latitude": 67.91164323455429,
+        "longitude": 32.86719949704295
       },
-      "number": "150635",
+      "note": "Изменения внесены в раздел «Номер пожарного водоёма» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T12:09:36.723Z",
+      "kind": "reservoir",
+      "number": "РРПО (150635)",
       "owner": "ЦСМ,РСМ КУ ЦЭОЗ",
       "status": "faulty",
       "volumeM3": 40,
       "faultDescription": "",
-      "reservoirType": "foam-solution",
-      "note": "Изменения внесены в раздел «Номер пожарного водоёма» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:58:31.340Z"
+      "reservoirType": "foam-solution"
     },
     {
       "id": "3b305724-6e06-4bf9-a2f0-6786bae33de2",
-      "kind": "reservoir",
       "point": {
-        "longitude": 32.872498317548775,
-        "latitude": 67.91428621968045
+        "latitude": 67.91428621968045,
+        "longitude": 32.872498317548775
       },
+      "note": "Изменения внесены в раздел «Координаты объекта» администратором 27.10.2026.",
+      "updatedAtIso": "2026-10-27T11:59:03.710Z",
+      "kind": "reservoir",
       "number": "1",
       "owner": "ЦСМ,РСМ КУ ЦЭОЗ",
       "status": "serviceable",
       "volumeM3": 750,
       "faultDescription": "",
-      "reservoirType": "artificial",
-      "note": "Изменения внесены в раздел «Координаты объекта» администратором 27.10.2026.",
-      "updatedAtIso": "2026-10-27T11:59:03.710Z"
+      "reservoirType": "artificial"
+    },
+    {
+      "id": "a06e6506-ea95-4c89-b43b-8a214ccf41f8",
+      "point": {
+        "latitude": 67.91200261935761,
+        "longitude": 32.871900950056585
+      },
+      "note": "",
+      "updatedAtIso": "2026-10-27T12:06:19.507Z",
+      "kind": "reservoir",
+      "number": "Резервуар ПО",
+      "owner": "ЦСМ,РСМ КУ ЦЭОЗ",
+      "status": "serviceable",
+      "volumeM3": 30,
+      "faultDescription": "",
+      "reservoirType": "foam-solution"
     }
   ],
-  "draftSavedAtIso": "2026-10-27T14:36:30.759Z",
-  "publishedAtIso": "2026-10-27T14:36:30.759Z"
+  "draftSavedAtIso": "2026-10-27T17:38:32.137Z",
+  "publishedAtIso": "2026-10-27T17:38:32.137Z"
 }
