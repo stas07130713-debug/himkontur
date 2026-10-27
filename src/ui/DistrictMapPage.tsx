@@ -24,17 +24,16 @@ import type {
   DistrictPlanningDocumentKind,
 } from './district-map-model';
 import {
-  compareDistrictMapObjects,
   districtMapObjectCounts,
   districtObjectTitle,
   buildingPrefix,
-  fetchCoordinatedDistrictMapProject,
   FIRE_RESERVOIR_TYPE_LABELS,
   HYDRANT_STATUS_LABELS,
   HYDRANT_TYPE_LABELS,
   parseDistrictMapBackup,
   serializeDistrictMapBackup,
 } from './district-map-model';
+import { fetchCoordinatedMapManifest, type MapSyncManifest } from './map-sync-service';
 import { alignOrthogonalContour } from './district-contour-geometry';
 import { DistrictObjectToolbar } from './DistrictObjectToolbar';
 import { OfflineBasemap } from './OfflineBasemap';
@@ -678,7 +677,7 @@ export function DistrictMapPage(props: Props) {
   const [compositionCheckOpen, setCompositionCheckOpen] = useState(false);
   const [compositionCheckBusy, setCompositionCheckBusy] = useState(false);
   const [compositionCheckError, setCompositionCheckError] = useState('');
-  const [sharedCompositionProject, setSharedCompositionProject] = useState<DistrictMapProject | null>(null);
+  const [sharedCompositionManifest, setSharedCompositionManifest] = useState<MapSyncManifest | null>(null);
   const [contourStatus, setContourStatus] = useState('');
   const [pendingHydrantAct, setPendingHydrantAct] = useState<Readonly<{ fileName: string; result: HydrantActParseResult }> | null>(null);
   const [panning, setPanning] = useState(false);
@@ -713,11 +712,10 @@ export function DistrictMapPage(props: Props) {
     setCompositionCheckBusy(true);
     setCompositionCheckError('');
     try {
-      const sharedProject = await fetchCoordinatedDistrictMapProject();
-      if (sharedProject === null) throw new Error('Общий сервер не вернул карту. Повторите сверку немного позже.');
-      setSharedCompositionProject(sharedProject);
+      const { manifest } = await fetchCoordinatedMapManifest();
+      setSharedCompositionManifest(manifest);
     } catch (error) {
-      setSharedCompositionProject(null);
+      setSharedCompositionManifest(null);
       setCompositionCheckError(error instanceof Error ? error.message : 'Не удалось получить состав общей карты.');
     } finally {
       setCompositionCheckBusy(false);
@@ -778,13 +776,19 @@ export function DistrictMapPage(props: Props) {
   const scalePixels = scaleDistanceKm * projection.scale;
   const selected = props.objects.find((object) => object.id === selectedId) ?? null;
   const localComposition = useMemo(() => districtMapObjectCounts(props.project.published), [props.project.published]);
-  const sharedComposition = useMemo(
-    () => sharedCompositionProject === null ? null : districtMapObjectCounts(sharedCompositionProject.published),
-    [sharedCompositionProject],
-  );
+  const sharedComposition = sharedCompositionManifest?.counts ?? null;
   const compositionObjectComparison = useMemo(
-    () => sharedCompositionProject === null ? null : compareDistrictMapObjects(props.project.published, sharedCompositionProject.published),
-    [props.project.published, sharedCompositionProject],
+    () => {
+      if (sharedCompositionManifest === null) return null;
+      const localById = new Map(props.project.published.map((object) => [object.id, object.updatedAtIso]));
+      const sharedById = new Map(sharedCompositionManifest.objects.map((object) => [object.id, object.updatedAtIso]));
+      return {
+        localOnly: [...localById.keys()].filter((id) => !sharedById.has(id)).length,
+        sharedOnly: [...sharedById.keys()].filter((id) => !localById.has(id)).length,
+        changed: [...localById].filter(([id, updatedAtIso]) => sharedById.has(id) && sharedById.get(id) !== updatedAtIso).length,
+      };
+    },
+    [props.project.published, sharedCompositionManifest],
   );
   const compositionRows = sharedComposition === null ? [] : [
     ['Здания', localComposition.buildings, sharedComposition.buildings],
@@ -1643,7 +1647,7 @@ export function DistrictMapPage(props: Props) {
                 })}</tbody>
               </table>
             </div>
-            <p className="district-composition-server-time">Общая карта обновлена: <strong>{synchronizationTime(sharedCompositionProject?.publishedAtIso ?? '')}</strong></p>
+            <p className="district-composition-server-time">Общая карта обновлена: <strong>{synchronizationTime(sharedCompositionManifest?.publishedAtIso ?? '')}</strong></p>
           </>}
           <div className="district-composition-check-actions">
             <button type="button" className="primary" disabled={compositionCheckBusy} onClick={() => void checkMapComposition()}>{compositionCheckBusy ? 'Сверяю…' : 'Обновить сверку'}</button>

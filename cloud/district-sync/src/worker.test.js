@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { canRebaseLegacyOperation, isAllowedOrigin, needsConflictRecovery, operationQueueBaseRevision, readJson, shouldUseBackupImmediately, validAuthoritativeRecovery } from './worker.js';
+import { applyObjectChange, canRebaseLegacyOperation, isAllowedOrigin, needsConflictRecovery, operationQueueBaseRevision, readJson, shouldUseBackupImmediately, validAuthoritativeRecovery } from './worker.js';
 
 async function gzipJson(value) {
   const stream = new Blob([JSON.stringify(value)]).stream().pipeThrough(new CompressionStream('gzip'));
@@ -102,5 +102,39 @@ describe('legacy local change migration guard', () => {
 
   it('does not rebase a normal operation through the legacy migration path', () => {
     assert.equal(canRebaseLegacyOperation('map-123', { publishedAtIso: '2026-10-22T08:00:00.000Z' }, shared, 0), false);
+  });
+});
+
+describe('object-level map synchronization', () => {
+  const object = (id, latitude, updatedAtIso) => ({ id, kind: 'hydrant', point: { latitude, longitude: 32.8 }, updatedAtIso });
+  const project = (published) => ({
+    id: 'district-map-main', name: 'Карта', revision: 10, draft: published, published,
+    draftSavedAtIso: '2026-10-27T09:00:00.000Z', publishedAtIso: '2026-10-27T09:00:00.000Z',
+  });
+
+  it('changes one object without replacing unrelated objects', () => {
+    const base = object('pg-1', 67.1, '2026-10-27T09:00:00.000Z');
+    const untouched = object('pg-2', 67.2, '2026-10-27T09:00:00.000Z');
+    const edited = object('pg-1', 67.3, '2026-10-27T10:00:00.000Z');
+    const result = applyObjectChange(project([base, untouched]), { objectId: 'pg-1', baseObject: base, object: edited, targetRevision: 11 }, '2026-10-27T10:01:00.000Z');
+    assert.equal(result.project.published.find((item) => item.id === 'pg-1').point.latitude, 67.3);
+    assert.deepEqual(result.project.published.find((item) => item.id === 'pg-2'), untouched);
+  });
+
+  it('keeps the newer edit when the same object changed on two devices', () => {
+    const base = object('pg-1', 67.1, '2026-10-27T09:00:00.000Z');
+    const remote = object('pg-1', 67.2, '2026-10-27T11:00:00.000Z');
+    const local = object('pg-1', 67.3, '2026-10-27T10:00:00.000Z');
+    const result = applyObjectChange(project([remote]), { objectId: 'pg-1', baseObject: base, object: local, targetRevision: 11 }, '2026-10-27T11:01:00.000Z');
+    assert.deepEqual(result.activeObject, remote);
+    assert.equal(result.conflict.activeSource, 'remote');
+  });
+
+  it('does not silently delete an object edited on another device', () => {
+    const base = object('pg-1', 67.1, '2026-10-27T09:00:00.000Z');
+    const remote = object('pg-1', 67.2, '2026-10-27T11:00:00.000Z');
+    const result = applyObjectChange(project([remote]), { objectId: 'pg-1', baseObject: base, object: null, targetRevision: 11 }, '2026-10-27T11:01:00.000Z');
+    assert.deepEqual(result.activeObject, remote);
+    assert.equal(result.conflict.activeSource, 'remote');
   });
 });

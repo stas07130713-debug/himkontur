@@ -1,8 +1,12 @@
 import type { GeoPoint } from '../core/types';
 import {
   fetchCoordinatedMap,
+  fetchCoordinatedMapChanges,
+  fetchCoordinatedMapManifest,
   loadMapSyncConfig,
   publishCoordinatedMap,
+  publishCoordinatedObjectChange,
+  type CoordinatedObjectChange,
   type MapAdminCredential,
 } from './map-sync-service';
 
@@ -165,6 +169,16 @@ export type PendingDistrictMapOperation = Readonly<{
   baseProject?: DistrictMapProject;
   project: DistrictMapProject;
   createdAtIso: string;
+}>;
+
+export type DistrictMapPublishResult = Readonly<{
+  project: DistrictMapProject;
+  conflicts: readonly Readonly<{
+    objectId: string;
+    local: DistrictMapObject | null;
+    remote: DistrictMapObject | null;
+    activeSource: 'local' | 'remote';
+  }>[];
 }>;
 
 const STORAGE_KEY = 'himkontur-district-map-project-v1';
@@ -639,14 +653,102 @@ export async function fetchCoordinatedDistrictMapProject(): Promise<DistrictMapP
   return normalizeDistrictMapProject(coordinated.project);
 }
 
-export async function publishDistrictMapOperation(operation: PendingDistrictMapOperation, credential: MapAdminCredential): Promise<DistrictMapProject> {
+function sameDistrictObject(left: DistrictMapObject | undefined, right: DistrictMapObject | undefined): boolean {
+  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+}
+
+export function districtMapObjectChanges(base: DistrictMapProject, target: DistrictMapProject): readonly CoordinatedObjectChange[] {
+  const baseById = new Map(base.published.map((object) => [object.id, object]));
+  const targetById = new Map(target.published.map((object) => [object.id, object]));
+  const ids = new Set([...baseById.keys(), ...targetById.keys()]);
+  return [...ids].flatMap((objectId) => {
+    const baseObject = baseById.get(objectId);
+    const object = targetById.get(objectId);
+    if (sameDistrictObject(baseObject, object)) return [];
+    return [{
+      objectId,
+      baseObject: baseObject ?? null,
+      object: object ?? null,
+      updatedAtIso: object?.updatedAtIso ?? target.publishedAtIso,
+      targetRevision: target.revision,
+    }];
+  });
+}
+
+function replaceDistrictObject(objects: readonly DistrictMapObject[], objectId: string, object: DistrictMapObject | null): DistrictMapObject[] {
+  const next = objects.filter((item) => item.id !== objectId);
+  if (object !== null) next.push(object);
+  return next;
+}
+
+export async function fetchCoordinatedDistrictMapUpdate(current: DistrictMapProject): Promise<DistrictMapProject | null> {
+  const { manifest } = await fetchCoordinatedMapManifest();
+  const localIndex = new Map(current.published.map((object) => [object.id, object.updatedAtIso]));
+  const sameIndex = current.published.length === manifest.objects.length
+    && manifest.objects.every((object) => localIndex.get(object.id) === object.updatedAtIso);
+  if (current.revision === manifest.revision) {
+    return sameIndex ? current : fetchCoordinatedDistrictMapProject();
+  }
+  let project = current;
+  for (let pageNumber = 0; pageNumber < 20; pageNumber += 1) {
+    const page = await fetchCoordinatedMapChanges(project.revision);
+    if (page.requiresSnapshot) break;
+    let objects = [...project.published];
+    for (const change of page.changes) {
+      const normalized = change.object === null ? null : normalizeDistrictObject(change.object);
+      if (change.object !== null && normalized === null) throw new Error('Сервис вернул повреждённый объект карты.');
+      objects = replaceDistrictObject(objects, change.objectId, normalized);
+      project = {
+        ...project,
+        revision: change.targetRevision,
+        published: objects,
+        draft: objects,
+        publishedAtIso: page.manifest.publishedAtIso,
+        draftSavedAtIso: page.manifest.publishedAtIso,
+      };
+    }
+    if (page.complete) return project;
+    if (page.nextRevision === project.revision && page.changes.length === 0) break;
+  }
+  return fetchCoordinatedDistrictMapProject();
+}
+
+export async function publishDistrictMapOperation(operation: PendingDistrictMapOperation, credential: MapAdminCredential): Promise<DistrictMapPublishResult> {
   const config = await loadMapSyncConfig();
   if (config === null) throw new Error('Облачная синхронизация ещё не настроена.');
   if (config.coordinatorEnabled) {
+    if (operation.baseProject !== undefined) {
+      const changes = districtMapObjectChanges(operation.baseProject, operation.project);
+      // Start with the user's complete local result, while each server reply
+      // confirms only the object that was actually written.
+      let project = operation.project;
+      const conflicts: DistrictMapPublishResult['conflicts'][number][] = [];
+      for (const [index, change] of changes.entries()) {
+        const result = await publishCoordinatedObjectChange({
+          operationId: `${operation.operationId}.${index + 1}`,
+          baseRevision: project.revision,
+          change,
+          credential,
+        });
+        const normalized = result.activeObject === null ? null : normalizeDistrictObject(result.activeObject);
+        if (result.activeObject !== null && normalized === null) throw new Error('Сервис синхронизации вернул повреждённый объект.');
+        const objects = replaceDistrictObject(project.published, change.objectId, normalized);
+        project = {
+          ...project,
+          revision: result.revision,
+          published: objects,
+          draft: objects,
+          publishedAtIso: result.publishedAtIso,
+          draftSavedAtIso: result.publishedAtIso,
+        };
+        if (result.conflict !== null) conflicts.push(result.conflict);
+      }
+      return { project, conflicts };
+    }
     const result = await publishCoordinatedMap({ ...operation, credential });
     const published = normalizeDistrictMapProject(result.project);
     if (published === null) throw new Error('Сервис синхронизации вернул некорректные данные.');
-    return published;
+    return { project: published, conflicts: [] };
   }
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 20_000);
@@ -674,7 +776,7 @@ export async function publishDistrictMapOperation(operation: PendingDistrictMapO
     }
     const published = isObject(payload) ? normalizeDistrictMapProject(payload.project) : null;
     if (published === null) throw new Error('Сервис синхронизации вернул некорректные данные.');
-    return published;
+    return { project: published, conflicts: [] };
   } catch (error) {
     if (controller.signal.aborted) throw new Error('Сервис синхронизации не ответил вовремя.');
     throw error;

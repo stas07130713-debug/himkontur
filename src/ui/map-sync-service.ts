@@ -1,4 +1,4 @@
-import type { DistrictMapProject } from './district-map-model';
+import type { DistrictMapObject, DistrictMapObjectCounts, DistrictMapProject } from './district-map-model';
 
 const MAP_SYNC_CONFIG_URL = './data/map-sync.json';
 const DEFAULT_POLL_INTERVAL_MS = 60_000;
@@ -37,6 +37,53 @@ export type MapAdminCredential = Readonly<{
 export type CoordinatedMapResponse = Readonly<{
   project: unknown;
   status: MapSyncStatus;
+}>;
+
+export type MapSyncObjectIndex = Readonly<{
+  id: string;
+  kind: string;
+  objectType: string;
+  hydrantType: string;
+  updatedAtIso: string;
+}>;
+
+export type MapSyncManifest = Readonly<{
+  revision: number;
+  checksum: string;
+  publishedAtIso: string;
+  counts: DistrictMapObjectCounts;
+  objects: readonly MapSyncObjectIndex[];
+  queued: number;
+}>;
+
+export type CoordinatedObjectChange = Readonly<{
+  objectId: string;
+  baseObject: DistrictMapObject | null;
+  object: DistrictMapObject | null;
+  updatedAtIso: string;
+  targetRevision: number;
+}>;
+
+export type CoordinatedObjectChangeResponse = Readonly<{
+  revision: number;
+  publishedAtIso: string;
+  activeObject: DistrictMapObject | null;
+  conflict: Readonly<{ objectId: string; local: DistrictMapObject | null; remote: DistrictMapObject | null; activeSource: 'local' | 'remote' }> | null;
+  status: MapSyncStatus;
+}>;
+
+export type CoordinatedChangesResponse = Readonly<{
+  changes: readonly Readonly<{
+    baseRevision: number;
+    targetRevision: number;
+    objectId: string;
+    object: DistrictMapObject | null;
+    updatedAtIso: string;
+  }>[];
+  nextRevision: number;
+  complete: boolean;
+  requiresSnapshot: boolean;
+  manifest: MapSyncManifest;
 }>;
 
 export type CoordinatedPublishRequest = Readonly<{
@@ -225,9 +272,53 @@ async function encodedJsonRequest(value: unknown): Promise<Readonly<{ body: Body
 }
 
 export async function fetchCoordinatedMap(): Promise<CoordinatedMapResponse> {
-  const payload = await coordinatorRequest('/v1/map', { method: 'GET' }, 12_000);
+  // A first launch may still require the full snapshot. Slow corporate routes
+  // must be allowed to finish instead of being aborted after a few seconds.
+  const payload = await coordinatorRequest('/v1/map', { method: 'GET' }, 180_000, 1);
   if (!isObject(payload) || !('project' in payload)) throw new MapSyncRequestError('Резервный сервис вернул некорректную карту.', 502, 'invalid');
   return { project: payload.project, status: normalizeStatus(payload.status) };
+}
+
+function normalizeManifest(value: unknown): MapSyncManifest | null {
+  if (!isObject(value) || !Number.isSafeInteger(value.revision) || !Array.isArray(value.objects) || !isObject(value.counts)) return null;
+  const counts = value.counts;
+  const count = (key: string) => typeof counts[key] === 'number' ? Math.max(0, Math.trunc(counts[key])) : 0;
+  const objects = value.objects.filter(isObject).map((object) => ({
+    id: stringValue(object.id), kind: stringValue(object.kind), objectType: stringValue(object.objectType),
+    hydrantType: stringValue(object.hydrantType), updatedAtIso: stringValue(object.updatedAtIso),
+  })).filter((object) => object.id !== '');
+  return {
+    revision: value.revision as number,
+    checksum: stringValue(value.checksum),
+    publishedAtIso: stringValue(value.publishedAtIso),
+    counts: {
+      buildings: count('buildings'), territories: count('territories'), installations: count('installations'),
+      demolished: count('demolished'), standardHydrants: count('standardHydrants'), foamHydrants: count('foamHydrants'),
+      reservoirs: count('reservoirs'), waterSources: count('standardHydrants') + count('foamHydrants') + count('reservoirs'), total: count('total'),
+    },
+    objects,
+    queued: typeof value.queued === 'number' ? Math.max(0, Math.trunc(value.queued)) : 0,
+  };
+}
+
+export async function fetchCoordinatedMapManifest(): Promise<Readonly<{ manifest: MapSyncManifest; status: MapSyncStatus }>> {
+  const payload = await coordinatorRequest('/v1/manifest', { method: 'GET' }, 30_000);
+  const manifest = isObject(payload) ? normalizeManifest(payload.manifest) : null;
+  if (!isObject(payload) || manifest === null) throw new MapSyncRequestError('Сервис вернул некорректный состав карты.', 502, 'invalid');
+  return { manifest, status: normalizeStatus(payload.status) };
+}
+
+export async function fetchCoordinatedMapChanges(sinceRevision: number): Promise<CoordinatedChangesResponse> {
+  const payload = await coordinatorRequest(`/v1/changes?since=${encodeURIComponent(String(sinceRevision))}`, { method: 'GET' }, 60_000);
+  const manifest = isObject(payload) ? normalizeManifest(payload.manifest) : null;
+  if (!isObject(payload) || manifest === null || !Array.isArray(payload.changes)) throw new MapSyncRequestError('Сервис вернул некорректный список изменений.', 502, 'invalid');
+  return {
+    changes: payload.changes as CoordinatedChangesResponse['changes'],
+    nextRevision: typeof payload.nextRevision === 'number' ? payload.nextRevision : sinceRevision,
+    complete: payload.complete === true,
+    requiresSnapshot: payload.requiresSnapshot === true,
+    manifest,
+  };
 }
 
 export async function authenticateMapAdmin(password: string): Promise<Readonly<{ credential: MapAdminCredential; status: MapSyncStatus }>> {
@@ -279,7 +370,7 @@ export async function publishCoordinatedMap(request: CoordinatedPublishRequest):
         Authorization: `Bearer ${request.credential.sessionToken}`,
       },
       body: encoded.body,
-    }, 60_000);
+    }, 180_000);
   } catch (error) {
     if (!(error instanceof MapSyncRequestError) || error.kind !== 'unavailable') throw error;
     // A timeout can happen after D1 has already committed the operation but
@@ -288,12 +379,40 @@ export async function publishCoordinatedMap(request: CoordinatedPublishRequest):
     const verified = await coordinatorRequest(`/v1/operations/${encodeURIComponent(request.operationId)}`, {
       method: 'GET',
       headers: { Authorization: `Bearer ${request.credential.sessionToken}` },
-    }, 15_000, 1).catch(() => null);
+    }, 60_000, 1).catch(() => null);
     if (!isObject(verified) || !('project' in verified)) throw error;
     payload = verified;
   }
   if (!isObject(payload) || !('project' in payload)) throw new MapSyncRequestError('Сервис синхронизации вернул некорректный ответ.', 502, 'invalid');
   return { project: payload.project, status: normalizeStatus(payload.status) };
+}
+
+export async function publishCoordinatedObjectChange(request: Readonly<{
+  operationId: string;
+  baseRevision: number;
+  change: CoordinatedObjectChange;
+  credential: MapAdminCredential;
+}>): Promise<CoordinatedObjectChangeResponse> {
+  const payload = await coordinatorRequest('/v1/object', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${request.credential.sessionToken}` },
+    body: JSON.stringify({
+      operationId: request.operationId,
+      baseRevision: request.baseRevision,
+      change: request.change,
+      updatedBy: 'Администратор ХИМКОНТУР',
+    }),
+  }, 120_000);
+  if (!isObject(payload) || typeof payload.revision !== 'number' || !('activeObject' in payload)) {
+    throw new MapSyncRequestError('Сервис синхронизации вернул некорректное подтверждение объекта.', 502, 'invalid');
+  }
+  return {
+    revision: payload.revision,
+    publishedAtIso: stringValue(payload.publishedAtIso),
+    activeObject: (payload.activeObject ?? null) as DistrictMapObject | null,
+    conflict: (payload.conflict ?? null) as CoordinatedObjectChangeResponse['conflict'],
+    status: normalizeStatus(payload.status),
+  };
 }
 
 export async function checkMapSynchronization(credential?: MapAdminCredential): Promise<MapSyncStatus> {

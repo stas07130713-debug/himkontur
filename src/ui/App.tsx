@@ -36,6 +36,7 @@ import { DistrictMapPage } from "./DistrictMapPage";
 import {
   createPendingDistrictMapOperation,
   fetchCoordinatedDistrictMapProject,
+  fetchCoordinatedDistrictMapUpdate,
   fetchPublishedDistrictMapProject,
   loadDistrictMapProject,
   loadPendingDistrictMapOperations,
@@ -45,6 +46,7 @@ import {
   savePendingDistrictMapOperations,
   shouldAdoptSharedDistrictMap,
   type DistrictMapObject,
+  type DistrictMapPublishResult,
   type PendingDistrictMapOperation,
   type DistrictMapProject,
 } from "./district-map-model";
@@ -138,6 +140,7 @@ export function App() {
   const districtProjectRef = useRef(districtProject);
   const pendingDistrictOperationsRef = useRef<PendingDistrictMapOperation[]>(initialPendingDistrictOperationsRef.current);
   const districtPublishingRef = useRef(false);
+  const districtRefreshingRef = useRef(false);
   const adminCredentialRef = useRef<MapAdminCredential | null>(null);
   useEffect(() => { districtProjectRef.current = districtProject; }, [districtProject]);
   useEffect(() => {
@@ -148,21 +151,25 @@ export function App() {
     if (tab !== "district") setDistrictManagementOpen(false);
   }, [tab]);
   const refreshDistrictMapFromServer = useCallback(async (): Promise<boolean> => {
+    if (districtRefreshingRef.current) return false;
+    districtRefreshingRef.current = true;
     let authoritative = false;
     let remote: DistrictMapProject | null = null;
     try {
-      remote = await fetchCoordinatedDistrictMapProject();
+      remote = await fetchCoordinatedDistrictMapUpdate(districtProjectRef.current);
       authoritative = remote !== null;
     } catch {
       remote = await fetchPublishedDistrictMapProject();
     }
     if (remote === null) {
       if (pendingDistrictOperationsRef.current.length === 0) setDistrictSyncState("error");
+      districtRefreshingRef.current = false;
       return false;
     }
     const shared = remote;
     if (pendingDistrictOperationsRef.current.length > 0 || districtChangeRememberedRef.current) {
       setDistrictSyncState("pending");
+      districtRefreshingRef.current = false;
       return false;
     }
     const currentLocal = districtProjectRef.current;
@@ -187,6 +194,7 @@ export function App() {
       saveDistrictMapProject(recovered.project);
       setDistrictSyncState("pending");
       setNotice(`Сохранены локальные объекты, отсутствовавшие в общей карте: ${localOnlyObjects.length}. Выполняется безопасное объединение.`);
+      districtRefreshingRef.current = false;
       return false;
     }
     setDistrictSyncState("ready");
@@ -197,6 +205,7 @@ export function App() {
       saveDistrictMapProject(next);
       return next;
     });
+    districtRefreshingRef.current = false;
     return true;
   }, []);
   useEffect(() => {
@@ -598,7 +607,7 @@ export function App() {
         setDistrictSyncState("publishing");
         const activeCredential: MapAdminCredential = adminCredentialRef.current;
         let publishResult: Readonly<{
-          value: DistrictMapProject;
+          value: DistrictMapPublishResult;
           credential: MapAdminCredential;
           status: MapSyncStatus | null;
         }>;
@@ -642,7 +651,17 @@ export function App() {
         }
         adminCredentialRef.current = publishResult.credential;
         if (publishResult.status !== null) setMapSyncStatus(publishResult.status);
-        const synchronized = publishResult.value;
+        const synchronized = publishResult.value.project;
+        if (publishResult.value.conflicts.length > 0) {
+          const total = saveDistrictMapConflictArchive({
+            createdAtIso: new Date().toISOString(),
+            baseRevision: pending.baseProject?.revision ?? pending.baseRevision,
+            localRevision: pending.project.revision,
+            remoteRevision: synchronized.revision,
+            conflicts: publishResult.value.conflicts,
+          });
+          setDistrictConflictCount(total);
+        }
         if (pendingDistrictOperationsRef.current[0]?.operationId === pending.operationId) {
           pendingDistrictOperationsRef.current = pendingDistrictOperationsRef.current.slice(1);
           savePendingDistrictMapOperations(pendingDistrictOperationsRef.current);

@@ -3,6 +3,7 @@ import {
   compareDistrictMapObjects,
   createPendingDistrictMapOperation,
   districtMapObjectCounts,
+  districtMapObjectChanges,
   districtObjectTitle,
   isPublishedProjectNewer,
   localOnlyDistrictMapObjects,
@@ -90,6 +91,17 @@ describe('district map composition comparison', () => {
       sharedOnly: 1,
       changed: 1,
     });
+  });
+
+  it('turns a complete queued map into small independent object changes', () => {
+    const base = { ...project(10, '2026-10-26T10:00:00Z'), draft: [building, foamHydrant], published: [building, foamHydrant] };
+    const movedHydrant = { ...foamHydrant, point: { latitude: 67.92, longitude: 32.82 }, updatedAtIso: '2026-10-26T11:00:00Z' };
+    const target = { ...project(11, '2026-10-26T11:00:00Z'), draft: [building, movedHydrant], published: [building, movedHydrant] };
+    expect(districtMapObjectChanges(base, target)).toEqual([expect.objectContaining({
+      objectId: foamHydrant.id,
+      baseObject: foamHydrant,
+      object: movedHydrant,
+    })]);
   });
 });
 
