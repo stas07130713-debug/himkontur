@@ -153,6 +153,12 @@ export function App() {
   const refreshDistrictMapFromServer = useCallback(async (): Promise<boolean> => {
     if (districtRefreshingRef.current) return false;
     districtRefreshingRef.current = true;
+    const hasPendingChanges = () => pendingDistrictOperationsRef.current.length > 0 || districtChangeRememberedRef.current;
+    if (hasPendingChanges()) {
+      setDistrictSyncState("pending");
+      districtRefreshingRef.current = false;
+      return false;
+    }
     let authoritative = false;
     let remote: DistrictMapProject | null = null;
     try {
@@ -167,7 +173,7 @@ export function App() {
       return false;
     }
     const shared = remote;
-    if (pendingDistrictOperationsRef.current.length > 0 || districtChangeRememberedRef.current) {
+    if (hasPendingChanges()) {
       setDistrictSyncState("pending");
       districtRefreshingRef.current = false;
       return false;
@@ -253,6 +259,33 @@ export function App() {
         pendingOperations: 0,
         message: message(error),
       }));
+    } finally {
+      setMapSyncCheckBusy(false);
+    }
+  };
+
+  const loadSharedDistrictMapFromServer = async (): Promise<Readonly<{ success: boolean; message: string }>> => {
+    if (pendingDistrictOperationsRef.current.length > 0 || districtChangeRememberedRef.current) {
+      return {
+        success: false,
+        message: 'На этом устройстве есть неопубликованные изменения. Сначала сохраните резервную копию и нажмите «Опубликовать для всех устройств», чтобы не потерять работу.',
+      };
+    }
+    setMapSyncCheckBusy(true);
+    try {
+      const shared = await fetchCoordinatedDistrictMapProject();
+      if (shared === null) return { success: false, message: 'Сервер не вернул общую карту.' };
+      const next = { ...shared, draft: shared.published };
+      districtProjectRef.current = next;
+      setDistrictProject(next);
+      saveDistrictMapProject(next);
+      setDistrictSyncState('ready');
+      return {
+        success: true,
+        message: `Общая карта принудительно загружена с сервера: ${next.published.length} объектов.`,
+      };
+    } catch (error) {
+      return { success: false, message: `Не удалось загрузить общую карту: ${message(error)}` };
     } finally {
       setMapSyncCheckBusy(false);
     }
@@ -904,6 +937,7 @@ export function App() {
           onCheckSynchronization={() => void refreshMapSyncStatus()}
           publishBusy={districtSyncState === "publishing"}
           onPublishForAll={publishPendingDistrictProject}
+          onLoadFromServer={loadSharedDistrictMapFromServer}
           conflictBackupCount={districtConflictCount}
           onDownloadConflictBackup={downloadDistrictConflictArchive}
           onClearConflictBackup={clearDistrictConflictArchive}

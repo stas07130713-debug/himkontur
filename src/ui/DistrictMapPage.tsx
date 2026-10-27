@@ -81,6 +81,7 @@ type Props = Readonly<{
   onCheckSynchronization: () => void;
   publishBusy: boolean;
   onPublishForAll: () => Promise<Readonly<{ success: boolean; message: string }>>;
+  onLoadFromServer: () => Promise<Readonly<{ success: boolean; message: string }>>;
   conflictBackupCount: number;
   onDownloadConflictBackup: () => void;
   onClearConflictBackup: () => void;
@@ -705,6 +706,11 @@ export function DistrictMapPage(props: Props) {
   const publishForAllDevices = async () => {
     setSharedPublishStatus(null);
     const result = await props.onPublishForAll();
+    setSharedPublishStatus(result);
+  };
+  const loadFromServer = async () => {
+    setSharedPublishStatus(null);
+    const result = await props.onLoadFromServer();
     setSharedPublishStatus(result);
   };
   const checkMapComposition = async () => {
@@ -1611,6 +1617,7 @@ export function DistrictMapPage(props: Props) {
             </div>
             <small className="district-sync-queue-note">После изменения объекта программа сразу сохраняет новую редакцию общей карты в доступном облачном сервисе. Поэтому значение «Все изменения отправлены» означает, что актуальная карта уже доступна другим устройствам. Обмен между облачными сервисами выполняется автоматически и не требует ожидания пользователя.</small>
             <button type="button" className="secondary district-composition-check-open" onClick={() => void checkMapComposition()}><UiIcon name="check" /><span>Сверить состав карты</span></button>
+            <button type="button" className="secondary district-composition-check-open" disabled={props.syncCheckBusy || props.publishBusy} onClick={() => void loadFromServer()}><UiIcon name="cloud" /><span>{props.syncCheckBusy ? 'Получаю карту…' : 'Загрузить общую карту с сервера'}</span></button>
             {props.conflictBackupCount > 0 && <div className="district-conflict-backup"><p>Это журнал уже разрешённых конфликтов. Для каждого объекта в общую карту выбрана его более поздняя редакция, а обе версии оставлены здесь для проверки. Очистка удалит только записи журнала и не изменит карту.</p><div><button type="button" className="secondary" onClick={props.onDownloadConflictBackup}>Скачать журнал ({props.conflictBackupCount})</button><button type="button" className="secondary danger" onClick={props.onClearConflictBackup}>Очистить журнал</button></div></div>}
           </section>
           {mapBackupStatus !== '' && <p className="district-act-status district-map-backup-status">{mapBackupStatus}</p>}

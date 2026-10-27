@@ -158,6 +158,17 @@ function compactObjectResponse(state, queued, operationId, operationStatus, obje
   };
 }
 
+function compactBatchResponse(state, queued, operationId, operationStatus, conflicts = [], message = '') {
+  return {
+    operationId,
+    operationStatus,
+    revision: state.revision,
+    publishedAtIso: text(state.project.publishedAtIso),
+    conflicts,
+    status: statusFrom(state, operationStatus === 'applied', true, queued, message),
+  };
+}
+
 function text(value) {
   return typeof value === 'string' ? value : '';
 }
@@ -353,7 +364,7 @@ async function writeState(env, project, provider, primaryRevision, mode, lastErr
   return { projectJson, checksum, now };
 }
 
-async function conditionalBackupCommit(env, operation, status, primaryRevision, mode, objectChange = null) {
+async function conditionalBackupCommit(env, operation, status, primaryRevision, mode, objectChanges = []) {
   const state = await readState(env);
   if (state === null) throw new HttpError(503, 'Резервная база не инициализирована.');
   if (state.revision !== operation.baseRevision) throw new HttpError(409, 'Карта уже изменена в другом браузере. Сначала обновите данные.', `expected ${operation.baseRevision}, current ${state.revision}`);
@@ -379,11 +390,18 @@ async function conditionalBackupCommit(env, operation, status, primaryRevision, 
   const stateUpdateIndex = statements.length;
   statements.push(env.DB.prepare('UPDATE map_state SET revision = ?, project_json = ?, checksum = ?, primary_revision = ?, mode = ?, updated_at = ?, last_primary_success_at = CASE WHEN ? = \'primary\' THEN ? ELSE last_primary_success_at END, last_error = \'\' WHERE id = 1 AND revision = ?')
     .bind(operation.project.revision, projectJson, checksum, primaryRevision, mode, now, mode, now, operation.baseRevision));
-  if (objectChange !== null) {
-    statements.push(env.DB.prepare('INSERT OR REPLACE INTO map_object_changes (operation_id, base_revision, target_revision, object_id, object_json, updated_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .bind(operation.operationId, operation.baseRevision, operation.project.revision, objectChange.objectId, JSON.stringify(objectChange.object ?? null), objectChange.updatedAtIso, now));
+  for (let offset = 0; offset < objectChanges.length; offset += 40) {
+    const group = objectChanges.slice(offset, offset + 40);
+    const placeholders = group.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ');
+    const bindings = group.flatMap((change, index) => [
+      objectChanges.length === 1 ? operation.operationId : `${operation.operationId}.${offset + index + 1}`,
+      change.baseRevision, change.targetRevision, change.objectId,
+      JSON.stringify(change.object ?? null), change.updatedAtIso, now,
+    ]);
+    statements.push(env.DB.prepare(`INSERT OR REPLACE INTO map_object_changes (operation_id, base_revision, target_revision, object_id, object_json, updated_at, created_at) VALUES ${placeholders}`).bind(...bindings));
   }
   statements.push(env.DB.prepare('DELETE FROM map_history WHERE revision NOT IN (SELECT revision FROM map_history ORDER BY revision DESC LIMIT ?)').bind(HISTORY_LIMIT));
+  statements.push(env.DB.prepare("DELETE FROM map_operations WHERE status = 'superseded' AND operation_id NOT IN (SELECT operation_id FROM map_operations WHERE status = 'superseded' ORDER BY created_at DESC LIMIT 20)"));
   const results = await env.DB.batch(statements);
   if (Number(results[stateUpdateIndex]?.meta?.changes ?? 0) !== 1) throw new HttpError(409, 'Карта уже изменена в другом браузере. Сначала обновите данные.');
 }
@@ -752,7 +770,7 @@ async function route(request, env, ctx) {
     };
     const queued = await pendingCount(env);
     if (shouldUseBackupImmediately(state, queued)) {
-      await conditionalBackupCommit(env, operation, 'queued', state.primaryRevision, 'backup', objectChange);
+      await conditionalBackupCommit(env, operation, 'queued', state.primaryRevision, 'backup', [{ ...objectChange, baseRevision: operation.baseRevision, targetRevision: operation.project.revision }]);
       const updated = await readState(env);
       await event(env, 'warning', 'backup-object-write', `operation=${operationId}, object=${objectId}, revision=${updated.revision}`);
       return jsonResponse(request, env, 202, compactObjectResponse(updated, await pendingCount(env), operationId, 'queued', objectId, applied.conflict, 'Изменение объекта сохранено в общей базе и уже доступно другим устройствам.'));
@@ -763,16 +781,78 @@ async function route(request, env, ctx) {
     });
     if (primary.ok && primary.protocolVersion >= 2) {
       operation.project = primary.project;
-      await conditionalBackupCommit(env, operation, 'applied', primary.revision, 'primary', objectChange);
+      await conditionalBackupCommit(env, operation, 'applied', primary.revision, 'primary', [{ ...objectChange, baseRevision: operation.baseRevision, targetRevision: operation.project.revision }]);
       const updated = await readState(env);
       return jsonResponse(request, env, 200, compactObjectResponse(updated, await pendingCount(env), operationId, 'applied', objectId, applied.conflict));
     }
     if (primary.ok && primary.protocolVersion < 2) throw new HttpError(503, 'Основная база ещё не обновлена до защищённого протокола.');
     if (primary.status > 0 && primary.status < 500) throw new HttpError(503, 'Основная база отклонила защищённую запись.');
-    await conditionalBackupCommit(env, operation, 'queued', state.primaryRevision, 'backup', objectChange);
+    await conditionalBackupCommit(env, operation, 'queued', state.primaryRevision, 'backup', [{ ...objectChange, baseRevision: operation.baseRevision, targetRevision: operation.project.revision }]);
     const updated = await readState(env);
     await event(env, 'warning', 'backup-object-write', `operation=${operationId}, object=${objectId}, revision=${updated.revision}`);
     return jsonResponse(request, env, 202, compactObjectResponse(updated, await pendingCount(env), operationId, 'queued', objectId, applied.conflict, 'Изменение объекта сохранено в общей базе и уже доступно другим устройствам.'));
+  }
+
+  if (request.method === 'POST' && url.pathname === '/v1/objects') {
+    await requireSession(request, env);
+    const payload = await readJson(request);
+    const operationId = text(payload.operationId).slice(0, 160);
+    const requestedBaseRevision = integer(payload.baseRevision);
+    if (operationId === '' || requestedBaseRevision === null || !Array.isArray(payload.changes) || payload.changes.length === 0 || payload.changes.length > 500) {
+      throw new HttpError(400, 'Не указан пакет изменений или базовая версия карты.');
+    }
+    const existing = await env.DB.prepare('SELECT status FROM map_operations WHERE operation_id = ?').bind(operationId).first();
+    if (existing) {
+      const state = await readState(env);
+      return jsonResponse(request, env, 200, compactBatchResponse(state, await pendingCount(env), operationId, existing.status, [], 'Повторный пакет распознан и не применён второй раз.'));
+    }
+    let state = await readState(env);
+    if (state === null) throw new HttpError(503, 'Резервная база не инициализирована.');
+    if (state.mode === 'conflict') {
+      await recoverSharedMapFromMirrorConflict(env, state);
+      state = await readState(env);
+    }
+    const now = new Date().toISOString();
+    let workingProject = state.project;
+    const records = [];
+    const conflicts = [];
+    for (const change of payload.changes) {
+      const baseRevision = workingProject.revision;
+      const applied = applyObjectChange(workingProject, change, now);
+      workingProject = applied.project;
+      records.push({
+        baseRevision,
+        targetRevision: workingProject.revision,
+        objectId: text(change.objectId),
+        object: applied.activeObject,
+        updatedAtIso: text(applied.activeObject?.updatedAtIso) || text(change.updatedAtIso) || now,
+      });
+      if (applied.conflict !== null) conflicts.push(applied.conflict);
+    }
+    const operation = { operationId, baseRevision: state.revision, project: workingProject, createdAt: now };
+    const queued = await pendingCount(env);
+    if (shouldUseBackupImmediately(state, queued)) {
+      await conditionalBackupCommit(env, operation, 'queued', state.primaryRevision, 'backup', records);
+      const updated = await readState(env);
+      await event(env, 'warning', 'backup-object-batch', `operation=${operationId}, changes=${records.length}, revision=${updated.revision}`);
+      return jsonResponse(request, env, 202, compactBatchResponse(updated, await pendingCount(env), operationId, 'queued', conflicts, 'Пакет изменений сохранён в общей базе и уже доступен другим устройствам.'));
+    }
+    const primary = await callPrimary(env, {
+      method: 'POST', timeoutMs: 8000,
+      body: { coordinatorToken: env.PRIMARY_SYNC_TOKEN, operationId, baseRevision: state.revision, project: workingProject, updatedBy: text(payload.updatedBy) || 'Администратор ХИМКОНТУР' },
+    });
+    if (primary.ok && primary.protocolVersion >= 2) {
+      operation.project = primary.project;
+      await conditionalBackupCommit(env, operation, 'applied', primary.revision, 'primary', records);
+      const updated = await readState(env);
+      return jsonResponse(request, env, 200, compactBatchResponse(updated, await pendingCount(env), operationId, 'applied', conflicts));
+    }
+    if (primary.ok && primary.protocolVersion < 2) throw new HttpError(503, 'Основная база ещё не обновлена до защищённого протокола.');
+    if (primary.status > 0 && primary.status < 500) throw new HttpError(503, 'Основная база отклонила защищённую запись.');
+    await conditionalBackupCommit(env, operation, 'queued', state.primaryRevision, 'backup', records);
+    const updated = await readState(env);
+    await event(env, 'warning', 'backup-object-batch', `operation=${operationId}, changes=${records.length}, revision=${updated.revision}`);
+    return jsonResponse(request, env, 202, compactBatchResponse(updated, await pendingCount(env), operationId, 'queued', conflicts, 'Пакет изменений сохранён в общей базе и уже доступен другим устройствам.'));
   }
 
   if (request.method === 'POST' && url.pathname === '/v1/map') {

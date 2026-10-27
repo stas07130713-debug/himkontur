@@ -5,7 +5,7 @@ import {
   fetchCoordinatedMapManifest,
   loadMapSyncConfig,
   publishCoordinatedMap,
-  publishCoordinatedObjectChange,
+  publishCoordinatedObjectChanges,
   type CoordinatedObjectChange,
   type MapAdminCredential,
 } from './map-sync-service';
@@ -719,31 +719,28 @@ export async function publishDistrictMapOperation(operation: PendingDistrictMapO
   if (config.coordinatorEnabled) {
     if (operation.baseProject !== undefined) {
       const changes = districtMapObjectChanges(operation.baseProject, operation.project);
-      // Start with the user's complete local result, while each server reply
-      // confirms only the object that was actually written.
       let project = operation.project;
-      const conflicts: DistrictMapPublishResult['conflicts'][number][] = [];
-      for (const [index, change] of changes.entries()) {
-        const result = await publishCoordinatedObjectChange({
-          operationId: `${operation.operationId}.${index + 1}`,
-          baseRevision: project.revision,
-          change,
-          credential,
-        });
-        const normalized = result.activeObject === null ? null : normalizeDistrictObject(result.activeObject);
-        if (result.activeObject !== null && normalized === null) throw new Error('Сервис синхронизации вернул повреждённый объект.');
-        const objects = replaceDistrictObject(project.published, change.objectId, normalized);
-        project = {
-          ...project,
-          revision: result.revision,
-          published: objects,
-          draft: objects,
-          publishedAtIso: result.publishedAtIso,
-          draftSavedAtIso: result.publishedAtIso,
-        };
-        if (result.conflict !== null) conflicts.push(result.conflict);
+      if (changes.length === 0) return { project, conflicts: [] };
+      const result = await publishCoordinatedObjectChanges({
+        operationId: operation.operationId,
+        baseRevision: operation.baseRevision,
+        changes,
+        credential,
+      });
+      for (const conflict of result.conflicts) {
+        const active = conflict.activeSource === 'remote' ? conflict.remote : conflict.local;
+        const normalized = active === null ? null : normalizeDistrictObject(active);
+        if (active !== null && normalized === null) throw new Error('Сервис синхронизации вернул повреждённый конфликтующий объект.');
+        const objects = replaceDistrictObject(project.published, conflict.objectId, normalized);
+        project = { ...project, published: objects, draft: objects };
       }
-      return { project, conflicts };
+      project = {
+        ...project,
+        revision: result.revision,
+        publishedAtIso: result.publishedAtIso,
+        draftSavedAtIso: result.publishedAtIso,
+      };
+      return { project, conflicts: result.conflicts };
     }
     const result = await publishCoordinatedMap({ ...operation, credential });
     const published = normalizeDistrictMapProject(result.project);

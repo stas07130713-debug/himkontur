@@ -72,6 +72,13 @@ export type CoordinatedObjectChangeResponse = Readonly<{
   status: MapSyncStatus;
 }>;
 
+export type CoordinatedObjectBatchResponse = Readonly<{
+  revision: number;
+  publishedAtIso: string;
+  conflicts: NonNullable<CoordinatedObjectChangeResponse['conflict']>[];
+  status: MapSyncStatus;
+}>;
+
 export type CoordinatedChangesResponse = Readonly<{
   changes: readonly Readonly<{
     baseRevision: number;
@@ -411,6 +418,34 @@ export async function publishCoordinatedObjectChange(request: Readonly<{
     publishedAtIso: stringValue(payload.publishedAtIso),
     activeObject: (payload.activeObject ?? null) as DistrictMapObject | null,
     conflict: (payload.conflict ?? null) as CoordinatedObjectChangeResponse['conflict'],
+    status: normalizeStatus(payload.status),
+  };
+}
+
+export async function publishCoordinatedObjectChanges(request: Readonly<{
+  operationId: string;
+  baseRevision: number;
+  changes: readonly CoordinatedObjectChange[];
+  credential: MapAdminCredential;
+}>): Promise<CoordinatedObjectBatchResponse> {
+  const encoded = await encodedJsonRequest({
+    operationId: request.operationId,
+    baseRevision: request.baseRevision,
+    changes: request.changes,
+    updatedBy: 'Администратор ХИМКОНТУР',
+  });
+  const payload = await coordinatorRequest('/v1/objects', {
+    method: 'POST',
+    headers: { 'Content-Type': encoded.contentType, Authorization: `Bearer ${request.credential.sessionToken}` },
+    body: encoded.body,
+  }, 180_000);
+  if (!isObject(payload) || typeof payload.revision !== 'number' || !Array.isArray(payload.conflicts)) {
+    throw new MapSyncRequestError('Сервис синхронизации вернул некорректное подтверждение пакета.', 502, 'invalid');
+  }
+  return {
+    revision: payload.revision,
+    publishedAtIso: stringValue(payload.publishedAtIso),
+    conflicts: payload.conflicts as CoordinatedObjectBatchResponse['conflicts'],
     status: normalizeStatus(payload.status),
   };
 }
