@@ -369,8 +369,20 @@ export async function fetchAvailableMap(): Promise<CoordinatedMapResponse> {
     throw new MapSyncRequestError(`Не удалось получить карту ни из одного облачного сервиса. Cloudflare: ${first.provider === 'cloudflare' ? firstMessage : secondMessage}; Яндекс: ${first.provider === 'yandex' ? firstMessage : secondMessage}`);
   }
 
-  // A successful primary response is authoritative and can be used at once.
-  if (first.provider === 'yandex') return first.response;
+  if (first.provider === 'yandex') {
+    // A backup edit may be newer while Yandex is recovering. The compact
+    // manifest lets us compare revisions without waiting for a second full map
+    // when the primary response is already current.
+    const backupManifest = await fetchCoordinatedMapManifest().catch(() => null);
+    if (backupManifest === null || backupManifest.manifest.revision <= mapRevision(first.response.project)) {
+      return first.response;
+    }
+    const second = await secondPromise;
+    if (second.response === null) return first.response;
+    return mapRevision(second.response.project) > mapRevision(first.response.project)
+      ? second.response
+      : first.response;
+  }
 
   // When the coordinator reports that Yandex is healthy but its own replica is
   // behind, wait for the already-running primary request and compare revisions.
