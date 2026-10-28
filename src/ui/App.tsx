@@ -141,6 +141,8 @@ export function App() {
   const pendingDistrictOperationsRef = useRef<PendingDistrictMapOperation[]>(initialPendingDistrictOperationsRef.current);
   const districtPublishingRef = useRef(false);
   const districtRefreshingRef = useRef(false);
+  const districtForceLoadRef = useRef(false);
+  const districtPublicationAbortRef = useRef<AbortController | null>(null);
   const adminCredentialRef = useRef<MapAdminCredential | null>(null);
   useEffect(() => { districtProjectRef.current = districtProject; }, [districtProject]);
   useEffect(() => {
@@ -264,17 +266,35 @@ export function App() {
     }
   };
 
-  const loadSharedDistrictMapFromServer = async (): Promise<Readonly<{ success: boolean; message: string }>> => {
-    if (pendingDistrictOperationsRef.current.length > 0 || districtChangeRememberedRef.current) {
+  const loadSharedDistrictMapFromServer = async (discardLocalChanges = false): Promise<Readonly<{ success: boolean; message: string }>> => {
+    const hasLocalChanges = pendingDistrictOperationsRef.current.length > 0 || districtChangeRememberedRef.current;
+    if (hasLocalChanges && !discardLocalChanges) {
       return {
         success: false,
-        message: 'На этом устройстве есть неопубликованные изменения. Сначала сохраните резервную копию и нажмите «Опубликовать для всех устройств», чтобы не потерять работу.',
+        message: 'На этом устройстве есть неопубликованные изменения. Подтвердите замену либо сначала сохраните резервную копию.',
       };
+    }
+    districtForceLoadRef.current = true;
+    districtPublicationAbortRef.current?.abort();
+    for (let attempt = 0; districtPublishingRef.current && attempt < 100; attempt += 1) {
+      await new Promise((resolve) => window.setTimeout(resolve, 50));
+    }
+    if (districtPublishingRef.current) {
+      districtForceLoadRef.current = false;
+      return { success: false, message: 'Не удалось остановить текущую отправку. Повторите замену карты через несколько секунд.' };
     }
     setMapSyncCheckBusy(true);
     try {
       const shared = await fetchCoordinatedDistrictMapProject();
       if (shared === null) return { success: false, message: 'Сервер не вернул общую карту.' };
+      if (discardLocalChanges) {
+        pendingDistrictOperationsRef.current = [];
+        savePendingDistrictMapOperations([]);
+        districtChangeRememberedRef.current = false;
+        pastRef.current = [];
+        futureRef.current = [];
+        setHistoryRevision((current) => current + 1);
+      }
       const next = { ...shared, draft: shared.published };
       districtProjectRef.current = next;
       setDistrictProject(next);
@@ -287,6 +307,7 @@ export function App() {
     } catch (error) {
       return { success: false, message: `Не удалось загрузить общую карту: ${message(error)}` };
     } finally {
+      districtForceLoadRef.current = false;
       setMapSyncCheckBusy(false);
     }
   };
@@ -619,6 +640,7 @@ export function App() {
     });
   };
   async function publishPendingDistrictProject(): Promise<Readonly<{ success: boolean; message: string }>> {
+    if (districtForceLoadRef.current) return { success: false, message: "Выполняется загрузка общей карты с сервера." };
     if (districtPublishingRef.current) return { success: false, message: "Загрузка уже выполняется. Дождитесь её завершения." };
     if (adminCredentialRef.current === null) return { success: false, message: "Сначала войдите в режим настройки карты." };
     const queuedAtStart = pendingDistrictOperationsRef.current.length;
@@ -627,6 +649,8 @@ export function App() {
       return { success: true, message: "Новых изменений для публикации нет. Общая карта уже актуальна." };
     }
     districtPublishingRef.current = true;
+    const publicationController = new AbortController();
+    districtPublicationAbortRef.current = publicationController;
     try {
       if (adminCredentialRef.current.sessionToken === '') {
         const authenticated = await authenticateMapAdmin(adminCredentialRef.current.password);
@@ -647,7 +671,7 @@ export function App() {
         try {
           publishResult = await withRenewedMapAdminSession(
             activeCredential,
-            (credential) => publishDistrictMapOperation(pending, credential),
+            (credential) => publishDistrictMapOperation(pending, credential, publicationController.signal),
           );
         } catch (error) {
           if (!(error instanceof MapSyncRequestError) || error.kind !== 'conflict') throw error;
@@ -723,6 +747,7 @@ export function App() {
       }, 30_000);
       return { success: false, message: failureMessage };
     } finally {
+      if (districtPublicationAbortRef.current === publicationController) districtPublicationAbortRef.current = null;
       districtPublishingRef.current = false;
     }
   }

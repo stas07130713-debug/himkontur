@@ -713,7 +713,7 @@ export async function fetchCoordinatedDistrictMapUpdate(current: DistrictMapProj
   return fetchCoordinatedDistrictMapProject();
 }
 
-export async function publishDistrictMapOperation(operation: PendingDistrictMapOperation, credential: MapAdminCredential): Promise<DistrictMapPublishResult> {
+export async function publishDistrictMapOperation(operation: PendingDistrictMapOperation, credential: MapAdminCredential, signal?: AbortSignal): Promise<DistrictMapPublishResult> {
   const config = await loadMapSyncConfig();
   if (config === null) throw new Error('Облачная синхронизация ещё не настроена.');
   if (config.coordinatorEnabled) {
@@ -726,6 +726,7 @@ export async function publishDistrictMapOperation(operation: PendingDistrictMapO
         baseRevision: operation.baseRevision,
         changes,
         credential,
+        ...(signal === undefined ? {} : { signal }),
       });
       for (const conflict of result.conflicts) {
         const active = conflict.activeSource === 'remote' ? conflict.remote : conflict.local;
@@ -742,7 +743,7 @@ export async function publishDistrictMapOperation(operation: PendingDistrictMapO
       };
       return { project, conflicts: result.conflicts };
     }
-    const result = await publishCoordinatedMap({ ...operation, credential });
+    const result = await publishCoordinatedMap({ ...operation, credential, ...(signal === undefined ? {} : { signal }) });
     const published = normalizeDistrictMapProject(result.project);
     if (published === null) throw new Error('Сервис синхронизации вернул некорректные данные.');
     return { project: published, conflicts: [] };

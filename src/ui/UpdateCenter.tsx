@@ -4,6 +4,7 @@ import packageInformation from "../../package.json";
 import { isNewerVersion } from "./update-version";
 
 const AUTOMATIC_CHECK_INTERVAL_MS = 30 * 60 * 1_000;
+const WINDOWS_AUTOMATIC_CHECK_INTERVAL_MS = 10 * 60 * 1_000;
 
 type AndroidUpdater = Readonly<{
   getVersion: () => Promise<{ version: string; code: number }>;
@@ -73,6 +74,24 @@ export function UpdateCenter() {
     void window.himkonturUpdates.getStatus().then(receiveStatus);
     return () => {
       unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    const updater = window.himkonturUpdates;
+    if (updater === undefined) return;
+    const checkAutomatically = () => {
+      automaticCheck.current = true;
+      void updater.check();
+    };
+    const timeout = window.setTimeout(checkAutomatically, 10_000);
+    const interval = window.setInterval(checkAutomatically, WINDOWS_AUTOMATIC_CHECK_INTERVAL_MS);
+    const checkWhenVisible = () => { if (document.visibilityState === "visible") checkAutomatically(); };
+    document.addEventListener("visibilitychange", checkWhenVisible);
+    return () => {
+      window.clearTimeout(timeout);
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", checkWhenVisible);
     };
   }, []);
 

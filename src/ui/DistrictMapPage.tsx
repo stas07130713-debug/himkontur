@@ -81,7 +81,7 @@ type Props = Readonly<{
   onCheckSynchronization: () => void;
   publishBusy: boolean;
   onPublishForAll: () => Promise<Readonly<{ success: boolean; message: string }>>;
-  onLoadFromServer: () => Promise<Readonly<{ success: boolean; message: string }>>;
+  onLoadFromServer: (discardLocalChanges?: boolean) => Promise<Readonly<{ success: boolean; message: string }>>;
   conflictBackupCount: number;
   onDownloadConflictBackup: () => void;
   onClearConflictBackup: () => void;
@@ -675,6 +675,7 @@ export function DistrictMapPage(props: Props) {
   const [actImporting, setActImporting] = useState(false);
   const [mapBackupStatus, setMapBackupStatus] = useState('');
   const [sharedPublishStatus, setSharedPublishStatus] = useState<Readonly<{ success: boolean; message: string }> | null>(null);
+  const [serverReplaceConfirmationOpen, setServerReplaceConfirmationOpen] = useState(false);
   const [compositionCheckOpen, setCompositionCheckOpen] = useState(false);
   const [compositionCheckBusy, setCompositionCheckBusy] = useState(false);
   const [compositionCheckError, setCompositionCheckError] = useState('');
@@ -708,10 +709,19 @@ export function DistrictMapPage(props: Props) {
     const result = await props.onPublishForAll();
     setSharedPublishStatus(result);
   };
-  const loadFromServer = async () => {
+  const loadFromServer = async (discardLocalChanges = false) => {
+    if (props.localPendingOperations > 0 && !discardLocalChanges) {
+      setServerReplaceConfirmationOpen(true);
+      return;
+    }
     setSharedPublishStatus(null);
-    const result = await props.onLoadFromServer();
+    setServerReplaceConfirmationOpen(false);
+    const result = await props.onLoadFromServer(discardLocalChanges);
     setSharedPublishStatus(result);
+  };
+  const backupAndLoadFromServer = async () => {
+    downloadMapBackup();
+    await loadFromServer(true);
   };
   const checkMapComposition = async () => {
     setCompositionCheckOpen(true);
@@ -1617,7 +1627,16 @@ export function DistrictMapPage(props: Props) {
             </div>
             <small className="district-sync-queue-note">После изменения объекта программа сразу сохраняет новую редакцию общей карты в доступном облачном сервисе. Поэтому значение «Все изменения отправлены» означает, что актуальная карта уже доступна другим устройствам. Обмен между облачными сервисами выполняется автоматически и не требует ожидания пользователя.</small>
             <button type="button" className="secondary district-composition-check-open" onClick={() => void checkMapComposition()}><UiIcon name="check" /><span>Сверить состав карты</span></button>
-            <button type="button" className="secondary district-composition-check-open" disabled={props.syncCheckBusy || props.publishBusy} onClick={() => void loadFromServer()}><UiIcon name="cloud" /><span>{props.syncCheckBusy ? 'Получаю карту…' : 'Загрузить общую карту с сервера'}</span></button>
+            <button type="button" className="secondary district-composition-check-open" disabled={props.syncCheckBusy} onClick={() => void loadFromServer()}><UiIcon name="cloud" /><span>{props.syncCheckBusy ? 'Получаю карту…' : 'Загрузить общую карту с сервера'}</span></button>
+            {serverReplaceConfirmationOpen && <div className="district-server-replace-confirmation" role="alertdialog" aria-label="Замена локальной карты общей картой">
+              <strong>Заменить локальную карту?</strong>
+              <p>На этом устройстве есть неопубликованные изменения. Общая карта с сервера заменит их. Можно предварительно сохранить текущую карту в файл.</p>
+              <div>
+                <button type="button" className="primary" onClick={() => void backupAndLoadFromServer()}>Сохранить копию и заменить</button>
+                <button type="button" className="secondary danger" onClick={() => void loadFromServer(true)}>Заменить без сохранения</button>
+                <button type="button" className="secondary" onClick={() => setServerReplaceConfirmationOpen(false)}>Отмена</button>
+              </div>
+            </div>}
             {props.conflictBackupCount > 0 && <div className="district-conflict-backup"><p>Это журнал уже разрешённых конфликтов. Для каждого объекта в общую карту выбрана его более поздняя редакция, а обе версии оставлены здесь для проверки. Очистка удалит только записи журнала и не изменит карту.</p><div><button type="button" className="secondary" onClick={props.onDownloadConflictBackup}>Скачать журнал ({props.conflictBackupCount})</button><button type="button" className="secondary danger" onClick={props.onClearConflictBackup}>Очистить журнал</button></div></div>}
           </section>
           {mapBackupStatus !== '' && <p className="district-act-status district-map-backup-status">{mapBackupStatus}</p>}
@@ -1625,7 +1644,7 @@ export function DistrictMapPage(props: Props) {
           {pendingHydrantAct !== null && <button type="button" className="primary district-act-apply" onClick={applyHydrantAct}><UiIcon name="check" /><span>Применить данные акта к пожарным гидрантам на карте</span></button>}
           {sharedPublishStatus !== null && <p className={`district-publish-status ${sharedPublishStatus.success ? 'is-success' : 'is-error'}`} role="status">{sharedPublishStatus.message}</p>}
           <div className="district-management-footer-actions">
-            <button type="button" className="primary publish-shared-map" disabled={props.publishBusy} onClick={() => void publishForAllDevices()}><UiIcon name="upload" /><span>{props.publishBusy ? 'Загружаю изменения…' : 'Опубликовать для всех устройств'}</span></button>
+            <button type="button" className="primary publish-shared-map" disabled={props.publishBusy || props.syncCheckBusy} onClick={() => void publishForAllDevices()}><UiIcon name="upload" /><span>{props.publishBusy ? 'Загружаю изменения…' : 'Опубликовать для всех устройств'}</span></button>
             <button className="secondary exit-admin" onClick={() => { props.onCloseManagement(); props.onExitAdmin(); }}>Завершить режим настройки</button>
           </div>
         </section>

@@ -98,6 +98,7 @@ export type CoordinatedPublishRequest = Readonly<{
   baseRevision: number;
   project: DistrictMapProject;
   credential: MapAdminCredential;
+  signal?: AbortSignal;
 }>;
 
 type JsonRecord = Record<string, unknown>;
@@ -235,6 +236,10 @@ async function coordinatorRequest(path: string, init: RequestInit, timeoutMs: nu
   let lastError: MapSyncRequestError | null = null;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     const controller = new AbortController();
+    const externalSignal = init.signal;
+    const abortFromOutside = () => controller.abort();
+    if (externalSignal?.aborted === true) controller.abort();
+    else externalSignal?.addEventListener('abort', abortFromOutside, { once: true });
     const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetch(`${config.coordinatorUrl}${path}`, {
@@ -254,9 +259,10 @@ async function coordinatorRequest(path: string, init: RequestInit, timeoutMs: nu
             ? new MapSyncRequestError('Не удалось связаться с сервером настройки карты. Проверьте интернет и повторите вход.')
             : new MapSyncRequestError(error instanceof Error ? error.message : 'Нет связи с сервисом синхронизации.');
       lastError = normalized;
-      if (normalized.kind !== 'unavailable' || attempt === attempts - 1) throw normalized;
+      if (externalSignal?.aborted === true || normalized.kind !== 'unavailable' || attempt === attempts - 1) throw normalized;
     } finally {
       window.clearTimeout(timeout);
+      externalSignal?.removeEventListener('abort', abortFromOutside);
     }
   }
   throw lastError ?? new MapSyncRequestError('Нет связи с сервисом синхронизации.');
@@ -377,8 +383,10 @@ export async function publishCoordinatedMap(request: CoordinatedPublishRequest):
         Authorization: `Bearer ${request.credential.sessionToken}`,
       },
       body: encoded.body,
+      ...(request.signal === undefined ? {} : { signal: request.signal }),
     }, 180_000);
   } catch (error) {
+    if (request.signal?.aborted === true) throw error;
     if (!(error instanceof MapSyncRequestError) || error.kind !== 'unavailable') throw error;
     // A timeout can happen after D1 has already committed the operation but
     // before the response reaches the browser. Verify the idempotent operation
@@ -427,6 +435,7 @@ export async function publishCoordinatedObjectChanges(request: Readonly<{
   baseRevision: number;
   changes: readonly CoordinatedObjectChange[];
   credential: MapAdminCredential;
+  signal?: AbortSignal;
 }>): Promise<CoordinatedObjectBatchResponse> {
   const encoded = await encodedJsonRequest({
     operationId: request.operationId,
@@ -438,6 +447,7 @@ export async function publishCoordinatedObjectChanges(request: Readonly<{
     method: 'POST',
     headers: { 'Content-Type': encoded.contentType, Authorization: `Bearer ${request.credential.sessionToken}` },
     body: encoded.body,
+    ...(request.signal === undefined ? {} : { signal: request.signal }),
   }, 180_000);
   if (!isObject(payload) || typeof payload.revision !== 'number' || !Array.isArray(payload.conflicts)) {
     throw new MapSyncRequestError('Сервис синхронизации вернул некорректное подтверждение пакета.', 502, 'invalid');

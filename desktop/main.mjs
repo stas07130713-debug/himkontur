@@ -30,7 +30,7 @@ let updateTimer = null;
 let lastUpdateStatus = { state: 'idle', version: app.getVersion() };
 let updateCheckInFlight = null;
 let lastUpdateCheckAt = 0;
-const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
+const UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 const UPDATE_CHECK_COOLDOWN_MS = 2 * 60 * 1000;
 
 function sendUpdateStatus(status) {
