@@ -1,7 +1,7 @@
 {
   "id": "district-map-main",
   "name": "Карта района выезда",
-  "revision": 1793179011798,
+  "revision": 1793206492299,
   "draft": [
     {
       "id": "kml-hydrant-095f40d67c2912bd9832",
@@ -11090,51 +11090,6 @@
           "shortName": "ОПУ НП, РП-135"
         }
       ]
-    },
-    {
-      "id": "5d4dcb38-735e-45a7-85a5-b770747f39bb",
-      "point": {
-        "latitude": 67.91988792088046,
-        "longitude": 32.846909622078776
-      },
-      "note": "",
-      "updatedAtIso": "2026-10-17T16:27:17.183Z",
-      "kind": "building",
-      "objectType": "building",
-      "mapRole": "ordinary",
-      "contour": [
-        {
-          "latitude": 67.92006225392235,
-          "longitude": 32.84726923335015
-        },
-        {
-          "latitude": 67.91966829269822,
-          "longitude": 32.84683048725128
-        },
-        {
-          "latitude": 67.9197136643071,
-          "longitude": 32.84654885530472
-        },
-        {
-          "latitude": 67.92010747259418,
-          "longitude": 32.84698991240896
-        }
-      ],
-      "territoryNames": [],
-      "number": "4.2",
-      "installationName": "",
-      "inventoryNumber": "",
-      "planningDocuments": [],
-      "workshopFull": "Химико-металлургический цех",
-      "workshopShort": "ХМЦ",
-      "departments": [
-        {
-          "id": "f7e8edf8-70de-45f0-a581-78b85518a036",
-          "fullName": "Аффинаж",
-          "shortName": ""
-        }
-      ],
-      "sites": []
     },
     {
       "id": "243cce8a-fce5-442e-97eb-05e51978966c",
@@ -24765,51 +24720,6 @@
       ]
     },
     {
-      "id": "5d4dcb38-735e-45a7-85a5-b770747f39bb",
-      "point": {
-        "latitude": 67.91988792088046,
-        "longitude": 32.846909622078776
-      },
-      "note": "",
-      "updatedAtIso": "2026-10-17T16:27:17.183Z",
-      "kind": "building",
-      "objectType": "building",
-      "mapRole": "ordinary",
-      "contour": [
-        {
-          "latitude": 67.92006225392235,
-          "longitude": 32.84726923335015
-        },
-        {
-          "latitude": 67.91966829269822,
-          "longitude": 32.84683048725128
-        },
-        {
-          "latitude": 67.9197136643071,
-          "longitude": 32.84654885530472
-        },
-        {
-          "latitude": 67.92010747259418,
-          "longitude": 32.84698991240896
-        }
-      ],
-      "territoryNames": [],
-      "number": "4.2",
-      "installationName": "",
-      "inventoryNumber": "",
-      "planningDocuments": [],
-      "workshopFull": "Химико-металлургический цех",
-      "workshopShort": "ХМЦ",
-      "departments": [
-        {
-          "id": "f7e8edf8-70de-45f0-a581-78b85518a036",
-          "fullName": "Аффинаж",
-          "shortName": ""
-        }
-      ],
-      "sites": []
-    },
-    {
       "id": "243cce8a-fce5-442e-97eb-05e51978966c",
       "point": {
         "latitude": 67.91690151881484,
@@ -27348,6 +27258,6 @@
       "updatedAtIso": "2026-10-27T11:59:03.710Z"
     }
   ],
-  "draftSavedAtIso": "2026-10-28T09:16:54.609Z",
-  "publishedAtIso": "2026-10-28T09:16:54.609Z"
+  "draftSavedAtIso": "2026-10-28T16:54:55.492Z",
+  "publishedAtIso": "2026-10-28T16:54:55.492Z"
 }
