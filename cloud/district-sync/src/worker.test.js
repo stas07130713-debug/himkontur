@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { applyObjectChange, canRebaseLegacyOperation, isAllowedOrigin, needsConflictRecovery, operationQueueBaseRevision, readJson, shouldUseBackupImmediately, validAuthoritativeRecovery } from './worker.js';
+import { applyObjectChange, canRebaseLegacyOperation, isAllowedOrigin, mirrorReconciliationAction, needsConflictRecovery, operationQueueBaseRevision, readJson, shouldUseBackupImmediately, validAuthoritativeRecovery } from './worker.js';
 
 async function gzipJson(value) {
   const stream = new Blob([JSON.stringify(value)]).stream().pipeThrough(new CompressionStream('gzip'));
@@ -48,6 +48,20 @@ describe('district sync conflict guard', () => {
 
   it('does not run recovery when no mirror conflict is recorded', () => {
     assert.equal(needsConflictRecovery({ mode: 'backup' }, 0), false);
+  });
+});
+
+describe('parallel mirror reconciliation', () => {
+  it('pulls a newer Yandex revision into Cloudflare when no writes are queued', () => {
+    assert.equal(mirrorReconciliationAction(21, 20, 0), 'pull-primary');
+  });
+
+  it('does not overwrite a newer shared revision without a queued operation', () => {
+    assert.equal(mirrorReconciliationAction(20, 21, 0), 'keep-shared');
+  });
+
+  it('leaves revision handling to the queued-operation reconciler when edits are pending', () => {
+    assert.equal(mirrorReconciliationAction(21, 20, 1), 'queue');
   });
 });
 

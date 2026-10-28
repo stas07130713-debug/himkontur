@@ -39,6 +39,12 @@ export type CoordinatedMapResponse = Readonly<{
   status: MapSyncStatus;
 }>;
 
+type MapProviderResult = Readonly<{
+  provider: 'yandex' | 'cloudflare';
+  response: CoordinatedMapResponse | null;
+  error: unknown;
+}>;
+
 export type MapSyncObjectIndex = Readonly<{
   id: string;
   kind: string;
@@ -290,6 +296,94 @@ export async function fetchCoordinatedMap(): Promise<CoordinatedMapResponse> {
   const payload = await coordinatorRequest('/v1/map', { method: 'GET' }, 180_000, 1);
   if (!isObject(payload) || !('project' in payload)) throw new MapSyncRequestError('Резервный сервис вернул некорректную карту.', 502, 'invalid');
   return { project: payload.project, status: normalizeStatus(payload.status) };
+}
+
+async function fetchPrimaryMap(): Promise<CoordinatedMapResponse> {
+  const config = await loadMapSyncConfig();
+  if (config === null) throw new MapSyncRequestError('Основной облачный сервис ещё не настроен.', 0, 'unavailable');
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 180_000);
+  try {
+    const response = await fetch(`${config.primaryApiUrl}?ts=${Date.now()}`, {
+      method: 'GET',
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+    const payload: unknown = await response.json().catch(() => null);
+    if (!response.ok) throw requestError(response.status, payload, `Основной сервис вернул ошибку ${response.status}.`);
+    if (!isObject(payload) || !('project' in payload)) {
+      throw new MapSyncRequestError('Основной сервис вернул некорректную карту.', 502, 'invalid');
+    }
+    return {
+      project: payload.project,
+      status: normalizeStatus(null, {
+        mode: 'primary',
+        activeProvider: 'yandex',
+        primaryAvailable: true,
+        backupAvailable: null,
+        synchronized: false,
+        message: 'Карта загружена из основной базы.',
+      }),
+    };
+  } catch (error) {
+    if (error instanceof MapSyncRequestError) throw error;
+    if (controller.signal.aborted) throw new MapSyncRequestError('Основной сервис синхронизации не ответил вовремя.');
+    if (error instanceof TypeError) throw new MapSyncRequestError('Не удалось связаться с основной базой карты.');
+    throw new MapSyncRequestError(error instanceof Error ? error.message : 'Основная база карты недоступна.');
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+function mapRevision(value: unknown): number {
+  if (!isObject(value)) return 0;
+  return typeof value.revision === 'number' && Number.isSafeInteger(value.revision) ? value.revision : 0;
+}
+
+function settledProviderMap(
+  provider: MapProviderResult['provider'],
+  request: Promise<CoordinatedMapResponse>,
+): Promise<MapProviderResult> {
+  return request.then(
+    (response) => ({ provider, response, error: null }),
+    (error: unknown) => ({ provider, response: null, error }),
+  );
+}
+
+/**
+ * Starts both shared-map providers at the same time. Yandex is authoritative
+ * while it is healthy; Cloudflare remains a transparent fallback. No provider
+ * choice is exposed to the user.
+ */
+export async function fetchAvailableMap(): Promise<CoordinatedMapResponse> {
+  const cloudflare = settledProviderMap('cloudflare', fetchCoordinatedMap());
+  const yandex = settledProviderMap('yandex', fetchPrimaryMap());
+  const first = await Promise.race([cloudflare, yandex]);
+  const secondPromise = first.provider === 'cloudflare' ? yandex : cloudflare;
+
+  if (first.response === null) {
+    const second = await secondPromise;
+    if (second.response !== null) return second.response;
+    const firstMessage = first.error instanceof Error ? first.error.message : 'сервис недоступен';
+    const secondMessage = second.error instanceof Error ? second.error.message : 'сервис недоступен';
+    throw new MapSyncRequestError(`Не удалось получить карту ни из одного облачного сервиса. Cloudflare: ${first.provider === 'cloudflare' ? firstMessage : secondMessage}; Яндекс: ${first.provider === 'yandex' ? firstMessage : secondMessage}`);
+  }
+
+  // A successful primary response is authoritative and can be used at once.
+  if (first.provider === 'yandex') return first.response;
+
+  // When the coordinator reports that Yandex is healthy but its own replica is
+  // behind, wait for the already-running primary request and compare revisions.
+  const shouldWaitForPrimary = first.response.status.activeProvider === 'yandex'
+    && first.response.status.primaryAvailable !== false
+    && !first.response.status.synchronized;
+  if (!shouldWaitForPrimary) return first.response;
+
+  const second = await secondPromise;
+  if (second.response === null) return first.response;
+  return mapRevision(second.response.project) >= mapRevision(first.response.project)
+    ? second.response
+    : first.response;
 }
 
 function normalizeManifest(value: unknown): MapSyncManifest | null {

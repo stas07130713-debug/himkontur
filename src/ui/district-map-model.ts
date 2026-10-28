@@ -1,6 +1,6 @@
 import type { GeoPoint } from '../core/types';
 import {
-  fetchCoordinatedMap,
+  fetchAvailableMap,
   fetchCoordinatedMapChanges,
   fetchCoordinatedMapManifest,
   loadMapSyncConfig,
@@ -628,11 +628,10 @@ async function fetchGithubDistrictMapProject(): Promise<DistrictMapProject | nul
 export async function fetchPublishedDistrictMapProject(): Promise<DistrictMapProject | null> {
   const config = await loadMapSyncConfig();
   const coordinated = config?.coordinatorEnabled === true
-    ? await fetchCoordinatedMap().then((value) => normalizeDistrictMapProject(value.project)).catch(() => null)
+    ? await fetchAvailableMap().then((value) => normalizeDistrictMapProject(value.project)).catch(() => null)
     : null;
-  // The coordinator is the shared map that all browsers write to. When it is
-  // available, return it immediately instead of waiting for stale fallbacks or
-  // an unavailable provider on every 30-second refresh.
+  // Yandex and Cloudflare are queried in parallel. Once either shared provider
+  // returns a valid current map, avoid waiting for older static fallbacks.
   if (coordinated !== null) return coordinated;
   const [cloud, synchronized, bundled, direct] = await Promise.all([
     fetchCloudDistrictMapProject(),
@@ -649,7 +648,7 @@ export async function fetchPublishedDistrictMapProject(): Promise<DistrictMapPro
 }
 
 export async function fetchCoordinatedDistrictMapProject(): Promise<DistrictMapProject | null> {
-  const coordinated = await fetchCoordinatedMap();
+  const coordinated = await fetchAvailableMap();
   return normalizeDistrictMapProject(coordinated.project);
 }
 
@@ -682,7 +681,12 @@ function replaceDistrictObject(objects: readonly DistrictMapObject[], objectId: 
 }
 
 export async function fetchCoordinatedDistrictMapUpdate(current: DistrictMapProject): Promise<DistrictMapProject | null> {
-  const { manifest } = await fetchCoordinatedMapManifest();
+  const manifestResponse = await fetchCoordinatedMapManifest().catch(() => null);
+  if (manifestResponse === null) return fetchCoordinatedDistrictMapProject();
+  const { manifest, status } = manifestResponse;
+  if (status.activeProvider === 'yandex' && status.primaryAvailable !== false && !status.synchronized) {
+    return fetchCoordinatedDistrictMapProject();
+  }
   const localIndex = new Map(current.published.map((object) => [object.id, object.updatedAtIso]));
   const sameIndex = current.published.length === manifest.objects.length
     && manifest.objects.every((object) => localIndex.get(object.id) === object.updatedAtIso);

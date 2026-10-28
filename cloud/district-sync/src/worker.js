@@ -440,6 +440,13 @@ export function needsConflictRecovery(state, conflictCount) {
   return state?.mode === 'conflict' || conflictCount > 0;
 }
 
+export function mirrorReconciliationAction(primaryRevision, sharedRevision, queued) {
+  if (queued > 0 || !Number.isSafeInteger(primaryRevision) || !Number.isSafeInteger(sharedRevision)) return 'queue';
+  if (primaryRevision > sharedRevision) return 'pull-primary';
+  if (primaryRevision < sharedRevision) return 'keep-shared';
+  return 'synchronized';
+}
+
 async function recoverSharedMapFromMirrorConflict(env, state) {
   const now = new Date().toISOString();
   await env.DB.batch([
@@ -490,12 +497,19 @@ async function reconcile(env) {
   }
   const queued = await env.DB.prepare("SELECT operation_id, base_revision, target_revision, project_json, created_at FROM map_operations WHERE status = 'queued' ORDER BY created_at ASC").all();
   if (queued.results.length === 0) {
-    if (primary.revision !== state.revision) {
+    const action = mirrorReconciliationAction(primary.revision, state.revision, 0);
+    if (action === 'pull-primary') {
+      await writeState(env, primary.project, 'yandex', primary.revision, 'primary');
+      await event(env, 'info', 'mirror-primary-pulled', `yandex=${primary.revision}, previousShared=${state.revision}`);
+      state = await readState(env);
+      return { state, primaryAvailable: true, queued: 0, message: 'Новая редакция Яндекса автоматически перенесена в резервную базу.' };
+    }
+    if (action === 'keep-shared') {
       await env.DB.prepare("UPDATE map_state SET primary_revision = ?, mode = 'backup', last_error = '' WHERE id = 1")
         .bind(primary.revision).run();
       await event(env, 'warning', 'mirror-revision-difference', `yandex=${primary.revision}, shared=${state.revision}`);
       state = await readState(env);
-      return { state, primaryAvailable: true, queued: 0, message: 'Общая карта Cloudflare доступна; зеркало Яндекс будет выровнено автоматически.' };
+      return { state, primaryAvailable: true, queued: 0, message: 'Резервная база содержит более новую редакцию; автоматическая перезапись Яндекса остановлена для защиты данных.' };
     } else {
       await env.DB.prepare("UPDATE map_state SET primary_revision = ?, mode = 'primary', last_primary_success_at = ?, last_error = '' WHERE id = 1")
         .bind(primary.revision, new Date().toISOString()).run();

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   authenticateMapAdmin,
   clearMapSyncConfigCache,
+  fetchAvailableMap,
   MapSyncRequestError,
   normalizeMapSyncStatus,
   publishCoordinatedMap,
@@ -23,6 +24,11 @@ function jsonResponse(value: unknown, status = 200): Response {
   });
 }
 
+function requestUrl(input: string | URL | Request): string {
+  if (typeof input === 'string') return input;
+  return input instanceof URL ? input.toString() : input.url;
+}
+
 afterEach(() => {
   clearMapSyncConfigCache();
   vi.unstubAllGlobals();
@@ -30,6 +36,67 @@ afterEach(() => {
 });
 
 describe('map synchronization sessions', () => {
+  it('loads the map from Yandex when Cloudflare is unavailable', async () => {
+    const yandexProject = { id: 'district-map', revision: 20, published: [] };
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      const url = requestUrl(input);
+      if (url.includes('map-sync.json')) return Promise.resolve(jsonResponse(configResponse));
+      if (url.startsWith(configResponse.coordinatorUrl)) return Promise.reject(new TypeError('Cloudflare unavailable'));
+      if (url.startsWith(configResponse.primaryApiUrl)) return Promise.resolve(jsonResponse({ project: yandexProject }));
+      return Promise.reject(new Error(`Unexpected URL: ${url}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('window', { setTimeout, clearTimeout });
+
+    await expect(fetchAvailableMap()).resolves.toMatchObject({
+      project: yandexProject,
+      status: { activeProvider: 'yandex', primaryAvailable: true },
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(configResponse.coordinatorUrl),
+      expect.any(Object),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(configResponse.primaryApiUrl),
+      expect.any(Object),
+    );
+  });
+
+  it('starts both providers in parallel and selects the newer Yandex revision', async () => {
+    const cloudflareProject = { id: 'district-map', revision: 20, published: [] };
+    const yandexProject = { id: 'district-map', revision: 21, published: [] };
+    let releaseYandex: ((response: Response) => void) | undefined;
+    const yandexResponse = new Promise<Response>((resolve) => { releaseYandex = resolve; });
+    const requested: string[] = [];
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      const url = requestUrl(input);
+      requested.push(url);
+      if (url.includes('map-sync.json')) return Promise.resolve(jsonResponse(configResponse));
+      if (url.startsWith(configResponse.coordinatorUrl)) {
+        return Promise.resolve(jsonResponse({
+          project: cloudflareProject,
+          status: {
+            mode: 'primary', activeProvider: 'yandex', primaryAvailable: true,
+            backupAvailable: true, synchronized: false,
+          },
+        }));
+      }
+      if (url.startsWith(configResponse.primaryApiUrl)) return yandexResponse;
+      return Promise.reject(new Error(`Unexpected URL: ${url}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('window', { setTimeout, clearTimeout });
+
+    const pending = fetchAvailableMap();
+    await vi.waitFor(() => {
+      expect(requested.some((url) => url.startsWith(configResponse.coordinatorUrl))).toBe(true);
+      expect(requested.some((url) => url.startsWith(configResponse.primaryApiUrl))).toBe(true);
+    });
+    releaseYandex?.(jsonResponse({ project: yandexProject }));
+
+    await expect(pending).resolves.toMatchObject({ project: yandexProject });
+  });
+
   it('keeps the confirmed shared-server revision and save time in diagnostics', () => {
     expect(normalizeMapSyncStatus({
       mode: 'backup',
