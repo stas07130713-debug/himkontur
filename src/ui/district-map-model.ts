@@ -805,14 +805,6 @@ export function shouldAdoptSharedDistrictMap(
   return candidate.revision !== current.revision || candidate.publishedAtIso !== current.publishedAtIso;
 }
 
-export function localOnlyDistrictMapObjects(
-  local: DistrictMapProject,
-  shared: DistrictMapProject,
-): readonly DistrictMapObject[] {
-  const sharedIds = new Set(shared.published.map((object) => object.id));
-  return local.published.filter((object) => !sharedIds.has(object.id));
-}
-
 export function saveDistrictMapProject(project: DistrictMapProject): void {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
 }

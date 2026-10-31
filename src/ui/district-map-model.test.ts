@@ -6,7 +6,6 @@ import {
   districtMapObjectChanges,
   districtObjectTitle,
   isPublishedProjectNewer,
-  localOnlyDistrictMapObjects,
   loadPendingDistrictMapOperations,
   parseDistrictMapBackup,
   savePendingDistrictMapOperations,
@@ -44,18 +43,6 @@ describe('published district project ordering', () => {
     expect(shouldAdoptSharedDistrictMap(shared, staleLocal, false)).toBe(false);
   });
 
-  it('detects locally preserved objects that never reached the shared map', () => {
-    const localBuilding = {
-      id: 'local-building', kind: 'building' as const, objectType: 'building' as const,
-      point: { latitude: 67.9, longitude: 32.8 }, contour: [], territoryNames: [], number: '9.9',
-      inventoryNumber: '', planningDocuments: [], workshopFull: '', workshopShort: '', departments: [], sites: [], note: '',
-      updatedAtIso: '2026-10-22T10:00:00Z',
-    };
-    const local = { ...project(12, '2026-10-22T10:00:00Z'), draft: [localBuilding], published: [localBuilding] };
-    const shared = project(20, '2026-10-26T10:00:00Z');
-    expect(localOnlyDistrictMapObjects(local, shared)).toEqual([localBuilding]);
-    expect(localOnlyDistrictMapObjects(shared, local)).toEqual([]);
-  });
 });
 
 describe('district map composition comparison', () => {

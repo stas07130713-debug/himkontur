@@ -67,7 +67,7 @@ function objectTimestamp(value, fallback = '') {
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
-export function applyObjectChange(project, change, nowIso = new Date().toISOString()) {
+export function applyObjectChange(project, change, nowIso = new Date().toISOString(), tombstone = null) {
   const objectId = text(change?.objectId).slice(0, 180);
   if (objectId === '') throw new HttpError(400, 'Не указан объект изменения.');
   const baseObject = change.baseObject ?? null;
@@ -83,12 +83,25 @@ export function applyObjectChange(project, change, nowIso = new Date().toISOStri
   let activeObject = localObject;
   let activeSource = 'local';
   let conflict = null;
+  const tombstoneTimestamp = objectTimestamp(null, text(tombstone?.updatedAtIso));
+  const localTimestamp = objectTimestamp(localObject, text(change.updatedAtIso));
+  if (remoteObject === null && localObject !== null && tombstoneTimestamp >= localTimestamp) {
+    activeObject = null;
+    activeSource = 'remote';
+    conflict = { objectId, local: localObject, remote: null, activeSource };
+  }
   if (remoteChanged && !sameObject(localObject, remoteObject)) {
     if (localObject === null) {
-      activeObject = remoteObject;
-      activeSource = 'remote';
+      const deletionTimestamp = objectTimestamp(null, text(change.updatedAtIso));
+      if (remoteObject !== null && objectTimestamp(remoteObject) > deletionTimestamp) {
+        activeObject = remoteObject;
+        activeSource = 'remote';
+      }
     } else if (remoteObject === null) {
-      activeObject = localObject;
+      if (tombstoneTimestamp >= localTimestamp) {
+        activeObject = null;
+        activeSource = 'remote';
+      }
     } else if (objectTimestamp(remoteObject) > objectTimestamp(localObject, text(change.updatedAtIso))) {
       activeObject = remoteObject;
       activeSource = 'remote';
@@ -115,7 +128,19 @@ export function applyObjectChange(project, change, nowIso = new Date().toISOStri
     },
     activeObject,
     conflict,
+    updatedAtIso: text(activeObject?.updatedAtIso)
+      || (activeSource === 'remote' && activeObject === null ? text(tombstone?.updatedAtIso) : '')
+      || text(change.updatedAtIso)
+      || nowIso,
   };
+}
+
+async function latestObjectTombstone(env, objectId) {
+  const row = await env.DB.prepare('SELECT object_json, updated_at, target_revision FROM map_object_changes WHERE object_id = ? ORDER BY target_revision DESC, sequence DESC LIMIT 1')
+    .bind(objectId).first();
+  return row && row.object_json === 'null'
+    ? { updatedAtIso: text(row.updated_at), targetRevision: Number(row.target_revision) }
+    : null;
 }
 
 function mapManifest(state, queued) {
@@ -776,11 +801,12 @@ async function route(request, env, ctx) {
       state = await readState(env);
     }
     const now = new Date().toISOString();
-    const applied = applyObjectChange(state.project, payload.change, now);
+    const tombstone = await latestObjectTombstone(env, objectId);
+    const applied = applyObjectChange(state.project, payload.change, now, tombstone);
     const operation = { operationId, baseRevision: state.revision, project: applied.project, createdAt: now };
     const objectChange = {
       objectId, object: applied.activeObject,
-      updatedAtIso: text(applied.activeObject?.updatedAtIso) || text(payload.change.updatedAtIso) || now,
+      updatedAtIso: applied.updatedAtIso,
     };
     const queued = await pendingCount(env);
     if (shouldUseBackupImmediately(state, queued)) {
@@ -832,14 +858,16 @@ async function route(request, env, ctx) {
     const conflicts = [];
     for (const change of payload.changes) {
       const baseRevision = workingProject.revision;
-      const applied = applyObjectChange(workingProject, change, now);
+      const objectId = text(change.objectId);
+      const tombstone = await latestObjectTombstone(env, objectId);
+      const applied = applyObjectChange(workingProject, change, now, tombstone);
       workingProject = applied.project;
       records.push({
         baseRevision,
         targetRevision: workingProject.revision,
-        objectId: text(change.objectId),
+        objectId,
         object: applied.activeObject,
-        updatedAtIso: text(applied.activeObject?.updatedAtIso) || text(change.updatedAtIso) || now,
+        updatedAtIso: applied.updatedAtIso,
       });
       if (applied.conflict !== null) conflicts.push(applied.conflict);
     }

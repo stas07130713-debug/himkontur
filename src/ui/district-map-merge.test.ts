@@ -88,6 +88,19 @@ describe('conflict-safe district map merge', () => {
     ]));
   });
 
+  it('keeps a remote deletion while publishing an unrelated local object edit', () => {
+    const deletedRemotely = building('1.1', 'Удаляемый объект', '2026-10-23T08:00:00.000Z');
+    const editedLocally = building('2.1', 'Редактируемый объект', '2026-10-23T08:00:00.000Z');
+    const localEdit = { ...editedLocally, note: 'Изменён на другом компьютере', updatedAtIso: '2026-10-23T10:00:00.000Z' };
+    const merged = mergeDistrictMapProjects(
+      project(10, [deletedRemotely, editedLocally]),
+      project(11, [deletedRemotely, localEdit]),
+      project(12, [editedLocally]),
+    );
+    expect(merged.conflicts).toHaveLength(0);
+    expect(merged.project.published).toEqual([localEdit]);
+  });
+
   it('keeps an edited object instead of silently applying a concurrent deletion', () => {
     const source = building('1.1', 'Цех', '2026-10-23T08:00:00.000Z');
     const local = { ...source, note: 'Новые сведения', updatedAtIso: '2026-10-23T10:00:00.000Z' };

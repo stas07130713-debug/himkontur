@@ -151,4 +151,43 @@ describe('object-level map synchronization', () => {
     assert.deepEqual(result.activeObject, remote);
     assert.equal(result.conflict.activeSource, 'remote');
   });
+
+  it('does not restore an old local object after a newer server deletion', () => {
+    const stale = object('pg-1', 67.1, '2026-10-27T09:00:00.000Z');
+    const result = applyObjectChange(
+      project([]),
+      { objectId: 'pg-1', baseObject: null, object: stale, updatedAtIso: stale.updatedAtIso, targetRevision: 11 },
+      '2026-10-27T11:01:00.000Z',
+      { updatedAtIso: '2026-10-27T11:00:00.000Z' },
+    );
+    assert.equal(result.activeObject, null);
+    assert.equal(result.conflict.activeSource, 'remote');
+    assert.deepEqual(result.project.published, []);
+    assert.equal(result.updatedAtIso, '2026-10-27T11:00:00.000Z');
+  });
+
+  it('allows an explicit object restoration made after the server deletion', () => {
+    const restored = object('pg-1', 67.3, '2026-10-27T12:00:00.000Z');
+    const result = applyObjectChange(
+      project([]),
+      { objectId: 'pg-1', baseObject: null, object: restored, updatedAtIso: restored.updatedAtIso, targetRevision: 11 },
+      '2026-10-27T12:01:00.000Z',
+      { updatedAtIso: '2026-10-27T11:00:00.000Z' },
+    );
+    assert.deepEqual(result.activeObject, restored);
+    assert.deepEqual(result.project.published, [restored]);
+  });
+
+  it('applies a deletion made after a concurrent remote edit', () => {
+    const base = object('pg-1', 67.1, '2026-10-27T09:00:00.000Z');
+    const remote = object('pg-1', 67.2, '2026-10-27T10:00:00.000Z');
+    const result = applyObjectChange(
+      project([remote]),
+      { objectId: 'pg-1', baseObject: base, object: null, updatedAtIso: '2026-10-27T11:00:00.000Z', targetRevision: 11 },
+      '2026-10-27T11:01:00.000Z',
+    );
+    assert.equal(result.activeObject, null);
+    assert.equal(result.conflict.activeSource, 'local');
+    assert.deepEqual(result.project.published, []);
+  });
 });
