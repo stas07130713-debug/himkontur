@@ -6,6 +6,7 @@ import {
   MapSyncRequestError,
   normalizeMapSyncStatus,
   publishCoordinatedMap,
+  publishCoordinatedObjectChanges,
   withRenewedMapAdminSession,
 } from './map-sync-service';
 import type { DistrictMapProject } from './district-map-model';
@@ -237,6 +238,32 @@ describe('map synchronization sessions', () => {
       credential: { password: 'administrator-password', sessionToken: 'active-session' },
     })).resolves.toMatchObject({ project, status: { mode: 'backup' } });
     expect(fetchMock.mock.calls[3]?.[0]).toBe('https://coordinator.example.test/v1/operations/operation-committed');
+  });
+
+  it('recognizes a committed object batch after its write response was lost', async () => {
+    const project = {
+      id: 'district-map-main',
+      name: 'Карта района выезда',
+      revision: 30,
+      draft: [],
+      published: [],
+      draftSavedAtIso: '2026-10-31T10:20:00.000Z',
+      publishedAtIso: '2026-10-31T10:20:00.000Z',
+    } satisfies DistrictMapProject;
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(configResponse))
+      .mockResolvedValueOnce(jsonResponse({ error: 'gateway timeout' }, 503))
+      .mockResolvedValueOnce(jsonResponse({ project, status: { mode: 'backup', activeProvider: 'cloudflare' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('window', { setTimeout, clearTimeout });
+
+    await expect(publishCoordinatedObjectChanges({
+      operationId: 'object-batch-committed',
+      baseRevision: 29,
+      changes: [{ objectId: 'demolished-1', baseObject: null, object: null, updatedAtIso: project.publishedAtIso, targetRevision: 30 }],
+      credential: { password: 'administrator-password', sessionToken: 'active-session' },
+    })).resolves.toMatchObject({ revision: 30, status: { mode: 'backup' } });
+    expect(fetchMock.mock.calls[2]?.[0]).toBe('https://coordinator.example.test/v1/operations/object-batch-committed');
   });
 
   it('compresses a full map before sending it to the coordinator', async () => {

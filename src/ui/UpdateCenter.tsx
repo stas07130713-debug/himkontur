@@ -62,7 +62,7 @@ export function UpdateCenter() {
   useEffect(() => {
     if (window.himkonturUpdates === undefined) return;
     const receiveStatus = (status: Awaited<ReturnType<NonNullable<typeof window.himkonturUpdates>["getStatus"]>>) => {
-      if (status.state === "available") setState({ mode: "available", text: `Загружается новая версия ${status.version ?? ""}`.trim(), ...(status.version === undefined ? {} : { version: status.version }) });
+      if (status.state === "available") setState({ mode: "available", text: `Доступна новая версия ${status.version ?? ""}`.trim(), ...(status.version === undefined ? {} : { version: status.version }) });
       else if (status.state === "downloading") setState({ mode: "downloading", text: "Загрузка обновления Windows", ...(status.percent === undefined ? {} : { percent: status.percent }) });
       else if (status.state === "downloaded") setState({ mode: "ready", text: `Версия ${status.version ?? ""} готова к установке`.trim(), ...(status.version === undefined ? {} : { version: status.version }) });
       else if (status.state === "error" && !automaticCheck.current) setState({ mode: "message", text: status.message ?? "Не удалось проверить обновления." });

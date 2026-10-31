@@ -473,6 +473,14 @@ export async function withRenewedMapAdminSession<T>(
   }
 }
 
+async function verifyCoordinatedOperation(operationId: string, credential: MapAdminCredential): Promise<JsonRecord | null> {
+  const verified = await coordinatorRequest(`/v1/operations/${encodeURIComponent(operationId)}`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${credential.sessionToken}` },
+  }, 60_000, 1).catch(() => null);
+  return isObject(verified) && 'project' in verified ? verified : null;
+}
+
 export async function publishCoordinatedMap(request: CoordinatedPublishRequest): Promise<CoordinatedMapResponse> {
   const encoded = await encodedJsonRequest({
     operationId: request.operationId,
@@ -497,11 +505,8 @@ export async function publishCoordinatedMap(request: CoordinatedPublishRequest):
     // A timeout can happen after D1 has already committed the operation but
     // before the response reaches the browser. Verify the idempotent operation
     // before claiming that the edit exists only on this device.
-    const verified = await coordinatorRequest(`/v1/operations/${encodeURIComponent(request.operationId)}`, {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${request.credential.sessionToken}` },
-    }, 60_000, 1).catch(() => null);
-    if (!isObject(verified) || !('project' in verified)) throw error;
+    const verified = await verifyCoordinatedOperation(request.operationId, request.credential);
+    if (verified === null) throw error;
     payload = verified;
   }
   if (!isObject(payload) || !('project' in payload)) throw new MapSyncRequestError('Сервис синхронизации вернул некорректный ответ.', 502, 'invalid');
@@ -549,12 +554,30 @@ export async function publishCoordinatedObjectChanges(request: Readonly<{
     changes: request.changes,
     updatedBy: 'Администратор ХИМКОНТУР',
   });
-  const payload = await coordinatorRequest('/v1/objects', {
-    method: 'POST',
-    headers: { 'Content-Type': encoded.contentType, Authorization: `Bearer ${request.credential.sessionToken}` },
-    body: encoded.body,
-    ...(request.signal === undefined ? {} : { signal: request.signal }),
-  }, 180_000);
+  let payload: unknown;
+  try {
+    payload = await coordinatorRequest('/v1/objects', {
+      method: 'POST',
+      headers: { 'Content-Type': encoded.contentType, Authorization: `Bearer ${request.credential.sessionToken}` },
+      body: encoded.body,
+      ...(request.signal === undefined ? {} : { signal: request.signal }),
+    }, 60_000, 1);
+  } catch (error) {
+    if (request.signal?.aborted === true) throw error;
+    if (!(error instanceof MapSyncRequestError) || error.kind !== 'unavailable') throw error;
+    // A slow corporate route can lose the response after D1 has committed the
+    // object batch. Verify the idempotent operation before keeping an already
+    // shared edit in the device-only queue.
+    const verified = await verifyCoordinatedOperation(request.operationId, request.credential);
+    const verifiedProject = verified?.project;
+    if (verified === null || !isObject(verifiedProject) || typeof verifiedProject.revision !== 'number') throw error;
+    payload = {
+      revision: verifiedProject.revision,
+      publishedAtIso: stringValue(verifiedProject.publishedAtIso),
+      conflicts: [],
+      status: verified.status,
+    };
+  }
   if (!isObject(payload) || typeof payload.revision !== 'number' || !Array.isArray(payload.conflicts)) {
     throw new MapSyncRequestError('Сервис синхронизации вернул некорректное подтверждение пакета.', 502, 'invalid');
   }

@@ -74,8 +74,12 @@ describe('fast backup routing', () => {
     assert.equal(shouldUseBackupImmediately({ mode: 'primary' }, 2), true);
   });
 
-  it('uses the primary write path only for a synchronized state', () => {
-    assert.equal(shouldUseBackupImmediately({ mode: 'primary' }, 0), false);
+  it('acknowledges a client write in D1 even while Yandex is synchronized', () => {
+    assert.equal(shouldUseBackupImmediately({ mode: 'primary' }, 0), true);
+  });
+
+  it('does not accept a write before the shared journal is initialized', () => {
+    assert.equal(shouldUseBackupImmediately(null, 0), false);
   });
 
   it('stores one backup checkpoint against the last confirmed Yandex revision', () => {

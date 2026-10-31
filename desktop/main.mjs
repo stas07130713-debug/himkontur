@@ -1,9 +1,12 @@
 import { app, BrowserWindow, ipcMain, powerMonitor, shell } from 'electron';
 import electronUpdater from 'electron-updater';
+import { createHash } from 'node:crypto';
+import { once } from 'node:events';
 import { createServer } from 'node:http';
-import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isNewerRelease, parseLatestYml } from './update-metadata.mjs';
 
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.HIMKONTUR_LOCAL_PORT ?? '32174');
@@ -32,6 +35,12 @@ let updateCheckInFlight = null;
 let lastUpdateCheckAt = 0;
 const UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 const UPDATE_CHECK_COOLDOWN_MS = 2 * 60 * 1000;
+const UPDATE_MANIFEST_URL = 'https://github.com/stas07130713-debug/himkontur/releases/latest/download/latest.yml';
+const UPDATE_RELEASE_API_URL = 'https://api.github.com/repos/stas07130713-debug/himkontur/releases/latest';
+const UPDATE_DOWNLOAD_BASE_URL = 'https://github.com/stas07130713-debug/himkontur/releases/latest/download';
+let latestReleaseMetadata = null;
+let downloadedInstallerPath = '';
+let autoUpdaterReady = false;
 
 function sendUpdateStatus(status) {
   lastUpdateStatus = status;
@@ -48,18 +57,107 @@ function friendlyUpdateError(error) {
   return 'Не удалось проверить или загрузить обновление. Повторите позднее.';
 }
 
+async function fetchWithTimeout(url, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { cache: 'no-store', redirect: 'follow', signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchLatestReleaseMetadata() {
+  try {
+    const response = await fetchWithTimeout(`${UPDATE_MANIFEST_URL}?ts=${Date.now()}`, 20_000);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const parsed = parseLatestYml(await response.text());
+    if (parsed === null) throw new Error('Некорректный latest.yml');
+    return {
+      version: parsed.version,
+      installerUrl: `${UPDATE_DOWNLOAD_BASE_URL}/${encodeURIComponent(parsed.path)}`,
+      sha512: parsed.sha512,
+    };
+  } catch {
+    const response = await fetchWithTimeout(`${UPDATE_RELEASE_API_URL}?ts=${Date.now()}`, 20_000);
+    if (!response.ok) throw new Error(`GitHub HTTP ${response.status}`);
+    const release = await response.json();
+    const version = String(release?.tag_name ?? '').replace(/^v/iu, '');
+    const assets = Array.isArray(release?.assets) ? release.assets : [];
+    const installer = assets.find((asset) => /HIMKONTUR-.*-Setup\.exe$/iu.test(String(asset?.name ?? '')))
+      ?? assets.find((asset) => /HIMKONTUR-Windows-Setup\.exe$/iu.test(String(asset?.name ?? '')));
+    const installerUrl = String(installer?.browser_download_url ?? '');
+    if (version === '' || installerUrl === '') throw new Error('В выпуске не найден установщик Windows.');
+    return { version, installerUrl, sha512: '' };
+  }
+}
+
+async function downloadInstallerDirect(metadata) {
+  const safeVersion = metadata.version.replace(/[^0-9A-Za-z.-]/gu, '');
+  const destination = join(app.getPath('temp'), `HIMKONTUR-${safeVersion}-Setup.exe`);
+  const partial = `${destination}.part`;
+  if (existsSync(partial)) unlinkSync(partial);
+  const response = await fetch(metadata.installerUrl, { cache: 'no-store', redirect: 'follow' });
+  if (!response.ok || response.body === null) throw new Error(`Сервер обновлений вернул HTTP ${response.status}.`);
+  const total = Number(response.headers.get('content-length') ?? 0);
+  const output = createWriteStream(partial);
+  const hash = createHash('sha512');
+  const reader = response.body.getReader();
+  let received = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = Buffer.from(value);
+      received += chunk.length;
+      hash.update(chunk);
+      if (!output.write(chunk)) await once(output, 'drain');
+      sendUpdateStatus({
+        state: 'downloading', version: metadata.version,
+        ...(total > 0 ? { percent: Math.max(0, Math.min(100, Math.round(received / total * 100))) } : {}),
+      });
+    }
+    output.end();
+    await once(output, 'finish');
+    const actualSha512 = hash.digest('base64');
+    if (metadata.sha512 !== '' && actualSha512 !== metadata.sha512) throw new Error('Контрольная сумма установщика не совпала.');
+    if (existsSync(destination)) unlinkSync(destination);
+    renameSync(partial, destination);
+    return destination;
+  } catch (error) {
+    output.destroy();
+    if (existsSync(partial)) unlinkSync(partial);
+    throw error;
+  }
+}
+
 async function checkForApplicationUpdate({ force = false } = {}) {
   if (!app.isPackaged) return { state: 'development', version: app.getVersion() };
   if (updateCheckInFlight !== null) return updateCheckInFlight;
   if (!force && Date.now() - lastUpdateCheckAt < UPDATE_CHECK_COOLDOWN_MS) return lastUpdateStatus;
   lastUpdateCheckAt = Date.now();
-  updateCheckInFlight = autoUpdater.checkForUpdates()
-    .then(() => lastUpdateStatus)
-    .catch((error) => {
-      const result = { state: 'error', message: friendlyUpdateError(error) };
-      sendUpdateStatus(result);
-      return result;
-    })
+  updateCheckInFlight = (async () => {
+    let metadataError = null;
+    try {
+      latestReleaseMetadata = await fetchLatestReleaseMetadata();
+      if (isNewerRelease(latestReleaseMetadata.version, app.getVersion())) {
+        sendUpdateStatus({ state: 'available', version: latestReleaseMetadata.version });
+      }
+    } catch (error) {
+      metadataError = error;
+    }
+    try {
+      await autoUpdater.checkForUpdates();
+    } catch (error) {
+      if (latestReleaseMetadata !== null && isNewerRelease(latestReleaseMetadata.version, app.getVersion())) {
+        sendUpdateStatus({ state: 'available', version: latestReleaseMetadata.version });
+      } else {
+        const result = { state: 'error', message: friendlyUpdateError(metadataError ?? error) };
+        sendUpdateStatus(result);
+      }
+    }
+    return lastUpdateStatus;
+  })()
     .finally(() => { updateCheckInFlight = null; });
   return updateCheckInFlight;
 }
@@ -81,15 +179,30 @@ function configureUpdates() {
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.autoRunAppAfterInstall = true;
   autoUpdater.allowPrerelease = false;
-  autoUpdater.on('checking-for-update', () => sendUpdateStatus({ state: 'checking' }));
-  autoUpdater.on('update-available', (info) => sendUpdateStatus({ state: 'available', version: info.version }));
-  autoUpdater.on('update-not-available', (info) => sendUpdateStatus({ state: 'current', version: info.version }));
+  autoUpdater.on('checking-for-update', () => {
+    if (lastUpdateStatus.state !== 'available') sendUpdateStatus({ state: 'checking' });
+  });
+  autoUpdater.on('update-available', (info) => {
+    autoUpdaterReady = true;
+    sendUpdateStatus({ state: 'available', version: info.version });
+  });
+  autoUpdater.on('update-not-available', (info) => {
+    if (latestReleaseMetadata === null || !isNewerRelease(latestReleaseMetadata.version, app.getVersion())) {
+      sendUpdateStatus({ state: 'current', version: info.version });
+    }
+  });
   autoUpdater.on('download-progress', (progress) => sendUpdateStatus({
     state: 'downloading',
     percent: Math.max(0, Math.min(100, Math.round(progress.percent)))
   }));
   autoUpdater.on('update-downloaded', (info) => sendUpdateStatus({ state: 'downloaded', version: info.version }));
-  autoUpdater.on('error', (error) => sendUpdateStatus({ state: 'error', message: friendlyUpdateError(error) }));
+  autoUpdater.on('error', (error) => {
+    if (latestReleaseMetadata !== null && isNewerRelease(latestReleaseMetadata.version, app.getVersion())) {
+      sendUpdateStatus({ state: 'available', version: latestReleaseMetadata.version });
+    } else {
+      sendUpdateStatus({ state: 'error', message: friendlyUpdateError(error) });
+    }
+  });
 
   ipcMain.handle('himkontur:update-version', () => app.getVersion());
   ipcMain.handle('himkontur:update-status-current', () => lastUpdateStatus);
@@ -100,7 +213,22 @@ function configureUpdates() {
   ipcMain.handle('himkontur:update-download', async () => {
     try {
       sendUpdateStatus({ state: 'downloading', version: lastUpdateStatus.version, percent: 0 });
-      await autoUpdater.downloadUpdate();
+      if (autoUpdaterReady) {
+        try {
+          await autoUpdater.downloadUpdate();
+          return lastUpdateStatus;
+        } catch {
+          autoUpdaterReady = false;
+        }
+      }
+      latestReleaseMetadata ??= await fetchLatestReleaseMetadata();
+      if (!isNewerRelease(latestReleaseMetadata.version, app.getVersion())) {
+        const current = { state: 'current', version: app.getVersion() };
+        sendUpdateStatus(current);
+        return current;
+      }
+      downloadedInstallerPath = await downloadInstallerDirect(latestReleaseMetadata);
+      sendUpdateStatus({ state: 'downloaded', version: latestReleaseMetadata.version });
       return lastUpdateStatus;
     } catch (error) {
       const result = { state: 'error', message: friendlyUpdateError(error) };
@@ -109,6 +237,14 @@ function configureUpdates() {
     }
   });
   ipcMain.handle('himkontur:update-install', () => {
+    if (downloadedInstallerPath !== '' && existsSync(downloadedInstallerPath)) {
+      sendUpdateStatus({ state: 'installing', version: lastUpdateStatus.version });
+      void shell.openPath(downloadedInstallerPath).then((error) => {
+        if (error === '') setTimeout(() => app.quit(), 1_000);
+        else sendUpdateStatus({ state: 'error', message: 'Не удалось запустить установщик обновления.' });
+      });
+      return { state: 'installing' };
+    }
     autoUpdater.quitAndInstall(false, true);
     return { state: 'installing' };
   });
@@ -353,7 +489,7 @@ async function bootstrap() {
   await startServer();
   await createWindow();
   if (app.isPackaged) {
-    setTimeout(() => void checkForApplicationUpdate({ force: true }), 5_000);
+    setTimeout(() => void checkForApplicationUpdate({ force: true }), 3_000);
     updateTimer = setInterval(() => void checkForApplicationUpdate(), UPDATE_CHECK_INTERVAL_MS);
     powerMonitor.on('resume', () => void checkForApplicationUpdate());
   }

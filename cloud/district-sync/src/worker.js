@@ -481,8 +481,12 @@ async function recoverSharedMapFromMirrorConflict(env, state) {
   await event(env, 'warning', 'mirror-conflict-recovered', `sharedRevision=${state?.revision ?? 'none'}, at=${now}`);
 }
 
-export function shouldUseBackupImmediately(state, queued) {
-  return state !== null && (state.mode === 'backup' || queued > 0);
+export function shouldUseBackupImmediately(state) {
+  // D1 is the fast shared journal for every client write. A device must never
+  // wait for the Yandex mirror before another device can see its edit. The
+  // queued snapshot is mirrored by reconcile() immediately in the background
+  // and by the scheduled job if the first attempt cannot reach Yandex.
+  return state !== null;
 }
 
 export function operationQueueBaseRevision(status, operationBaseRevision, primaryRevision) {
@@ -813,6 +817,7 @@ async function route(request, env, ctx) {
       await conditionalBackupCommit(env, operation, 'queued', state.primaryRevision, 'backup', [{ ...objectChange, baseRevision: operation.baseRevision, targetRevision: operation.project.revision }]);
       const updated = await readState(env);
       await event(env, 'warning', 'backup-object-write', `operation=${operationId}, object=${objectId}, revision=${updated.revision}`);
+      ctx.waitUntil(reconcile(env));
       return jsonResponse(request, env, 202, compactObjectResponse(updated, await pendingCount(env), operationId, 'queued', objectId, applied.conflict, 'Изменение объекта сохранено в общей базе и уже доступно другим устройствам.'));
     }
     const primary = await callPrimary(env, {
@@ -877,6 +882,7 @@ async function route(request, env, ctx) {
       await conditionalBackupCommit(env, operation, 'queued', state.primaryRevision, 'backup', records);
       const updated = await readState(env);
       await event(env, 'warning', 'backup-object-batch', `operation=${operationId}, changes=${records.length}, revision=${updated.revision}`);
+      ctx.waitUntil(reconcile(env));
       return jsonResponse(request, env, 202, compactBatchResponse(updated, await pendingCount(env), operationId, 'queued', conflicts, 'Пакет изменений сохранён в общей базе и уже доступен другим устройствам.'));
     }
     const primary = await callPrimary(env, {
@@ -929,6 +935,7 @@ async function route(request, env, ctx) {
       await conditionalBackupCommit(env, operation, 'queued', state.primaryRevision, 'backup');
       await event(env, 'warning', 'backup-write', `operation=${operationId}, revision=${project.revision}`);
       const updated = await readState(env);
+      ctx.waitUntil(reconcile(env));
       return jsonResponse(request, env, 202, { project: updated.project, status: statusFrom(updated, false, true, await pendingCount(env), 'Изменения сохранены в общей резервной базе и уже доступны другим устройствам. В Яндекс они будут переданы автоматически.') });
     }
     const primary = await callPrimary(env, {
