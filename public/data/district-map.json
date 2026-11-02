@@ -1,7 +1,7 @@
 {
   "id": "district-map-main",
   "name": "Карта района выезда",
-  "revision": 1793431087541,
+  "revision": 1793637832720,
   "draft": [
     {
       "id": "kml-hydrant-095f40d67c2912bd9832",
@@ -30948,6 +30948,6 @@
       "updatedAtIso": "2026-10-31T07:12:35.952Z"
     }
   ],
-  "draftSavedAtIso": "2026-10-31T07:18:07.529Z",
-  "publishedAtIso": "2026-10-31T07:18:07.529Z"
+  "draftSavedAtIso": "2026-11-02T16:44:03.752Z",
+  "publishedAtIso": "2026-11-02T16:44:03.752Z"
 }
