@@ -645,7 +645,14 @@ export function App() {
         try {
           publishResult = await withRenewedMapAdminSession(
             activeCredential,
-            (credential) => publishDistrictMapOperation(pending, credential, publicationController.signal),
+            (credential) => publishDistrictMapOperation(
+              pending,
+              credential,
+              publicationController.signal,
+              ({ part, total, objectCount }) => {
+                setNotice(`Загрузка изменений: часть ${part} из ${total}, объектов в части — ${objectCount}.`);
+              },
+            ),
           );
         } catch (error) {
           if (!(error instanceof MapSyncRequestError) || error.kind !== 'conflict') throw error;
@@ -716,9 +723,6 @@ export function App() {
       setDistrictSyncState("error");
       const failureMessage = `Не удалось загрузить изменения в общую базу. Они сохранены только на этом устройстве: ${message(error)}`;
       setNotice(failureMessage);
-      window.setTimeout(() => {
-        if (pendingDistrictOperationsRef.current.length > 0) void publishPendingDistrictProject();
-      }, 30_000);
       return { success: false, message: failureMessage };
     } finally {
       if (districtPublicationAbortRef.current === publicationController) districtPublicationAbortRef.current = null;
@@ -733,7 +737,9 @@ export function App() {
     };
     const onVisibility = () => { if (document.visibilityState === "visible") resumePendingPublication(); };
     resumePendingPublication();
-    const interval = window.setInterval(resumePendingPublication, 15_000);
+    // One bounded retry source is enough. A slow corporate connection must not
+    // be surrounded by overlapping 15/30 second retry timers.
+    const interval = window.setInterval(resumePendingPublication, 60_000);
     window.addEventListener("online", resumePendingPublication);
     document.addEventListener("visibilitychange", onVisibility);
     return () => {

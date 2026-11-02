@@ -548,7 +548,10 @@ export async function publishCoordinatedObjectChanges(request: Readonly<{
   credential: MapAdminCredential;
   signal?: AbortSignal;
 }>): Promise<CoordinatedObjectBatchResponse> {
-  const encoded = await encodedJsonRequest({
+  // Object changes are intentionally sent as small, ordinary JSON fragments.
+  // Some corporate proxies accept health checks but indefinitely delay a
+  // custom gzip content type used by large map uploads.
+  const body = JSON.stringify({
     operationId: request.operationId,
     baseRevision: request.baseRevision,
     changes: request.changes,
@@ -558,8 +561,8 @@ export async function publishCoordinatedObjectChanges(request: Readonly<{
   try {
     payload = await coordinatorRequest('/v1/objects', {
       method: 'POST',
-      headers: { 'Content-Type': encoded.contentType, Authorization: `Bearer ${request.credential.sessionToken}` },
-      body: encoded.body,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${request.credential.sessionToken}` },
+      body,
       ...(request.signal === undefined ? {} : { signal: request.signal }),
     }, 60_000, 1);
   } catch (error) {

@@ -264,6 +264,8 @@ describe('map synchronization sessions', () => {
       credential: { password: 'administrator-password', sessionToken: 'active-session' },
     })).resolves.toMatchObject({ revision: 30, status: { mode: 'backup' } });
     expect(fetchMock.mock.calls[2]?.[0]).toBe('https://coordinator.example.test/v1/operations/object-batch-committed');
+    const request = fetchMock.mock.calls[1]?.[1] as RequestInit;
+    expect((request.headers as Record<string, string>)['Content-Type']).toBe('application/json');
   });
 
   it('compresses a full map before sending it to the coordinator', async () => {

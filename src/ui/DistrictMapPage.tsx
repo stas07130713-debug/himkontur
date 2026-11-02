@@ -27,9 +27,11 @@ import {
   districtMapObjectCounts,
   districtObjectTitle,
   buildingPrefix,
+  compareDistrictMapBackupObjects,
   FIRE_RESERVOIR_TYPE_LABELS,
   HYDRANT_STATUS_LABELS,
   HYDRANT_TYPE_LABELS,
+  mergeDistrictMapBackupObjects,
   parseDistrictMapBackup,
   serializeDistrictMapBackup,
 } from './district-map-model';
@@ -674,6 +676,7 @@ export function DistrictMapPage(props: Props) {
   const [actImportStatus, setActImportStatus] = useState('');
   const [actImporting, setActImporting] = useState(false);
   const [mapBackupStatus, setMapBackupStatus] = useState('');
+  const [pendingMapBackup, setPendingMapBackup] = useState<Readonly<{ fileName: string; project: DistrictMapProject }> | null>(null);
   const [sharedPublishStatus, setSharedPublishStatus] = useState<Readonly<{ success: boolean; message: string }> | null>(null);
   const [serverReplaceConfirmationOpen, setServerReplaceConfirmationOpen] = useState(false);
   const [compositionCheckOpen, setCompositionCheckOpen] = useState(false);
@@ -821,6 +824,12 @@ export function DistrictMapPage(props: Props) {
     && compositionObjectComparison.localOnly === 0
     && compositionObjectComparison.sharedOnly === 0
     && compositionObjectComparison.changed === 0;
+  const backupComparison = useMemo(
+    () => pendingMapBackup === null
+      ? null
+      : compareDistrictMapBackupObjects(props.objects, pendingMapBackup.project.draft),
+    [pendingMapBackup, props.objects],
+  );
   const selectObject = (id: string) => {
     setSelectedId(id);
     setLegendCollapsed(true);
@@ -1086,17 +1095,27 @@ export function DistrictMapPage(props: Props) {
         setMapBackupStatus('Файл не является резервной копией карты ХИМКОНТУР. Текущая карта не изменена.');
         return;
       }
-      if (!window.confirm(`Загрузить из файла ${backup.draft.length} объектов? Текущая карта будет заменена только после подтверждения.`)) {
-        setMapBackupStatus('Загрузка отменена. Текущая карта не изменена.');
-        return;
-      }
-      props.onCommitObjects([...backup.draft]);
-      setSelectedId(null);
-      setEditorObject(null);
-      setMapBackupStatus(`Загружено ${backup.draft.length} объектов. Они сохранены в этом браузере и поставлены в очередь синхронизации.`);
+      setPendingMapBackup({ fileName: file.name, project: backup });
+      setMapBackupStatus('Копия проверена. Выберите способ загрузки в открывшемся окне.');
     } catch {
       setMapBackupStatus('Не удалось прочитать файл. Текущая карта не изменена.');
     }
+  };
+  const applyMapBackup = (mode: 'merge' | 'replace') => {
+    if (pendingMapBackup === null) return;
+    const fromFile = pendingMapBackup.project.draft;
+    const comparison = compareDistrictMapBackupObjects(props.objects, fromFile);
+    if (mode === 'replace') downloadMapBackup();
+    const nextObjects = mode === 'merge'
+      ? mergeDistrictMapBackupObjects(props.objects, fromFile)
+      : [...fromFile];
+    props.onCommitObjects(nextObjects);
+    setSelectedId(null);
+    setEditorObject(null);
+    setPendingMapBackup(null);
+    setMapBackupStatus(mode === 'merge'
+      ? `Из файла добавлено ${comparison.fileOnly}, обновлено ${comparison.changed} объектов. ${comparison.currentOnly} объектов, имеющихся только в этом браузере, сохранены.`
+      : `Карта полностью заменена: принято ${fromFile.length} объектов. Предыдущая карта автоматически сохранена в резервную копию.`);
   };
   const importHydrantAct = async (file: File) => {
     setActImporting(true);
@@ -1647,6 +1666,31 @@ export function DistrictMapPage(props: Props) {
             <button type="button" className="primary publish-shared-map" disabled={props.publishBusy || props.syncCheckBusy} onClick={() => void publishForAllDevices()}><UiIcon name="upload" /><span>{props.publishBusy ? 'Загружаю изменения…' : 'Опубликовать для всех устройств'}</span></button>
             <button className="secondary exit-admin" onClick={() => { props.onCloseManagement(); props.onExitAdmin(); }}>Завершить режим настройки</button>
           </div>
+        </section>
+      </div>}
+      {pendingMapBackup !== null && backupComparison !== null && <div className="dialog-backdrop district-backup-import-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setPendingMapBackup(null); }}>
+        <section className="district-backup-import-dialog" role="dialog" aria-modal="true" aria-labelledby="district-backup-import-title">
+          <button type="button" className="dialog-close" aria-label="Закрыть" onClick={() => setPendingMapBackup(null)}><UiIcon name="close" /></button>
+          <div className="admin-login-icon"><UiIcon name="open" /></div>
+          <h2 id="district-backup-import-title">Как загрузить резервную копию?</h2>
+          <p className="district-backup-file-name">Файл: <strong>{pendingMapBackup.fileName}</strong></p>
+          <div className="district-backup-comparison" aria-label="Сравнение резервной копии с текущей картой">
+            <span><small>Новые из файла</small><strong>{backupComparison.fileOnly}</strong></span>
+            <span><small>Отличаются</small><strong>{backupComparison.changed}</strong></span>
+            <span><small>Только в текущей карте</small><strong>{backupComparison.currentOnly}</strong></span>
+            <span><small>Совпадают</small><strong>{backupComparison.unchanged}</strong></span>
+          </div>
+          <div className="district-backup-import-options">
+            <button type="button" className="primary" onClick={() => applyMapBackup('merge')}>
+              <UiIcon name="check" />
+              <span><strong>Добавить и обновить отличающиеся</strong><small>Из файла будут приняты новые и изменённые объекты. Остальные объекты текущей карты сохранятся.</small></span>
+            </button>
+            <button type="button" className="secondary danger" onClick={() => applyMapBackup('replace')}>
+              <UiIcon name="open" />
+              <span><strong>Полностью принять карту из файла</strong><small>Текущая карта будет заменена целиком. Перед заменой программа автоматически скачает её резервную копию.</small></span>
+            </button>
+          </div>
+          <button type="button" className="secondary district-backup-import-cancel" onClick={() => setPendingMapBackup(null)}>Отмена</button>
         </section>
       </div>}
       {compositionCheckOpen && <div className="dialog-backdrop district-composition-check-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCompositionCheckOpen(false); }}>

@@ -163,6 +163,19 @@ export type DistrictMapBackup = Readonly<{
   project: DistrictMapProject;
 }>;
 
+export type DistrictMapBackupComparison = Readonly<{
+  fileOnly: number;
+  currentOnly: number;
+  changed: number;
+  unchanged: number;
+}>;
+
+export type DistrictMapPublishProgress = Readonly<{
+  part: number;
+  total: number;
+  objectCount: number;
+}>;
+
 export type PendingDistrictMapOperation = Readonly<{
   operationId: string;
   baseRevision: number;
@@ -656,6 +669,46 @@ function sameDistrictObject(left: DistrictMapObject | undefined, right: District
   return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
 }
 
+export function compareDistrictMapBackupObjects(
+  current: readonly DistrictMapObject[],
+  fromFile: readonly DistrictMapObject[],
+): DistrictMapBackupComparison {
+  const currentById = new Map(current.map((object) => [object.id, object]));
+  const fileById = new Map(fromFile.map((object) => [object.id, object]));
+  let fileOnly = 0;
+  let currentOnly = 0;
+  let changed = 0;
+  let unchanged = 0;
+  for (const [objectId, fileObject] of fileById) {
+    const currentObject = currentById.get(objectId);
+    if (currentObject === undefined) fileOnly += 1;
+    else if (sameDistrictObject(currentObject, fileObject)) unchanged += 1;
+    else changed += 1;
+  }
+  for (const objectId of currentById.keys()) {
+    if (!fileById.has(objectId)) currentOnly += 1;
+  }
+  return { fileOnly, currentOnly, changed, unchanged };
+}
+
+/**
+ * Applies only objects carried by a backup. Objects that exist only in the
+ * current browser are deliberately retained; a complete replacement is a
+ * separate, explicit import mode.
+ */
+export function mergeDistrictMapBackupObjects(
+  current: readonly DistrictMapObject[],
+  fromFile: readonly DistrictMapObject[],
+): DistrictMapObject[] {
+  const fileById = new Map(fromFile.map((object) => [object.id, object]));
+  const merged = current.map((object) => fileById.get(object.id) ?? object);
+  const currentIds = new Set(current.map((object) => object.id));
+  for (const object of fromFile) {
+    if (!currentIds.has(object.id)) merged.push(object);
+  }
+  return merged;
+}
+
 export function districtMapObjectChanges(base: DistrictMapProject, target: DistrictMapProject): readonly CoordinatedObjectChange[] {
   const baseById = new Map(base.published.map((object) => [object.id, object]));
   const targetById = new Map(target.published.map((object) => [object.id, object]));
@@ -717,7 +770,43 @@ export async function fetchCoordinatedDistrictMapUpdate(current: DistrictMapProj
   return fetchCoordinatedDistrictMapProject();
 }
 
-export async function publishDistrictMapOperation(operation: PendingDistrictMapOperation, credential: MapAdminCredential, signal?: AbortSignal): Promise<DistrictMapPublishResult> {
+const OBJECT_CHUNK_MAX_COUNT = 8;
+const OBJECT_CHUNK_MAX_BYTES = 24 * 1024;
+
+export function chunkDistrictMapObjectChanges(
+  changes: readonly CoordinatedObjectChange[],
+  maxCount = OBJECT_CHUNK_MAX_COUNT,
+  maxBytes = OBJECT_CHUNK_MAX_BYTES,
+): readonly (readonly CoordinatedObjectChange[])[] {
+  const chunks: CoordinatedObjectChange[][] = [];
+  let current: CoordinatedObjectChange[] = [];
+  let currentBytes = 2;
+  for (const change of changes) {
+    const changeBytes = new TextEncoder().encode(JSON.stringify(change)).byteLength + (current.length === 0 ? 0 : 1);
+    if (current.length > 0 && (current.length >= maxCount || currentBytes + changeBytes > maxBytes)) {
+      chunks.push(current);
+      current = [];
+      currentBytes = 2;
+    }
+    current.push(change);
+    currentBytes += changeBytes;
+  }
+  if (current.length > 0) chunks.push(current);
+  return chunks;
+}
+
+function chunkOperationId(operationId: string, part: number, total: number): string {
+  if (total === 1) return operationId;
+  const suffix = `-part-${part}-of-${total}`;
+  return `${operationId.slice(0, Math.max(1, 160 - suffix.length))}${suffix}`;
+}
+
+export async function publishDistrictMapOperation(
+  operation: PendingDistrictMapOperation,
+  credential: MapAdminCredential,
+  signal?: AbortSignal,
+  onProgress?: (progress: DistrictMapPublishProgress) => void,
+): Promise<DistrictMapPublishResult> {
   const config = await loadMapSyncConfig();
   if (config === null) throw new Error('Облачная синхронизация ещё не настроена.');
   if (config.coordinatorEnabled) {
@@ -725,27 +814,37 @@ export async function publishDistrictMapOperation(operation: PendingDistrictMapO
       const changes = districtMapObjectChanges(operation.baseProject, operation.project);
       let project = operation.project;
       if (changes.length === 0) return { project, conflicts: [] };
-      const result = await publishCoordinatedObjectChanges({
-        operationId: operation.operationId,
-        baseRevision: operation.baseRevision,
-        changes,
-        credential,
-        ...(signal === undefined ? {} : { signal }),
-      });
-      for (const conflict of result.conflicts) {
-        const active = conflict.activeSource === 'remote' ? conflict.remote : conflict.local;
-        const normalized = active === null ? null : normalizeDistrictObject(active);
-        if (active !== null && normalized === null) throw new Error('Сервис синхронизации вернул повреждённый конфликтующий объект.');
-        const objects = replaceDistrictObject(project.published, conflict.objectId, normalized);
-        project = { ...project, published: objects, draft: objects };
+      const chunks = chunkDistrictMapObjectChanges(changes);
+      const conflicts: DistrictMapPublishResult['conflicts'][number][] = [];
+      let revision = operation.baseRevision;
+      let publishedAtIso = operation.project.publishedAtIso;
+      for (const [index, chunk] of chunks.entries()) {
+        onProgress?.({ part: index + 1, total: chunks.length, objectCount: chunk.length });
+        const result = await publishCoordinatedObjectChanges({
+          operationId: chunkOperationId(operation.operationId, index + 1, chunks.length),
+          baseRevision: revision,
+          changes: chunk,
+          credential,
+          ...(signal === undefined ? {} : { signal }),
+        });
+        revision = result.revision;
+        publishedAtIso = result.publishedAtIso;
+        conflicts.push(...result.conflicts);
+        for (const conflict of result.conflicts) {
+          const active = conflict.activeSource === 'remote' ? conflict.remote : conflict.local;
+          const normalized = active === null ? null : normalizeDistrictObject(active);
+          if (active !== null && normalized === null) throw new Error('Сервис синхронизации вернул повреждённый конфликтующий объект.');
+          const objects = replaceDistrictObject(project.published, conflict.objectId, normalized);
+          project = { ...project, published: objects, draft: objects };
+        }
       }
       project = {
         ...project,
-        revision: result.revision,
-        publishedAtIso: result.publishedAtIso,
-        draftSavedAtIso: result.publishedAtIso,
+        revision,
+        publishedAtIso,
+        draftSavedAtIso: publishedAtIso,
       };
-      return { project, conflicts: result.conflicts };
+      return { project, conflicts };
     }
     const result = await publishCoordinatedMap({ ...operation, credential, ...(signal === undefined ? {} : { signal }) });
     const published = normalizeDistrictMapProject(result.project);

@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  chunkDistrictMapObjectChanges,
+  compareDistrictMapBackupObjects,
   compareDistrictMapObjects,
   createPendingDistrictMapOperation,
   districtMapObjectCounts,
@@ -7,6 +9,7 @@ import {
   districtObjectTitle,
   isPublishedProjectNewer,
   loadPendingDistrictMapOperations,
+  mergeDistrictMapBackupObjects,
   parseDistrictMapBackup,
   savePendingDistrictMapOperations,
   serializeDistrictMapBackup,
@@ -25,6 +28,21 @@ function project(revision: number, publishedAtIso: string): DistrictMapProject {
     publishedAtIso,
   };
 }
+
+const building = {
+  id: 'building-1', kind: 'building' as const, objectType: 'building' as const,
+  point: { latitude: 67.9, longitude: 32.8 }, contour: [], territoryNames: [], number: '1.1',
+  inventoryNumber: '', planningDocuments: [], workshopFull: '', workshopShort: '', departments: [], sites: [], note: '',
+  updatedAtIso: '2026-10-26T10:00:00Z',
+};
+
+const foamHydrant = {
+  id: 'hydrant-foam', kind: 'hydrant' as const, number: 'ПГ-1', owner: '', status: 'serviceable' as const,
+  faultDescription: '', network: 'ring' as const, hydrantType: 'foam' as const, pattern: 'moscow' as const,
+  diameterMm: 150, pressureAtm: null, heightMm: null, signDistanceLeftM: null, signDistanceRightM: null,
+  signDistanceForwardM: null, lastInspectionDate: '', point: { latitude: 67.91, longitude: 32.81 }, note: '',
+  updatedAtIso: '2026-10-26T10:00:00Z',
+};
 
 describe('published district project ordering', () => {
   it('prefers a greater revision', () => {
@@ -46,20 +64,6 @@ describe('published district project ordering', () => {
 });
 
 describe('district map composition comparison', () => {
-  const building = {
-    id: 'building-1', kind: 'building' as const, objectType: 'building' as const,
-    point: { latitude: 67.9, longitude: 32.8 }, contour: [], territoryNames: [], number: '1.1',
-    inventoryNumber: '', planningDocuments: [], workshopFull: '', workshopShort: '', departments: [], sites: [], note: '',
-    updatedAtIso: '2026-10-26T10:00:00Z',
-  };
-  const foamHydrant = {
-    id: 'hydrant-foam', kind: 'hydrant' as const, number: 'ПГ-1', owner: '', status: 'serviceable' as const,
-    faultDescription: '', network: 'ring' as const, hydrantType: 'foam' as const, pattern: 'moscow' as const,
-    diameterMm: 150, pressureAtm: null, heightMm: null, signDistanceLeftM: null, signDistanceRightM: null,
-    signDistanceForwardM: null, lastInspectionDate: '', point: { latitude: 67.91, longitude: 32.81 }, note: '',
-    updatedAtIso: '2026-10-26T10:00:00Z',
-  };
-
   it('counts map object groups without double-counting the total', () => {
     expect(districtMapObjectCounts([building, foamHydrant])).toMatchObject({
       buildings: 1,
@@ -100,6 +104,19 @@ describe('district map backup', () => {
 
   it('rejects an unrelated json file', () => {
     expect(parseDistrictMapBackup('{"hello":"world"}')).toBeNull();
+  });
+
+  it('merges only new and changed file objects while retaining current-only objects', () => {
+    const currentOnly = { ...foamHydrant, id: 'current-only' };
+    const changedBuilding = { ...building, number: '1.2', updatedAtIso: '2026-10-26T11:00:00Z' };
+    const fileOnly = { ...foamHydrant, id: 'file-only' };
+    const comparison = compareDistrictMapBackupObjects(
+      [building, currentOnly],
+      [changedBuilding, fileOnly],
+    );
+    expect(comparison).toEqual({ fileOnly: 1, currentOnly: 1, changed: 1, unchanged: 0 });
+    expect(mergeDistrictMapBackupObjects([building, currentOnly], [changedBuilding, fileOnly]))
+      .toEqual([changedBuilding, currentOnly, fileOnly]);
   });
 
   it('keeps an outdoor installation with index 0 distinct from a territory', () => {
@@ -152,6 +169,32 @@ describe('district map backup', () => {
     const restored = parseDistrictMapBackup(serializeDistrictMapBackup({ ...source, draft: [demolished], published: [demolished] }));
     expect(restored?.published[0]).toMatchObject({ objectType: 'demolished', number: '0' });
     expect(restored?.published[0] && districtObjectTitle(restored.published[0])).toBe('Демонтированный объект');
+  });
+});
+
+describe('object upload fragments', () => {
+  it('splits a large change set into deterministic small chunks', () => {
+    const changes = Array.from({ length: 19 }, (_, index) => ({
+      objectId: `building-${index}`,
+      baseObject: null,
+      object: { ...building, id: `building-${index}` },
+      updatedAtIso: building.updatedAtIso,
+      targetRevision: 20,
+    }));
+    const chunks = chunkDistrictMapObjectChanges(changes);
+    expect(chunks.map((chunk) => chunk.length)).toEqual([8, 8, 3]);
+    expect(chunks.flat().map((change) => change.objectId)).toEqual(changes.map((change) => change.objectId));
+  });
+
+  it('keeps an oversized single object as its own fragment', () => {
+    const change = {
+      objectId: 'large-building',
+      baseObject: null,
+      object: { ...building, id: 'large-building', note: 'Контур'.repeat(10_000) },
+      updatedAtIso: building.updatedAtIso,
+      targetRevision: 20,
+    };
+    expect(chunkDistrictMapObjectChanges([change])).toEqual([[change]]);
   });
 });
 
