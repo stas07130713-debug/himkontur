@@ -1,7 +1,7 @@
 {
   "id": "district-map-main",
   "name": "Карта района выезда",
-  "revision": 1793815172193,
+  "revision": 1793873494270,
   "draft": [
     {
       "id": "kml-hydrant-095f40d67c2912bd9832",
@@ -17298,6 +17298,402 @@
           "shortName": ""
         }
       ]
+    },
+    {
+      "id": "8ab10c32-8e8b-4c06-986e-59e5079c3b71",
+      "kind": "building",
+      "objectType": "demolished",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "longitude": 32.830029129981995,
+          "latitude": 67.92131673763708
+        },
+        {
+          "longitude": 32.829996943473816,
+          "latitude": 67.92133891775038
+        },
+        {
+          "longitude": 32.8299942612648,
+          "latitude": 67.9213641223989
+        },
+        {
+          "longitude": 32.830018401145935,
+          "latitude": 67.9213873106514
+        },
+        {
+          "longitude": 32.8300666809082,
+          "latitude": 67.92140444977966
+        },
+        {
+          "longitude": 32.830128371715546,
+          "latitude": 67.92141150706411
+        },
+        {
+          "longitude": 32.83018469810486,
+          "latitude": 67.92141049888073
+        },
+        {
+          "longitude": 32.83023566007614,
+          "latitude": 67.92140041704474
+        },
+        {
+          "longitude": 32.830275893211365,
+          "latitude": 67.92138428609803
+        },
+        {
+          "longitude": 32.83029466867447,
+          "latitude": 67.92136513058426
+        },
+        {
+          "longitude": 32.83029466867447,
+          "latitude": 67.92134295049598
+        },
+        {
+          "longitude": 32.83027321100235,
+          "latitude": 67.92132379494817
+        },
+        {
+          "longitude": 32.83023297786713,
+          "latitude": 67.92130766394826
+        },
+        {
+          "longitude": 32.83018201589584,
+          "latitude": 67.92129859025587
+        },
+        {
+          "longitude": 32.83012568950653,
+          "latitude": 67.92129758206764
+        },
+        {
+          "longitude": 32.83007204532623,
+          "latitude": 67.92130363119654
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.9213535994251,
+        "longitude": 32.830150332301855
+      },
+      "number": "0",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "",
+      "workshopShort": "",
+      "departments": [
+        {
+          "id": "719acf19-629d-4140-96fa-293e5c457c61",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "2c09b03f-0e06-4990-af98-b2137584f454",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "note": "",
+      "updatedAtIso": "2026-11-05T05:56:31.561Z"
+    },
+    {
+      "id": "c15dabcb-7c04-466d-80a5-75968fce431a",
+      "kind": "building",
+      "objectType": "demolished",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "longitude": 32.82958656549454,
+          "latitude": 67.92135404054278
+        },
+        {
+          "longitude": 32.8295624256134,
+          "latitude": 67.92137622062046
+        },
+        {
+          "longitude": 32.82956510782242,
+          "latitude": 67.92140041704474
+        },
+        {
+          "longitude": 32.82959461212158,
+          "latitude": 67.92142259707816
+        },
+        {
+          "longitude": 32.829645574092865,
+          "latitude": 67.92143771981611
+        },
+        {
+          "longitude": 32.82970726490021,
+          "latitude": 67.92144376890855
+        },
+        {
+          "longitude": 32.829766273498535,
+          "latitude": 67.92143973618045
+        },
+        {
+          "longitude": 32.82981991767883,
+          "latitude": 67.92142662980925
+        },
+        {
+          "longitude": 32.82985478639603,
+          "latitude": 67.92140747433041
+        },
+        {
+          "longitude": 32.829865515232086,
+          "latitude": 67.92138529428254
+        },
+        {
+          "longitude": 32.829849421978,
+          "latitude": 67.92136210602803
+        },
+        {
+          "longitude": 32.8298145532608,
+          "latitude": 67.92134395868229
+        },
+        {
+          "longitude": 32.82976895570755,
+          "latitude": 67.92133387681741
+        },
+        {
+          "longitude": 32.82972067594528,
+          "latitude": 67.92132883588332
+        },
+        {
+          "longitude": 32.829669713974,
+          "latitude": 67.9213318604439
+        },
+        {
+          "longitude": 32.829624116420746,
+          "latitude": 67.92133992593685
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.92138340390032,
+        "longitude": 32.829713467508554
+      },
+      "number": "0",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "",
+      "workshopShort": "",
+      "departments": [
+        {
+          "id": "8a3880e4-d001-426b-89a9-449239e551a0",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "2f67090f-777a-4ce7-9624-df97e50ef5a4",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "note": "",
+      "updatedAtIso": "2026-11-05T05:56:36.376Z"
+    },
+    {
+      "id": "e0a6a20a-88d6-4e61-b560-9353404cbd3b",
+      "kind": "building",
+      "objectType": "demolished",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "longitude": 32.82981723546982,
+          "latitude": 67.92160608563387
+        },
+        {
+          "longitude": 32.82977968454361,
+          "latitude": 67.92164842894101
+        },
+        {
+          "longitude": 32.829793095588684,
+          "latitude": 67.92169178034217
+        },
+        {
+          "longitude": 32.82985478639603,
+          "latitude": 67.92173009081543
+        },
+        {
+          "longitude": 32.82995402812958,
+          "latitude": 67.92175327870277
+        },
+        {
+          "longitude": 32.83006936311722,
+          "latitude": 67.92175932771306
+        },
+        {
+          "longitude": 32.830165922641754,
+          "latitude": 67.92175025419706
+        },
+        {
+          "longitude": 32.830243706703186,
+          "latitude": 67.9217280744763
+        },
+        {
+          "longitude": 32.830297350883484,
+          "latitude": 67.92169682119751
+        },
+        {
+          "longitude": 32.83031612634659,
+          "latitude": 67.92166052701458
+        },
+        {
+          "longitude": 32.830302715301514,
+          "latitude": 67.92162423277495
+        },
+        {
+          "longitude": 32.83025175333023,
+          "latitude": 67.92159197118102
+        },
+        {
+          "longitude": 32.830171287059784,
+          "latitude": 67.92156878313273
+        },
+        {
+          "longitude": 32.83007472753525,
+          "latitude": 67.92155769318842
+        },
+        {
+          "longitude": 32.8299754858017,
+          "latitude": 67.92156071771919
+        },
+        {
+          "longitude": 32.82988429069519,
+          "latitude": 67.92157785671961
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.92165662023434,
+        "longitude": 32.830059472471476
+      },
+      "number": "0",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "",
+      "workshopShort": "",
+      "departments": [
+        {
+          "id": "0105f668-1375-4333-9dec-35849ffda350",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "65dd31f9-dbd5-4153-af9d-08721b118597",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "note": "",
+      "updatedAtIso": "2026-11-05T05:56:39.479Z"
+    },
+    {
+      "id": "f1782af3-88f7-4509-95bf-f10790c21746",
+      "kind": "building",
+      "objectType": "demolished",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "longitude": 32.826295495033264,
+          "latitude": 67.9171212910224
+        },
+        {
+          "longitude": 32.82627135515213,
+          "latitude": 67.91714750861325
+        },
+        {
+          "longitude": 32.826279401779175,
+          "latitude": 67.91717473454167
+        },
+        {
+          "longitude": 32.82631427049637,
+          "latitude": 67.91719893534017
+        },
+        {
+          "longitude": 32.82637059688568,
+          "latitude": 67.91721607755719
+        },
+        {
+          "longitude": 32.82644033432007,
+          "latitude": 67.9172241444785
+        },
+        {
+          "longitude": 32.8265181183815,
+          "latitude": 67.9172201110182
+        },
+        {
+          "longitude": 32.82658249139786,
+          "latitude": 67.91720498553588
+        },
+        {
+          "longitude": 32.826625406742096,
+          "latitude": 67.91718179311053
+        },
+        {
+          "longitude": 32.826641499996185,
+          "latitude": 67.91715355882232
+        },
+        {
+          "longitude": 32.82662272453308,
+          "latitude": 67.91712532449984
+        },
+        {
+          "longitude": 32.82657712697983,
+          "latitude": 67.917102131995
+        },
+        {
+          "longitude": 32.826520800590515,
+          "latitude": 67.91709003154853
+        },
+        {
+          "longitude": 32.82645642757416,
+          "latitude": 67.91708498969396
+        },
+        {
+          "longitude": 32.8263920545578,
+          "latitude": 67.91708902317768
+        },
+        {
+          "longitude": 32.82633572816849,
+          "latitude": 67.917102131995
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.91715229830939,
+        "longitude": 32.82645273953676
+      },
+      "number": "0",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "",
+      "workshopShort": "",
+      "departments": [
+        {
+          "id": "5aeedaac-19cd-46ff-a4d0-623a33be3b05",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "284ba25a-981d-440c-af4b-505b2b969841",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "note": "",
+      "updatedAtIso": "2026-11-05T05:57:53.875Z"
     }
   ],
   "published": [
@@ -34596,8 +34992,404 @@
           "shortName": ""
         }
       ]
+    },
+    {
+      "id": "8ab10c32-8e8b-4c06-986e-59e5079c3b71",
+      "kind": "building",
+      "objectType": "demolished",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "longitude": 32.830029129981995,
+          "latitude": 67.92131673763708
+        },
+        {
+          "longitude": 32.829996943473816,
+          "latitude": 67.92133891775038
+        },
+        {
+          "longitude": 32.8299942612648,
+          "latitude": 67.9213641223989
+        },
+        {
+          "longitude": 32.830018401145935,
+          "latitude": 67.9213873106514
+        },
+        {
+          "longitude": 32.8300666809082,
+          "latitude": 67.92140444977966
+        },
+        {
+          "longitude": 32.830128371715546,
+          "latitude": 67.92141150706411
+        },
+        {
+          "longitude": 32.83018469810486,
+          "latitude": 67.92141049888073
+        },
+        {
+          "longitude": 32.83023566007614,
+          "latitude": 67.92140041704474
+        },
+        {
+          "longitude": 32.830275893211365,
+          "latitude": 67.92138428609803
+        },
+        {
+          "longitude": 32.83029466867447,
+          "latitude": 67.92136513058426
+        },
+        {
+          "longitude": 32.83029466867447,
+          "latitude": 67.92134295049598
+        },
+        {
+          "longitude": 32.83027321100235,
+          "latitude": 67.92132379494817
+        },
+        {
+          "longitude": 32.83023297786713,
+          "latitude": 67.92130766394826
+        },
+        {
+          "longitude": 32.83018201589584,
+          "latitude": 67.92129859025587
+        },
+        {
+          "longitude": 32.83012568950653,
+          "latitude": 67.92129758206764
+        },
+        {
+          "longitude": 32.83007204532623,
+          "latitude": 67.92130363119654
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.9213535994251,
+        "longitude": 32.830150332301855
+      },
+      "number": "0",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "",
+      "workshopShort": "",
+      "departments": [
+        {
+          "id": "719acf19-629d-4140-96fa-293e5c457c61",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "2c09b03f-0e06-4990-af98-b2137584f454",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "note": "",
+      "updatedAtIso": "2026-11-05T05:56:31.561Z"
+    },
+    {
+      "id": "c15dabcb-7c04-466d-80a5-75968fce431a",
+      "kind": "building",
+      "objectType": "demolished",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "longitude": 32.82958656549454,
+          "latitude": 67.92135404054278
+        },
+        {
+          "longitude": 32.8295624256134,
+          "latitude": 67.92137622062046
+        },
+        {
+          "longitude": 32.82956510782242,
+          "latitude": 67.92140041704474
+        },
+        {
+          "longitude": 32.82959461212158,
+          "latitude": 67.92142259707816
+        },
+        {
+          "longitude": 32.829645574092865,
+          "latitude": 67.92143771981611
+        },
+        {
+          "longitude": 32.82970726490021,
+          "latitude": 67.92144376890855
+        },
+        {
+          "longitude": 32.829766273498535,
+          "latitude": 67.92143973618045
+        },
+        {
+          "longitude": 32.82981991767883,
+          "latitude": 67.92142662980925
+        },
+        {
+          "longitude": 32.82985478639603,
+          "latitude": 67.92140747433041
+        },
+        {
+          "longitude": 32.829865515232086,
+          "latitude": 67.92138529428254
+        },
+        {
+          "longitude": 32.829849421978,
+          "latitude": 67.92136210602803
+        },
+        {
+          "longitude": 32.8298145532608,
+          "latitude": 67.92134395868229
+        },
+        {
+          "longitude": 32.82976895570755,
+          "latitude": 67.92133387681741
+        },
+        {
+          "longitude": 32.82972067594528,
+          "latitude": 67.92132883588332
+        },
+        {
+          "longitude": 32.829669713974,
+          "latitude": 67.9213318604439
+        },
+        {
+          "longitude": 32.829624116420746,
+          "latitude": 67.92133992593685
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.92138340390032,
+        "longitude": 32.829713467508554
+      },
+      "number": "0",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "",
+      "workshopShort": "",
+      "departments": [
+        {
+          "id": "8a3880e4-d001-426b-89a9-449239e551a0",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "2f67090f-777a-4ce7-9624-df97e50ef5a4",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "note": "",
+      "updatedAtIso": "2026-11-05T05:56:36.376Z"
+    },
+    {
+      "id": "e0a6a20a-88d6-4e61-b560-9353404cbd3b",
+      "kind": "building",
+      "objectType": "demolished",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "longitude": 32.82981723546982,
+          "latitude": 67.92160608563387
+        },
+        {
+          "longitude": 32.82977968454361,
+          "latitude": 67.92164842894101
+        },
+        {
+          "longitude": 32.829793095588684,
+          "latitude": 67.92169178034217
+        },
+        {
+          "longitude": 32.82985478639603,
+          "latitude": 67.92173009081543
+        },
+        {
+          "longitude": 32.82995402812958,
+          "latitude": 67.92175327870277
+        },
+        {
+          "longitude": 32.83006936311722,
+          "latitude": 67.92175932771306
+        },
+        {
+          "longitude": 32.830165922641754,
+          "latitude": 67.92175025419706
+        },
+        {
+          "longitude": 32.830243706703186,
+          "latitude": 67.9217280744763
+        },
+        {
+          "longitude": 32.830297350883484,
+          "latitude": 67.92169682119751
+        },
+        {
+          "longitude": 32.83031612634659,
+          "latitude": 67.92166052701458
+        },
+        {
+          "longitude": 32.830302715301514,
+          "latitude": 67.92162423277495
+        },
+        {
+          "longitude": 32.83025175333023,
+          "latitude": 67.92159197118102
+        },
+        {
+          "longitude": 32.830171287059784,
+          "latitude": 67.92156878313273
+        },
+        {
+          "longitude": 32.83007472753525,
+          "latitude": 67.92155769318842
+        },
+        {
+          "longitude": 32.8299754858017,
+          "latitude": 67.92156071771919
+        },
+        {
+          "longitude": 32.82988429069519,
+          "latitude": 67.92157785671961
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.92165662023434,
+        "longitude": 32.830059472471476
+      },
+      "number": "0",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "",
+      "workshopShort": "",
+      "departments": [
+        {
+          "id": "0105f668-1375-4333-9dec-35849ffda350",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "65dd31f9-dbd5-4153-af9d-08721b118597",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "note": "",
+      "updatedAtIso": "2026-11-05T05:56:39.479Z"
+    },
+    {
+      "id": "f1782af3-88f7-4509-95bf-f10790c21746",
+      "kind": "building",
+      "objectType": "demolished",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "longitude": 32.826295495033264,
+          "latitude": 67.9171212910224
+        },
+        {
+          "longitude": 32.82627135515213,
+          "latitude": 67.91714750861325
+        },
+        {
+          "longitude": 32.826279401779175,
+          "latitude": 67.91717473454167
+        },
+        {
+          "longitude": 32.82631427049637,
+          "latitude": 67.91719893534017
+        },
+        {
+          "longitude": 32.82637059688568,
+          "latitude": 67.91721607755719
+        },
+        {
+          "longitude": 32.82644033432007,
+          "latitude": 67.9172241444785
+        },
+        {
+          "longitude": 32.8265181183815,
+          "latitude": 67.9172201110182
+        },
+        {
+          "longitude": 32.82658249139786,
+          "latitude": 67.91720498553588
+        },
+        {
+          "longitude": 32.826625406742096,
+          "latitude": 67.91718179311053
+        },
+        {
+          "longitude": 32.826641499996185,
+          "latitude": 67.91715355882232
+        },
+        {
+          "longitude": 32.82662272453308,
+          "latitude": 67.91712532449984
+        },
+        {
+          "longitude": 32.82657712697983,
+          "latitude": 67.917102131995
+        },
+        {
+          "longitude": 32.826520800590515,
+          "latitude": 67.91709003154853
+        },
+        {
+          "longitude": 32.82645642757416,
+          "latitude": 67.91708498969396
+        },
+        {
+          "longitude": 32.8263920545578,
+          "latitude": 67.91708902317768
+        },
+        {
+          "longitude": 32.82633572816849,
+          "latitude": 67.917102131995
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.91715229830939,
+        "longitude": 32.82645273953676
+      },
+      "number": "0",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "",
+      "workshopShort": "",
+      "departments": [
+        {
+          "id": "5aeedaac-19cd-46ff-a4d0-623a33be3b05",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "284ba25a-981d-440c-af4b-505b2b969841",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "note": "",
+      "updatedAtIso": "2026-11-05T05:57:53.875Z"
     }
   ],
-  "draftSavedAtIso": "2026-11-04T17:59:46.283Z",
-  "publishedAtIso": "2026-11-04T17:59:46.283Z"
+  "draftSavedAtIso": "2026-11-05T10:11:44.640Z",
+  "publishedAtIso": "2026-11-05T10:11:44.640Z"
 }
