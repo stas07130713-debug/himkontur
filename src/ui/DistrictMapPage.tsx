@@ -62,6 +62,7 @@ import {
   type DistrictLayerKey,
 } from './district-map-visuals';
 import type { MapSyncStatus } from './map-sync-service';
+import type { DistrictUploadDiagnostic } from './district-map-upload-diagnostics';
 
 type Props = Readonly<{
   project: DistrictMapProject;
@@ -87,6 +88,10 @@ type Props = Readonly<{
   conflictBackupCount: number;
   onDownloadConflictBackup: () => void;
   onClearConflictBackup: () => void;
+  uploadDiagnostics: readonly DistrictUploadDiagnostic[];
+  onCopyUploadDiagnostics: () => Promise<void>;
+  onDownloadUploadDiagnostics: () => void;
+  onClearUploadDiagnostics: () => void;
 }>;
 
 type ContourDragState =
@@ -142,6 +147,19 @@ function localSynchronizationPacketCount(count: number): string {
   const noun = lastTwo >= 11 && lastTwo <= 14 ? 'пакетов' : last === 1 ? 'пакет' : last >= 2 && last <= 4 ? 'пакета' : 'пакетов';
   const verb = last === 1 && lastTwo !== 11 ? 'не отправлен' : 'не отправлены';
   return `${count} ${noun} ${verb}`;
+}
+
+function uploadStageLabel(entry: DistrictUploadDiagnostic): string {
+  if (entry.stage === 'preparing') return 'Подготовка';
+  if (entry.stage === 'sending') return 'Отправляется';
+  if (entry.stage === 'verifying') return 'Проверяю на сервере';
+  if (entry.stage === 'confirmed') return entry.confirmation === 'status-check' ? 'Подтверждено проверкой' : 'Подтверждено';
+  return 'Ошибка';
+}
+
+function uploadSize(bytes: number): string {
+  if (bytes <= 0) return '—';
+  return bytes < 1024 ? `${bytes} Б` : `${(bytes / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} КБ`;
 }
 
 function worldCoordinate(point: GeoPoint): Readonly<{ x: number; y: number }> {
@@ -1656,6 +1674,26 @@ export function DistrictMapPage(props: Props) {
                 <button type="button" className="secondary" onClick={() => setServerReplaceConfirmationOpen(false)}>Отмена</button>
               </div>
             </div>}
+            <details className="district-upload-diagnostics" open={props.publishBusy || props.uploadDiagnostics.some((entry) => entry.stage === 'failed')}>
+              <summary>Ход отправки и диагностика <span>{props.uploadDiagnostics.filter((entry) => entry.stage === 'confirmed').length} подтверждено</span></summary>
+              <p>Каждая строка — отдельный малый фрагмент. После подтверждения его не нужно отправлять заново.</p>
+              {props.uploadDiagnostics.length === 0 ? <div className="district-upload-empty">Отправок в этом браузере пока не было.</div> : <div className="district-upload-table-wrap">
+                <table><thead><tr><th>Часть</th><th>Объекты</th><th>Размер</th><th>Время</th><th>Состояние</th></tr></thead><tbody>
+                  {[...props.uploadDiagnostics].reverse().slice(0, 30).map((entry) => <tr key={entry.chunkOperationId} className={`stage-${entry.stage}`} title={entry.message || entry.chunkOperationId}>
+                    <td>{entry.sequence}</td>
+                    <td><strong>{entry.objectCount}</strong><small>{entry.objectLabels.slice(0, 2).join(' · ')}{entry.objectLabels.length > 2 ? ` · ещё ${entry.objectLabels.length - 2}` : ''}</small></td>
+                    <td>{uploadSize(entry.payloadBytes)}</td>
+                    <td>{new Date(entry.updatedAtIso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</td>
+                    <td><strong>{uploadStageLabel(entry)}</strong>{entry.serverRevision !== null && <small>Версия {entry.serverRevision}</small>}</td>
+                  </tr>)}
+                </tbody></table>
+              </div>}
+              <div className="district-upload-actions">
+                <button type="button" className="secondary" disabled={props.uploadDiagnostics.length === 0} onClick={() => void props.onCopyUploadDiagnostics()}>Скопировать диагностику</button>
+                <button type="button" className="secondary" disabled={props.uploadDiagnostics.length === 0} onClick={props.onDownloadUploadDiagnostics}>Скачать журнал</button>
+                <button type="button" className="secondary danger" disabled={props.uploadDiagnostics.length === 0 || props.publishBusy} onClick={props.onClearUploadDiagnostics}>Очистить журнал</button>
+              </div>
+            </details>
             {props.conflictBackupCount > 0 && <div className="district-conflict-backup"><p>Это журнал уже разрешённых конфликтов. Для каждого объекта в общую карту выбрана его более поздняя редакция, а обе версии оставлены здесь для проверки. Очистка удалит только записи журнала и не изменит карту.</p><div><button type="button" className="secondary" onClick={props.onDownloadConflictBackup}>Скачать журнал ({props.conflictBackupCount})</button><button type="button" className="secondary danger" onClick={props.onClearConflictBackup}>Очистить журнал</button></div></div>}
           </section>
           {mapBackupStatus !== '' && <p className="district-act-status district-map-backup-status">{mapBackupStatus}</p>}

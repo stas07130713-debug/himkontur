@@ -35,6 +35,7 @@ import { UpdateCenter } from "./UpdateCenter";
 import { DistrictMapPage } from "./DistrictMapPage";
 import {
   createPendingDistrictMapOperation,
+  districtObjectTitle,
   fetchCoordinatedDistrictMapProject,
   fetchCoordinatedDistrictMapUpdate,
   fetchPublishedDistrictMapProject,
@@ -49,6 +50,13 @@ import {
   type PendingDistrictMapOperation,
   type DistrictMapProject,
 } from "./district-map-model";
+import {
+  clearDistrictUploadDiagnostics,
+  loadDistrictUploadDiagnostics,
+  serializeDistrictUploadDiagnostics,
+  updateDistrictUploadDiagnostics,
+  type DistrictUploadDiagnostic,
+} from './district-map-upload-diagnostics';
 import {
   clearDistrictMapConflictArchives,
   districtMapConflictArchiveCount,
@@ -122,6 +130,7 @@ export function App() {
   const [districtSyncState, setDistrictSyncState] = useState<DistrictSyncState>(() => initialPendingDistrictOperationsRef.current.length === 0 ? "ready" : "pending");
   const [mapSyncStatus, setMapSyncStatus] = useState<MapSyncStatus>(() => disabledMapSyncStatus());
   const [districtConflictCount, setDistrictConflictCount] = useState(districtMapConflictArchiveCount);
+  const [districtUploadDiagnostics, setDistrictUploadDiagnostics] = useState<DistrictUploadDiagnostic[]>(loadDistrictUploadDiagnostics);
   const [mapSyncCheckBusy, setMapSyncCheckBusy] = useState(false);
   const [districtAdmin, setDistrictAdmin] = useState(false);
   const [districtManagementOpen, setDistrictManagementOpen] = useState(false);
@@ -340,6 +349,7 @@ export function App() {
         pendingBase?.baseRevision ?? currentProject.revision,
         restoredProject,
         pendingBase?.baseProject ?? currentProject,
+        pendingBase,
       );
       pendingDistrictOperationsRef.current = [operation];
       savePendingDistrictMapOperations(pendingDistrictOperationsRef.current);
@@ -643,14 +653,54 @@ export function App() {
           status: MapSyncStatus | null;
         }>;
         try {
+          let lastCheckpoint = pending;
           publishResult = await withRenewedMapAdminSession(
             activeCredential,
             (credential) => publishDistrictMapOperation(
               pending,
               credential,
               publicationController.signal,
-              ({ part, total, objectCount }) => {
-                setNotice(`Загрузка изменений: часть ${part} из ${total}, объектов в части — ${objectCount}.`);
+              (progress) => {
+                const objectLabels = progress.objectIds.map((id) => {
+                  const object = districtProjectRef.current.published.find((item) => item.id === id);
+                  return object === undefined ? `Удалённый объект ${id}` : districtObjectTitle(object);
+                });
+                setDistrictUploadDiagnostics((current) => updateDistrictUploadDiagnostics(current, {
+                  chunkOperationId: progress.chunkOperationId,
+                  rootOperationId: progress.rootOperationId,
+                  sequence: progress.part,
+                  stage: progress.stage,
+                  objectCount: progress.objectCount,
+                  objectIds: progress.objectIds,
+                  objectLabels,
+                  ...(progress.payloadBytes === undefined ? {} : { payloadBytes: progress.payloadBytes }),
+                  confirmedObjects: progress.stage === 'confirmed' ? progress.part : Math.max(0, progress.part - 1),
+                  totalObjects: progress.total,
+                  ...(progress.revision === undefined ? {} : { serverRevision: progress.revision }),
+                  ...(progress.confirmation === undefined ? {} : { confirmation: progress.confirmation }),
+                  ...(progress.message === undefined ? {} : { message: progress.message }),
+                }));
+                const action = progress.stage === 'verifying'
+                  ? 'Ответ потерян, проверяю сервер'
+                  : progress.stage === 'confirmed'
+                    ? 'Сервер подтвердил фрагмент'
+                    : 'Загрузка изменений';
+                setNotice(`${action}: часть ${progress.part} из ${progress.total}, объектов — ${progress.objectCount}.`);
+              },
+              (checkpoint) => {
+                const current = pendingDistrictOperationsRef.current[0];
+                let persisted = checkpoint;
+                if (current?.operationId === checkpoint.operationId && current.project !== lastCheckpoint.project) {
+                  const merged = mergeDistrictMapProjects(lastCheckpoint.project, current.project, checkpoint.project);
+                  persisted = { ...checkpoint, project: merged.project };
+                }
+                pendingDistrictOperationsRef.current = [persisted];
+                savePendingDistrictMapOperations(pendingDistrictOperationsRef.current);
+                districtProjectRef.current = persisted.project;
+                setDistrictProject(persisted.project);
+                saveDistrictMapProject(persisted.project);
+                lastCheckpoint = persisted;
+                return persisted;
               },
             ),
           );
@@ -722,6 +772,11 @@ export function App() {
     } catch (error) {
       setDistrictSyncState("error");
       const failureMessage = `Не удалось загрузить изменения в общую базу. Они сохранены только на этом устройстве: ${message(error)}`;
+      setDistrictUploadDiagnostics((current) => {
+        const active = [...current].reverse().find((entry) => entry.stage !== 'confirmed' && entry.stage !== 'failed');
+        if (active === undefined) return current;
+        return updateDistrictUploadDiagnostics(current, { ...active, stage: 'failed', message: message(error) });
+      });
       setNotice(failureMessage);
       return { success: false, message: failureMessage };
     } finally {
@@ -764,6 +819,7 @@ export function App() {
       pendingBase?.baseRevision ?? current.revision,
       published,
       pendingBase?.baseProject ?? current,
+      pendingBase,
     );
     districtProjectRef.current = published;
     pendingDistrictOperationsRef.current = [operation];
@@ -786,6 +842,31 @@ export function App() {
     if (!window.confirm('Удалить все записи из журнала уже разрешённых конфликтов? Актуальная карта, выбранные версии объектов и опубликованные данные не изменятся.')) return;
     clearDistrictMapConflictArchives();
     setDistrictConflictCount(0);
+  };
+  const copyDistrictUploadDiagnostics = async () => {
+    const report = serializeDistrictUploadDiagnostics(districtUploadDiagnostics, {
+      appVersion: packageInformation.version,
+      pendingPackets: pendingDistrictOperationsRef.current.length,
+      userAgent: navigator.userAgent,
+    });
+    await navigator.clipboard.writeText(report);
+  };
+  const downloadDistrictUploadDiagnostics = () => {
+    const report = serializeDistrictUploadDiagnostics(districtUploadDiagnostics, {
+      appVersion: packageInformation.version,
+      pendingPackets: pendingDistrictOperationsRef.current.length,
+      userAgent: navigator.userAgent,
+    });
+    const url = URL.createObjectURL(new Blob([report], { type: 'application/json;charset=utf-8' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `HIMKONTUR-map-upload-${new Date().toISOString().slice(0, 10)}.json`;
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+  const clearDistrictUploadDiagnosticLog = () => {
+    clearDistrictUploadDiagnostics();
+    setDistrictUploadDiagnostics([]);
   };
 
   return (
@@ -946,6 +1027,10 @@ export function App() {
           conflictBackupCount={districtConflictCount}
           onDownloadConflictBackup={downloadDistrictConflictArchive}
           onClearConflictBackup={clearDistrictConflictArchive}
+          uploadDiagnostics={districtUploadDiagnostics}
+          onCopyUploadDiagnostics={copyDistrictUploadDiagnostics}
+          onDownloadUploadDiagnostics={downloadDistrictUploadDiagnostics}
+          onClearUploadDiagnostics={clearDistrictUploadDiagnosticLog}
         />
       ) : (
         <>

@@ -7,6 +7,7 @@ import {
   publishCoordinatedMap,
   publishCoordinatedObjectChanges,
   type CoordinatedObjectChange,
+  type CoordinatedObjectTransferEvent,
   type MapAdminCredential,
 } from './map-sync-service';
 
@@ -174,6 +175,19 @@ export type DistrictMapPublishProgress = Readonly<{
   part: number;
   total: number;
   objectCount: number;
+  rootOperationId: string;
+  chunkOperationId: string;
+  objectIds: readonly string[];
+  stage: 'preparing' | CoordinatedObjectTransferEvent['stage'];
+  payloadBytes?: number;
+  confirmation?: CoordinatedObjectTransferEvent['confirmation'];
+  revision?: number;
+  message?: string;
+}>;
+
+export type ConfirmedDistrictMapObject = Readonly<{
+  objectId: string;
+  signature: string;
 }>;
 
 export type PendingDistrictMapOperation = Readonly<{
@@ -182,6 +196,8 @@ export type PendingDistrictMapOperation = Readonly<{
   baseProject?: DistrictMapProject;
   project: DistrictMapProject;
   createdAtIso: string;
+  confirmedObjects: readonly ConfirmedDistrictMapObject[];
+  nextChunkSequence: number;
 }>;
 
 export type DistrictMapPublishResult = Readonly<{
@@ -457,13 +473,18 @@ export function loadPendingDistrictMapOperations(): PendingDistrictMapOperation[
     const raw = window.localStorage.getItem(PENDING_SYNC_STORAGE_KEY);
     if (raw === null) return [];
     const parsed: unknown = JSON.parse(raw);
-    if (isObject(parsed) && (parsed.version === 2 || parsed.version === 3) && Array.isArray(parsed.operations)) {
+    if (isObject(parsed) && (parsed.version === 2 || parsed.version === 3 || parsed.version === 4) && Array.isArray(parsed.operations)) {
       const operations = parsed.operations.flatMap((value) => {
         if (!isObject(value)) return [];
         const project = normalizeDistrictMapProject(value.project);
         const baseProject = normalizeDistrictMapProject(value.baseProject);
         const operationId = text(value.operationId);
         if (project === null || operationId === '') return [];
+        const confirmedObjects = Array.isArray(value.confirmedObjects)
+          ? value.confirmedObjects.flatMap((item) => isObject(item) && text(item.objectId) !== '' && text(item.signature) !== ''
+            ? [{ objectId: text(item.objectId), signature: text(item.signature) }]
+            : [])
+          : [];
         return [{
           operationId,
           baseRevision: typeof value.baseRevision === 'number' && Number.isSafeInteger(value.baseRevision)
@@ -472,6 +493,10 @@ export function loadPendingDistrictMapOperations(): PendingDistrictMapOperation[
           ...(baseProject === null ? {} : { baseProject }),
           project,
           createdAtIso: text(value.createdAtIso) || project.publishedAtIso,
+          confirmedObjects,
+          nextChunkSequence: typeof value.nextChunkSequence === 'number' && Number.isSafeInteger(value.nextChunkSequence)
+            ? Math.max(1, value.nextChunkSequence)
+            : 1,
         }];
       });
       if (operations.length <= 1) return operations;
@@ -493,6 +518,8 @@ export function loadPendingDistrictMapOperations(): PendingDistrictMapOperation[
       operationId: `legacy-${legacyProject.revision}`,
       baseRevision: Math.max(0, legacyProject.revision - 1),
       project: legacyProject,
+      confirmedObjects: [],
+      nextChunkSequence: 1,
       createdAtIso: legacyProject.publishedAtIso,
     }];
   } catch {
@@ -795,10 +822,30 @@ export function chunkDistrictMapObjectChanges(
   return chunks;
 }
 
-function chunkOperationId(operationId: string, part: number, total: number): string {
-  if (total === 1) return operationId;
-  const suffix = `-part-${part}-of-${total}`;
+function chunkOperationId(operationId: string, sequence: number): string {
+  const suffix = `-chunk-${sequence}`;
   return `${operationId.slice(0, Math.max(1, 160 - suffix.length))}${suffix}`;
+}
+
+function hashText(value: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+export function districtMapObjectChangeSignature(change: Pick<CoordinatedObjectChange, 'objectId' | 'object'>): string {
+  return hashText(`${change.objectId}\n${change.object === null ? '<deleted>' : JSON.stringify(change.object)}`);
+}
+
+export function unconfirmedDistrictMapObjectChanges(
+  operation: PendingDistrictMapOperation,
+  changes: readonly CoordinatedObjectChange[],
+): readonly CoordinatedObjectChange[] {
+  const confirmed = new Map(operation.confirmedObjects.map((item) => [item.objectId, item.signature]));
+  return changes.filter((change) => confirmed.get(change.objectId) !== districtMapObjectChangeSignature(change));
 }
 
 export async function publishDistrictMapOperation(
@@ -806,30 +853,59 @@ export async function publishDistrictMapOperation(
   credential: MapAdminCredential,
   signal?: AbortSignal,
   onProgress?: (progress: DistrictMapPublishProgress) => void,
+  onCheckpoint?: (operation: PendingDistrictMapOperation) => PendingDistrictMapOperation | Promise<PendingDistrictMapOperation>,
 ): Promise<DistrictMapPublishResult> {
   const config = await loadMapSyncConfig();
   if (config === null) throw new Error('Облачная синхронизация ещё не настроена.');
   if (config.coordinatorEnabled) {
     if (operation.baseProject !== undefined) {
-      const changes = districtMapObjectChanges(operation.baseProject, operation.project);
-      let project = operation.project;
-      if (changes.length === 0) return { project, conflicts: [] };
-      const chunks = chunkDistrictMapObjectChanges(changes);
+      let activeOperation = operation;
+      let project = activeOperation.project;
       const conflicts: DistrictMapPublishResult['conflicts'][number][] = [];
-      let revision = operation.baseRevision;
-      let publishedAtIso = operation.project.publishedAtIso;
-      for (const [index, chunk] of chunks.entries()) {
-        onProgress?.({ part: index + 1, total: chunks.length, objectCount: chunk.length });
+      let revision = activeOperation.baseRevision;
+      let publishedAtIso = activeOperation.project.publishedAtIso;
+      let completedParts = Math.max(0, activeOperation.nextChunkSequence - 1);
+      for (;;) {
+        const changes = unconfirmedDistrictMapObjectChanges(
+          activeOperation,
+          districtMapObjectChanges(activeOperation.baseProject ?? operation.baseProject, activeOperation.project),
+        );
+        if (changes.length === 0) break;
+        const chunks = chunkDistrictMapObjectChanges(changes);
+        const chunk = chunks[0];
+        if (chunk === undefined) break;
+        const chunkId = chunkOperationId(activeOperation.operationId, activeOperation.nextChunkSequence);
+        const progressBase = {
+          part: completedParts + 1,
+          total: completedParts + chunks.length,
+          objectCount: chunk.length,
+          rootOperationId: activeOperation.operationId,
+          chunkOperationId: chunkId,
+          objectIds: chunk.map((change) => change.objectId),
+        } as const;
+        onProgress?.({ ...progressBase, stage: 'preparing' });
         const result = await publishCoordinatedObjectChanges({
-          operationId: chunkOperationId(operation.operationId, index + 1, chunks.length),
+          operationId: chunkId,
           baseRevision: revision,
           changes: chunk,
           credential,
           ...(signal === undefined ? {} : { signal }),
+          onTransfer: (event) => onProgress?.({ ...progressBase, ...event }),
         });
         revision = result.revision;
         publishedAtIso = result.publishedAtIso;
         conflicts.push(...result.conflicts);
+        for (const acknowledgement of result.activeObjects) {
+          const normalized = acknowledgement.object === null ? null : normalizeDistrictObject(acknowledgement.object);
+          if (acknowledgement.object !== null && normalized === null) throw new Error('Сервис синхронизации вернул повреждённый объект.');
+          const local = chunk.find((change) => change.objectId === acknowledgement.objectId)?.object ?? null;
+          if (JSON.stringify(local) !== JSON.stringify(normalized)
+            && !result.conflicts.some((conflict) => conflict.objectId === acknowledgement.objectId)) {
+            conflicts.push({ objectId: acknowledgement.objectId, local, remote: normalized, activeSource: 'remote' });
+          }
+          const objects = replaceDistrictObject(project.published, acknowledgement.objectId, normalized);
+          project = { ...project, published: objects, draft: objects };
+        }
         for (const conflict of result.conflicts) {
           const active = conflict.activeSource === 'remote' ? conflict.remote : conflict.local;
           const normalized = active === null ? null : normalizeDistrictObject(active);
@@ -837,6 +913,26 @@ export async function publishDistrictMapOperation(
           const objects = replaceDistrictObject(project.published, conflict.objectId, normalized);
           project = { ...project, published: objects, draft: objects };
         }
+        const confirmedById = new Map(activeOperation.confirmedObjects.map((item) => [item.objectId, item]));
+        for (const change of chunk) {
+          const currentObject = project.published.find((item) => item.id === change.objectId) ?? null;
+          confirmedById.set(change.objectId, {
+            objectId: change.objectId,
+            signature: districtMapObjectChangeSignature({ objectId: change.objectId, object: currentObject }),
+          });
+        }
+        const checkpoint: PendingDistrictMapOperation = {
+          ...activeOperation,
+          baseRevision: revision,
+          project: { ...project, revision, publishedAtIso, draftSavedAtIso: publishedAtIso },
+          confirmedObjects: [...confirmedById.values()],
+          nextChunkSequence: activeOperation.nextChunkSequence + 1,
+        };
+        activeOperation = onCheckpoint === undefined ? checkpoint : await onCheckpoint(checkpoint);
+        project = activeOperation.project;
+        revision = activeOperation.baseRevision;
+        publishedAtIso = project.publishedAtIso;
+        completedParts += 1;
       }
       project = {
         ...project,
@@ -908,16 +1004,23 @@ export function saveDistrictMapProject(project: DistrictMapProject): void {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
 }
 
-export function createPendingDistrictMapOperation(baseRevision: number, project: DistrictMapProject, baseProject?: DistrictMapProject): PendingDistrictMapOperation {
+export function createPendingDistrictMapOperation(
+  baseRevision: number,
+  project: DistrictMapProject,
+  baseProject?: DistrictMapProject,
+  resume?: PendingDistrictMapOperation,
+): PendingDistrictMapOperation {
   const randomPart = typeof crypto.randomUUID === 'function'
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return {
-    operationId: `map-${randomPart}`,
+    operationId: resume?.operationId ?? `map-${randomPart}`,
     baseRevision,
     ...(baseProject === undefined ? {} : { baseProject }),
     project,
-    createdAtIso: new Date().toISOString(),
+    createdAtIso: resume?.createdAtIso ?? new Date().toISOString(),
+    confirmedObjects: resume?.confirmedObjects ?? [],
+    nextChunkSequence: resume?.nextChunkSequence ?? 1,
   };
 }
 
@@ -926,7 +1029,7 @@ export function savePendingDistrictMapOperations(operations: readonly PendingDis
     window.localStorage.removeItem(PENDING_SYNC_STORAGE_KEY);
     return;
   }
-  window.localStorage.setItem(PENDING_SYNC_STORAGE_KEY, JSON.stringify({ version: 3, operations }));
+  window.localStorage.setItem(PENDING_SYNC_STORAGE_KEY, JSON.stringify({ version: 4, operations }));
 }
 
 export function districtObjectTitle(object: DistrictMapObject): string {

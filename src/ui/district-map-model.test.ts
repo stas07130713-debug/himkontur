@@ -6,6 +6,7 @@ import {
   createPendingDistrictMapOperation,
   districtMapObjectCounts,
   districtMapObjectChanges,
+  districtMapObjectChangeSignature,
   districtObjectTitle,
   isPublishedProjectNewer,
   loadPendingDistrictMapOperations,
@@ -14,6 +15,7 @@ import {
   savePendingDistrictMapOperations,
   serializeDistrictMapBackup,
   shouldAdoptSharedDistrictMap,
+  unconfirmedDistrictMapObjectChanges,
   type DistrictMapProject,
 } from './district-map-model';
 
@@ -240,5 +242,44 @@ describe('durable district map operation queue', () => {
       baseRevision: 54,
       project: legacy,
     })]);
+  });
+
+  it('keeps the stable operation id and confirmed fragment cursor after another local edit', () => {
+    const base = project(100, '2026-11-05T08:00:00Z');
+    const firstProject = { ...project(101, '2026-11-05T08:01:00Z'), published: [building], draft: [building] };
+    const first = createPendingDistrictMapOperation(100, firstProject, base);
+    const checkpoint = {
+      ...first,
+      baseRevision: 101,
+      confirmedObjects: [{ objectId: building.id, signature: 'confirmed-signature' }],
+      nextChunkSequence: 2,
+    };
+    const edited = { ...firstProject, revision: 102, publishedAtIso: '2026-11-05T08:02:00Z' };
+    const resumed = createPendingDistrictMapOperation(checkpoint.baseRevision, edited, base, checkpoint);
+    expect(resumed).toMatchObject({
+      operationId: first.operationId,
+      createdAtIso: first.createdAtIso,
+      nextChunkSequence: 2,
+      confirmedObjects: checkpoint.confirmedObjects,
+    });
+  });
+
+  it('does not resend a confirmed object unless that object changes again', () => {
+    const base = project(100, '2026-11-05T08:00:00Z');
+    const firstProject = { ...project(101, '2026-11-05T08:01:00Z'), published: [building], draft: [building] };
+    const change = districtMapObjectChanges(base, firstProject)[0];
+    expect(change).toBeDefined();
+    if (change === undefined) throw new Error('Изменение объекта не создано.');
+    const operation = {
+      ...createPendingDistrictMapOperation(100, firstProject, base),
+      confirmedObjects: [{ objectId: building.id, signature: districtMapObjectChangeSignature(change) }],
+      nextChunkSequence: 2,
+    };
+    expect(unconfirmedDistrictMapObjectChanges(operation, [change])).toEqual([]);
+    const edited = { ...building, note: 'изменён после подтверждения', updatedAtIso: '2026-11-05T08:02:00Z' };
+    const editedProject = { ...firstProject, published: [edited], draft: [edited] };
+    const editedChange = districtMapObjectChanges(base, editedProject)[0];
+    if (editedChange === undefined) throw new Error('Повторное изменение объекта не создано.');
+    expect(unconfirmedDistrictMapObjectChanges({ ...operation, project: editedProject }, [editedChange])).toEqual([editedChange]);
   });
 });

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { applyObjectChange, canRebaseLegacyOperation, isAllowedOrigin, mirrorReconciliationAction, needsConflictRecovery, operationQueueBaseRevision, readJson, shouldUseBackupImmediately, validAuthoritativeRecovery } from './worker.js';
+import { applyObjectChange, canRebaseLegacyOperation, compactOperationStatusResponse, isAllowedOrigin, mirrorReconciliationAction, needsConflictRecovery, operationQueueBaseRevision, readJson, shouldUseBackupImmediately, validAuthoritativeRecovery } from './worker.js';
 
 async function gzipJson(value) {
   const stream = new Blob([JSON.stringify(value)]).stream().pipeThrough(new CompressionStream('gzip'));
@@ -16,6 +16,28 @@ describe('compressed synchronization requests', () => {
       body: await gzipJson(payload),
     });
     assert.deepEqual(await readJson(request), payload);
+  });
+});
+
+describe('compact operation acknowledgement', () => {
+  it('confirms a saved fragment without returning the full map', () => {
+    const state = {
+      revision: 42, primaryRevision: 40, mode: 'backup', updatedAt: '2026-11-05T10:00:00.000Z',
+      project: { publishedAtIso: '2026-11-05T10:00:00.000Z', published: [{ id: 'large-object', note: 'x'.repeat(1000) }] },
+    };
+    const response = compactOperationStatusResponse(state, 1, 'map-1-chunk-2', {
+      status: 'queued', target_revision: 42, error: '',
+    });
+    assert.equal(response.operationId, 'map-1-chunk-2');
+    assert.equal(response.revision, 42);
+    assert.equal(response.operationRevision, 42);
+    assert.equal('project' in response, false);
+    assert.ok(JSON.stringify(response).length < 1000);
+    const withObject = compactOperationStatusResponse(state, 1, 'map-1-chunk-2', {
+      status: 'queued', target_revision: 42, error: '',
+    }, ['large-object', 'deleted-object']);
+    assert.equal(withObject.objects[0].object.id, 'large-object');
+    assert.equal(withObject.objects[1].object, null);
   });
 });
 

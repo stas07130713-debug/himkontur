@@ -253,17 +253,28 @@ describe('map synchronization sessions', () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse(configResponse))
       .mockResolvedValueOnce(jsonResponse({ error: 'gateway timeout' }, 503))
-      .mockResolvedValueOnce(jsonResponse({ project, status: { mode: 'backup', activeProvider: 'cloudflare' } }));
+      .mockResolvedValueOnce(jsonResponse({
+        operationId: 'object-batch-committed', operationStatus: 'queued', revision: 30,
+        publishedAtIso: project.publishedAtIso,
+        objects: [{ objectId: 'demolished-1', object: null }],
+        status: { mode: 'backup', activeProvider: 'cloudflare' },
+      }));
     vi.stubGlobal('fetch', fetchMock);
     vi.stubGlobal('window', { setTimeout, clearTimeout });
 
+    const events: string[] = [];
     await expect(publishCoordinatedObjectChanges({
       operationId: 'object-batch-committed',
       baseRevision: 29,
       changes: [{ objectId: 'demolished-1', baseObject: null, object: null, updatedAtIso: project.publishedAtIso, targetRevision: 30 }],
       credential: { password: 'administrator-password', sessionToken: 'active-session' },
-    })).resolves.toMatchObject({ revision: 30, status: { mode: 'backup' } });
-    expect(fetchMock.mock.calls[2]?.[0]).toBe('https://coordinator.example.test/v1/operations/object-batch-committed');
+      onTransfer: (event) => events.push(`${event.stage}:${event.confirmation ?? ''}`),
+    })).resolves.toMatchObject({
+      revision: 30, status: { mode: 'backup' },
+      activeObjects: [{ objectId: 'demolished-1', object: null }],
+    });
+    expect(fetchMock.mock.calls[2]?.[0]).toBe('https://coordinator.example.test/v1/operations/object-batch-committed/status');
+    expect(events).toEqual(['sending:', 'verifying:', 'confirmed:status-check']);
     const request = fetchMock.mock.calls[1]?.[1] as RequestInit;
     expect((request.headers as Record<string, string>)['Content-Type']).toBe('application/json');
   });

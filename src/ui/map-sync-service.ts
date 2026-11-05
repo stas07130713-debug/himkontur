@@ -82,7 +82,17 @@ export type CoordinatedObjectBatchResponse = Readonly<{
   revision: number;
   publishedAtIso: string;
   conflicts: NonNullable<CoordinatedObjectChangeResponse['conflict']>[];
+  activeObjects: readonly Readonly<{ objectId: string; object: DistrictMapObject | null }>[];
   status: MapSyncStatus;
+}>;
+
+export type CoordinatedObjectTransferEvent = Readonly<{
+  stage: 'sending' | 'verifying' | 'confirmed';
+  payloadBytes: number;
+  attempt: number;
+  confirmation?: 'direct' | 'status-check';
+  revision?: number;
+  message?: string;
 }>;
 
 export type CoordinatedChangesResponse = Readonly<{
@@ -481,6 +491,40 @@ async function verifyCoordinatedOperation(operationId: string, credential: MapAd
   return isObject(verified) && 'project' in verified ? verified : null;
 }
 
+async function verifyCoordinatedOperationStatus(
+  operationId: string,
+  credential: MapAdminCredential,
+  signal?: AbortSignal,
+): Promise<JsonRecord | null> {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const verified = await coordinatorRequest(`/v1/operations/${encodeURIComponent(operationId)}/status`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${credential.sessionToken}` },
+        ...(signal === undefined ? {} : { signal }),
+      }, 30_000, 1);
+      if (isObject(verified) && typeof verified.revision === 'number') return verified;
+    } catch (error) {
+      if (signal?.aborted === true) throw error;
+      if (error instanceof MapSyncRequestError && error.kind === 'authorization') throw error;
+      if (attempt === 3) return null;
+    }
+    await new Promise<void>((resolve, reject) => {
+      const abort = () => {
+        window.clearTimeout(timeout);
+        reject(new MapSyncRequestError('Отправка отменена.'));
+      };
+      const timeout = window.setTimeout(() => {
+        signal?.removeEventListener('abort', abort);
+        resolve();
+      }, 1_500 * attempt);
+      if (signal?.aborted === true) abort();
+      else signal?.addEventListener('abort', abort, { once: true });
+    });
+  }
+  return null;
+}
+
 export async function publishCoordinatedMap(request: CoordinatedPublishRequest): Promise<CoordinatedMapResponse> {
   const encoded = await encodedJsonRequest({
     operationId: request.operationId,
@@ -547,6 +591,7 @@ export async function publishCoordinatedObjectChanges(request: Readonly<{
   changes: readonly CoordinatedObjectChange[];
   credential: MapAdminCredential;
   signal?: AbortSignal;
+  onTransfer?: (event: CoordinatedObjectTransferEvent) => void;
 }>): Promise<CoordinatedObjectBatchResponse> {
   // Object changes are intentionally sent as small, ordinary JSON fragments.
   // Some corporate proxies accept health checks but indefinitely delay a
@@ -557,7 +602,10 @@ export async function publishCoordinatedObjectChanges(request: Readonly<{
     changes: request.changes,
     updatedBy: 'Администратор ХИМКОНТУР',
   });
+  const payloadBytes = new TextEncoder().encode(body).byteLength;
+  request.onTransfer?.({ stage: 'sending', payloadBytes, attempt: 1 });
   let payload: unknown;
+  let confirmation: CoordinatedObjectTransferEvent['confirmation'] = 'direct';
   try {
     payload = await coordinatorRequest('/v1/objects', {
       method: 'POST',
@@ -571,25 +619,44 @@ export async function publishCoordinatedObjectChanges(request: Readonly<{
     // A slow corporate route can lose the response after D1 has committed the
     // object batch. Verify the idempotent operation before keeping an already
     // shared edit in the device-only queue.
-    const verified = await verifyCoordinatedOperation(request.operationId, request.credential);
-    const verifiedProject = verified?.project;
-    if (verified === null || !isObject(verifiedProject) || typeof verifiedProject.revision !== 'number') throw error;
+    request.onTransfer?.({
+      stage: 'verifying', payloadBytes, attempt: 1,
+      message: 'Ответ на отправку не получен. Проверяю короткий статус операции на сервере.',
+    });
+    const verified = await verifyCoordinatedOperationStatus(request.operationId, request.credential, request.signal);
+    if (verified === null || typeof verified.revision !== 'number') throw error;
     payload = {
-      revision: verifiedProject.revision,
-      publishedAtIso: stringValue(verifiedProject.publishedAtIso),
+      revision: verified.revision,
+      publishedAtIso: stringValue(verified.publishedAtIso),
       conflicts: [],
+      objects: Array.isArray(verified.objects) ? verified.objects : [],
       status: verified.status,
     };
+    confirmation = 'status-check';
   }
   if (!isObject(payload) || typeof payload.revision !== 'number' || !Array.isArray(payload.conflicts)) {
     throw new MapSyncRequestError('Сервис синхронизации вернул некорректное подтверждение пакета.', 502, 'invalid');
   }
-  return {
+  const response: CoordinatedObjectBatchResponse = {
     revision: payload.revision,
     publishedAtIso: stringValue(payload.publishedAtIso),
     conflicts: payload.conflicts as CoordinatedObjectBatchResponse['conflicts'],
+    activeObjects: Array.isArray(payload.objects)
+      ? payload.objects.filter(isObject).flatMap((item) => {
+        const objectId = stringValue(item.objectId);
+        return objectId === '' ? [] : [{ objectId, object: (item.object ?? null) as DistrictMapObject | null }];
+      })
+      : [],
     status: normalizeStatus(payload.status),
   };
+  request.onTransfer?.({
+    stage: 'confirmed', payloadBytes, attempt: 1, confirmation,
+    revision: response.revision,
+    message: confirmation === 'status-check'
+      ? 'Сервер подтвердил, что фрагмент уже сохранён.'
+      : 'Сервер сразу подтвердил сохранение фрагмента.',
+  });
+  return response;
 }
 
 export async function checkMapSynchronization(credential?: MapAdminCredential): Promise<MapSyncStatus> {

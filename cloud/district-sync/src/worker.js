@@ -183,14 +183,33 @@ function compactObjectResponse(state, queued, operationId, operationStatus, obje
   };
 }
 
-function compactBatchResponse(state, queued, operationId, operationStatus, conflicts = [], message = '') {
+function acknowledgedObjects(state, objectIds = []) {
+  const byId = new Map(state.project.published.map((object) => [object.id, object]));
+  return [...new Set(objectIds)].map((objectId) => ({ objectId, object: byId.get(objectId) ?? null }));
+}
+
+function compactBatchResponse(state, queued, operationId, operationStatus, conflicts = [], message = '', objectIds = []) {
   return {
     operationId,
     operationStatus,
     revision: state.revision,
     publishedAtIso: text(state.project.publishedAtIso),
     conflicts,
+    objects: acknowledgedObjects(state, objectIds),
     status: statusFrom(state, operationStatus === 'applied', true, queued, message),
+  };
+}
+
+export function compactOperationStatusResponse(state, queued, operationId, operation, objectIds = []) {
+  return {
+    operationId,
+    operationStatus: operation.status,
+    operationRevision: Number(operation.target_revision),
+    revision: state.revision,
+    publishedAtIso: text(state.project.publishedAtIso),
+    error: text(operation.error),
+    objects: acknowledgedObjects(state, objectIds),
+    status: statusFrom(state, operation.status === 'applied', true, queued, 'Операция найдена в общей базе.'),
   };
 }
 
@@ -768,6 +787,21 @@ async function route(request, env, ctx) {
     });
   }
 
+  if (request.method === 'GET' && url.pathname.startsWith('/v1/operations/') && url.pathname.endsWith('/status')) {
+    await requireSession(request, env);
+    const operationId = decodeURIComponent(url.pathname.slice('/v1/operations/'.length, -'/status'.length)).slice(0, 160);
+    if (operationId === '') throw new HttpError(400, 'Не указан идентификатор операции.');
+    const operation = await env.DB.prepare('SELECT target_revision, status, error FROM map_operations WHERE operation_id = ?').bind(operationId).first();
+    if (!operation) throw new HttpError(404, 'Операция ещё не найдена в общей базе.');
+    if (operation.status === 'conflict') throw new HttpError(409, 'Операция остановлена из-за конфликта версий.', text(operation.error));
+    const state = await readState(env);
+    const changed = await env.DB.prepare('SELECT object_id FROM map_object_changes WHERE operation_id = ? OR operation_id LIKE ? ORDER BY sequence ASC')
+      .bind(operationId, `${operationId}.%`).all();
+    return jsonResponse(request, env, 200, compactOperationStatusResponse(
+      state, await pendingCount(env), operationId, operation, changed.results.map((row) => text(row.object_id)).filter(Boolean),
+    ));
+  }
+
   if (request.method === 'GET' && url.pathname.startsWith('/v1/operations/')) {
     await requireSession(request, env);
     const operationId = decodeURIComponent(url.pathname.slice('/v1/operations/'.length)).slice(0, 160);
@@ -849,7 +883,7 @@ async function route(request, env, ctx) {
     const existing = await env.DB.prepare('SELECT status FROM map_operations WHERE operation_id = ?').bind(operationId).first();
     if (existing) {
       const state = await readState(env);
-      return jsonResponse(request, env, 200, compactBatchResponse(state, await pendingCount(env), operationId, existing.status, [], 'Повторный пакет распознан и не применён второй раз.'));
+      return jsonResponse(request, env, 200, compactBatchResponse(state, await pendingCount(env), operationId, existing.status, [], 'Повторный пакет распознан и не применён второй раз.', payload.changes.map((change) => text(change.objectId)).filter(Boolean)));
     }
     let state = await readState(env);
     if (state === null) throw new HttpError(503, 'Резервная база не инициализирована.');
@@ -883,7 +917,7 @@ async function route(request, env, ctx) {
       const updated = await readState(env);
       await event(env, 'warning', 'backup-object-batch', `operation=${operationId}, changes=${records.length}, revision=${updated.revision}`);
       ctx.waitUntil(reconcile(env));
-      return jsonResponse(request, env, 202, compactBatchResponse(updated, await pendingCount(env), operationId, 'queued', conflicts, 'Пакет изменений сохранён в общей базе и уже доступен другим устройствам.'));
+      return jsonResponse(request, env, 202, compactBatchResponse(updated, await pendingCount(env), operationId, 'queued', conflicts, 'Пакет изменений сохранён в общей базе и уже доступен другим устройствам.', records.map((record) => record.objectId)));
     }
     const primary = await callPrimary(env, {
       method: 'POST', timeoutMs: 8000,
@@ -893,14 +927,14 @@ async function route(request, env, ctx) {
       operation.project = primary.project;
       await conditionalBackupCommit(env, operation, 'applied', primary.revision, 'primary', records);
       const updated = await readState(env);
-      return jsonResponse(request, env, 200, compactBatchResponse(updated, await pendingCount(env), operationId, 'applied', conflicts));
+      return jsonResponse(request, env, 200, compactBatchResponse(updated, await pendingCount(env), operationId, 'applied', conflicts, '', records.map((record) => record.objectId)));
     }
     if (primary.ok && primary.protocolVersion < 2) throw new HttpError(503, 'Основная база ещё не обновлена до защищённого протокола.');
     if (primary.status > 0 && primary.status < 500) throw new HttpError(503, 'Основная база отклонила защищённую запись.');
     await conditionalBackupCommit(env, operation, 'queued', state.primaryRevision, 'backup', records);
     const updated = await readState(env);
     await event(env, 'warning', 'backup-object-batch', `operation=${operationId}, changes=${records.length}, revision=${updated.revision}`);
-    return jsonResponse(request, env, 202, compactBatchResponse(updated, await pendingCount(env), operationId, 'queued', conflicts, 'Пакет изменений сохранён в общей базе и уже доступен другим устройствам.'));
+    return jsonResponse(request, env, 202, compactBatchResponse(updated, await pendingCount(env), operationId, 'queued', conflicts, 'Пакет изменений сохранён в общей базе и уже доступен другим устройствам.', records.map((record) => record.objectId)));
   }
 
   if (request.method === 'POST' && url.pathname === '/v1/map') {
