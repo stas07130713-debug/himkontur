@@ -1,7 +1,7 @@
 {
   "id": "district-map-main",
   "name": "Карта района выезда",
-  "revision": 1793922747665,
+  "revision": 1794009689648,
   "draft": [
     {
       "id": "kml-hydrant-095f40d67c2912bd9832",
@@ -22900,6 +22900,112 @@
           "shortName": ""
         }
       ]
+    },
+    {
+      "id": "9489fcfe-fd3f-4951-ae39-64e50b2b4414",
+      "kind": "building",
+      "objectType": "demolished",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "longitude": 32.81851977109909,
+          "latitude": 67.91234213699863
+        },
+        {
+          "longitude": 32.818873822689056,
+          "latitude": 67.91265075943883
+        },
+        {
+          "longitude": 32.81916040240449,
+          "latitude": 67.91260428333801
+        },
+        {
+          "longitude": 32.81899452209473,
+          "latitude": 67.91245963589424
+        },
+        {
+          "longitude": 32.818806767463684,
+          "latitude": 67.91229599456608
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.91247056204716,
+        "longitude": 32.81887105715021
+      },
+      "number": "0",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "",
+      "workshopShort": "",
+      "departments": [
+        {
+          "id": "89343352-295a-4d31-a7e9-eec41aedca69",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "fa9c0fb9-dc7a-4e41-812d-eb1ee907212d",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "note": "",
+      "updatedAtIso": "2026-11-06T12:16:08.141Z"
+    },
+    {
+      "id": "52eeb867-2338-450a-b6cf-d468b6222c0e",
+      "kind": "building",
+      "objectType": "demolished",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91205339734209,
+          "longitude": 32.820303670980216
+        },
+        {
+          "latitude": 67.91235150201324,
+          "longitude": 32.820617030723085
+        },
+        {
+          "latitude": 67.91230964287377,
+          "longitude": 32.82089865960908
+        },
+        {
+          "latitude": 67.91201153820262,
+          "longitude": 32.82058529986621
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.91218152010794,
+        "longitude": 32.82060116529465
+      },
+      "number": "0",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "",
+      "workshopShort": "",
+      "departments": [
+        {
+          "id": "e2aed41c-db45-476a-8c23-b856a230a313",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "75837bed-1c14-4fc0-a9bb-23e5b9d45206",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "note": "",
+      "updatedAtIso": "2026-11-06T12:16:29.517Z"
     }
   ],
   "published": [
@@ -45800,8 +45906,114 @@
           "shortName": ""
         }
       ]
+    },
+    {
+      "id": "9489fcfe-fd3f-4951-ae39-64e50b2b4414",
+      "kind": "building",
+      "objectType": "demolished",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "longitude": 32.81851977109909,
+          "latitude": 67.91234213699863
+        },
+        {
+          "longitude": 32.818873822689056,
+          "latitude": 67.91265075943883
+        },
+        {
+          "longitude": 32.81916040240449,
+          "latitude": 67.91260428333801
+        },
+        {
+          "longitude": 32.81899452209473,
+          "latitude": 67.91245963589424
+        },
+        {
+          "longitude": 32.818806767463684,
+          "latitude": 67.91229599456608
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.91247056204716,
+        "longitude": 32.81887105715021
+      },
+      "number": "0",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "",
+      "workshopShort": "",
+      "departments": [
+        {
+          "id": "89343352-295a-4d31-a7e9-eec41aedca69",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "fa9c0fb9-dc7a-4e41-812d-eb1ee907212d",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "note": "",
+      "updatedAtIso": "2026-11-06T12:16:08.141Z"
+    },
+    {
+      "id": "52eeb867-2338-450a-b6cf-d468b6222c0e",
+      "kind": "building",
+      "objectType": "demolished",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91205339734209,
+          "longitude": 32.820303670980216
+        },
+        {
+          "latitude": 67.91235150201324,
+          "longitude": 32.820617030723085
+        },
+        {
+          "latitude": 67.91230964287377,
+          "longitude": 32.82089865960908
+        },
+        {
+          "latitude": 67.91201153820262,
+          "longitude": 32.82058529986621
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.91218152010794,
+        "longitude": 32.82060116529465
+      },
+      "number": "0",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "",
+      "workshopShort": "",
+      "departments": [
+        {
+          "id": "e2aed41c-db45-476a-8c23-b856a230a313",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "75837bed-1c14-4fc0-a9bb-23e5b9d45206",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "note": "",
+      "updatedAtIso": "2026-11-06T12:16:29.517Z"
     }
   ],
-  "draftSavedAtIso": "2026-11-06T08:25:51.594Z",
-  "publishedAtIso": "2026-11-06T08:25:51.594Z"
+  "draftSavedAtIso": "2026-11-07T00:01:28.938Z",
+  "publishedAtIso": "2026-11-07T00:01:28.938Z"
 }
