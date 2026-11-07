@@ -1,7 +1,7 @@
 {
   "id": "district-map-main",
   "name": "Карта района выезда",
-  "revision": 1794009689648,
+  "revision": 1794067167210,
   "draft": [
     {
       "id": "kml-hydrant-095f40d67c2912bd9832",
@@ -23006,6 +23006,561 @@
       ],
       "note": "",
       "updatedAtIso": "2026-11-06T12:16:29.517Z"
+    },
+    {
+      "id": "d1f73e5e-bea7-4d64-bf61-59620a1df061",
+      "point": {
+        "longitude": 32.8283235034053,
+        "latitude": 67.91460309561269
+      },
+      "note": "Изменения внесены в раздел «Расположение таблички» администратором 07.11.2026.",
+      "updatedAtIso": "2026-11-07T13:09:31.818Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91486676948342,
+          "longitude": 32.82831997432432
+        },
+        {
+          "latitude": 67.91496786814854,
+          "longitude": 32.828424807118004
+        },
+        {
+          "latitude": 67.91500057415386,
+          "longitude": 32.82820169157778
+        },
+        {
+          "latitude": 67.91509633821562,
+          "longitude": 32.82830099273194
+        },
+        {
+          "latitude": 67.91503508359278,
+          "longitude": 32.8287188627264
+        },
+        {
+          "latitude": 67.91501669717988,
+          "longitude": 32.828699797202354
+        },
+        {
+          "latitude": 67.91480887679465,
+          "longitude": 32.83011751719133
+        },
+        {
+          "latitude": 67.91464971076243,
+          "longitude": 32.829952472283956
+        },
+        {
+          "latitude": 67.91466756589058,
+          "longitude": 32.829830667235555
+        },
+        {
+          "latitude": 67.91446858501347,
+          "longitude": 32.82962433690253
+        },
+        {
+          "latitude": 67.91442947226875,
+          "longitude": 32.82989115827302
+        },
+        {
+          "latitude": 67.9141082015778,
+          "longitude": 32.82955802129218
+        },
+        {
+          "latitude": 67.91415129534676,
+          "longitude": 32.82926404196208
+        },
+        {
+          "latitude": 67.91407474436555,
+          "longitude": 32.82918466353299
+        },
+        {
+          "latitude": 67.91445586645621,
+          "longitude": 32.82658470489279
+        },
+        {
+          "latitude": 67.91453520746315,
+          "longitude": 32.82666697639858
+        },
+        {
+          "latitude": 67.91455811133385,
+          "longitude": 32.826510729573755
+        },
+        {
+          "latitude": 67.91505626259443,
+          "longitude": 32.82702728029449
+        }
+      ],
+      "territoryNames": [],
+      "number": "3.12",
+      "installationName": "",
+      "inventoryNumber": "50001",
+      "planningDocuments": [
+        {
+          "id": "82c9eb8c-bbff-4578-ac2b-7c33245b672b",
+          "kind": "ПТП",
+          "number": "7 (46/8)"
+        },
+        {
+          "id": "016b783b-76dd-41e9-b9cb-87de375bf170",
+          "kind": "ПМЛА",
+          "number": "6"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "2f66a182-ce76-4f87-93d0-44ca2dedd168",
+          "fullName": "Отделение разделение файнштейна. Здание главного корпуса.",
+          "shortName": "ОРФ "
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "7e6c8fa7-cd6c-4d4a-b225-9a037f7dd4fd",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91405174763788,
+          "longitude": 32.82578334476505
+        },
+        {
+          "latitude": 67.91396777007147,
+          "longitude": 32.82631411849405
+        },
+        {
+          "latitude": 67.9137640512306,
+          "longitude": 32.82608613107647
+        },
+        {
+          "latitude": 67.91384802879702,
+          "longitude": 32.825555357347476
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.91390789943424,
+        "longitude": 32.82593473792076
+      },
+      "number": "3.13",
+      "installationName": "",
+      "inventoryNumber": "50003",
+      "planningDocuments": [
+        {
+          "id": "9ff72992-6094-40cc-a450-90faa550564d",
+          "kind": "ПТП",
+          "number": "7 (46/8)"
+        },
+        {
+          "id": "8d137a6e-d1f3-42d0-ac6a-f7445d67d0cc",
+          "kind": "ПМЛА",
+          "number": "6"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "53b65293-58d2-4bae-afc4-6401bd6adb5b",
+          "fullName": "Отделение разделения файнштейна. Корпус среднего и мелкого дробления.",
+          "shortName": "ОРФ КСМД"
+        }
+      ],
+      "sites": [],
+      "note": "",
+      "updatedAtIso": "2026-11-07T13:09:18.723Z"
+    },
+    {
+      "id": "3132b7c5-e201-43eb-b53b-de85689ff914",
+      "point": {
+        "latitude": 67.91518259004208,
+        "longitude": 32.83205671219193
+      },
+      "note": "Изменения внесены в разделы: «Инвентарный номер», «Участки» администратором 07.11.2026.",
+      "updatedAtIso": "2026-11-07T13:25:36.921Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91523783268809,
+          "longitude": 32.83241629600525
+        },
+        {
+          "latitude": 67.91519547770122,
+          "longitude": 32.83268451690674
+        },
+        {
+          "latitude": 67.91464716722233,
+          "longitude": 32.83207531844755
+        },
+        {
+          "latitude": 67.91468701097148,
+          "longitude": 32.831813702387734
+        },
+        {
+          "latitude": 67.91380920407839,
+          "longitude": 32.830823559033945
+        },
+        {
+          "latitude": 67.91392002079061,
+          "longitude": 32.8301215168392
+        },
+        {
+          "latitude": 67.91577936464819,
+          "longitude": 32.832190990448
+        },
+        {
+          "latitude": 67.91586407241718,
+          "longitude": 32.831651866436005
+        },
+        {
+          "latitude": 67.91592559794125,
+          "longitude": 32.83171877774339
+        },
+        {
+          "latitude": 67.91584187407358,
+          "longitude": 32.832266935706485
+        },
+        {
+          "latitude": 67.91598892733317,
+          "longitude": 32.83242681511234
+        },
+        {
+          "latitude": 67.91595028569081,
+          "longitude": 32.83263237434852
+        },
+        {
+          "latitude": 67.91587622236347,
+          "longitude": 32.83312628751315
+        }
+      ],
+      "territoryNames": [],
+      "number": "3.11",
+      "installationName": "",
+      "inventoryNumber": "50002, 10005,10006, 51891",
+      "planningDocuments": [
+        {
+          "id": "46defc14-f1a1-4b7b-bd0c-e3f394b57b94",
+          "kind": "ПТП",
+          "number": "7 (46/8)"
+        },
+        {
+          "id": "ac86f1a3-d7f6-40da-b23f-0262b55b55a0",
+          "kind": "ПМЛА",
+          "number": "6"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "fc97d950-9b3d-413c-8393-8d01fe278839",
+          "fullName": "Склад руды и флюсов",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "f10d9e27-ecee-440d-b4af-07bd53476805",
+          "fullName": "Центральная вентиляторная",
+          "shortName": ""
+        },
+        {
+          "id": "6dda6e89-00c5-4f96-8155-1b0f694ece7b",
+          "fullName": "Здание сушки восстановителя РЦ",
+          "shortName": ""
+        },
+        {
+          "id": "c2218ed5-9458-4ed7-a474-771e1f02b61f",
+          "fullName": "Здание установки приготовления восстановителей",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "e844d5ee-95cb-4998-87c0-063fc0906a21",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91344479742403,
+          "longitude": 32.83440629099971
+        },
+        {
+          "latitude": 67.91335044880421,
+          "longitude": 32.835036556841004
+        },
+        {
+          "latitude": 67.91302916038829,
+          "longitude": 32.8346963777625
+        },
+        {
+          "latitude": 67.91312350900812,
+          "longitude": 32.8340661119212
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.91323697890617,
+        "longitude": 32.8345513343811
+      },
+      "number": "3.10",
+      "installationName": "",
+      "inventoryNumber": "10003",
+      "planningDocuments": [
+        {
+          "id": "20ef6bbb-14f8-4210-a1e0-4e28cc237e7c",
+          "kind": "ПТП",
+          "number": "8"
+        },
+        {
+          "id": "1b43b7ab-127a-4bc8-80eb-78b0f61f7ed9",
+          "kind": "ПМЛА",
+          "number": "6"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "1032f683-fffa-44d8-bcca-d2ea61a4effb",
+          "fullName": "Здание механической мастерской",
+          "shortName": ""
+        }
+      ],
+      "sites": [],
+      "note": "",
+      "updatedAtIso": "2026-11-07T13:32:49.601Z"
+    },
+    {
+      "id": "7e0b0fc8-9dca-451a-b7a7-22ffd533da2d",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91397817931232,
+          "longitude": 32.83497878469107
+        },
+        {
+          "latitude": 67.91390811137134,
+          "longitude": 32.83541198874917
+        },
+        {
+          "latitude": 67.91354767143159,
+          "longitude": 32.8349996253145
+        },
+        {
+          "latitude": 67.91361773937257,
+          "longitude": 32.8345664212564
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.91376292537196,
+        "longitude": 32.834989205002785
+      },
+      "number": "3.6",
+      "installationName": "",
+      "inventoryNumber": "10002",
+      "planningDocuments": [
+        {
+          "id": "1f995640-cb5d-4592-a1b9-1bc207def2a6",
+          "kind": "ПТП",
+          "number": "8 (46/13)"
+        },
+        {
+          "id": "4e1144c8-8e8e-44d4-8f0d-05d48f5266e0",
+          "kind": "ПМЛА",
+          "number": "6"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [],
+      "sites": [
+        {
+          "id": "1150946c-0bee-4d55-9813-af6811ff9101",
+          "fullName": "участок отчистки от свинца и пыли",
+          "shortName": ""
+        }
+      ],
+      "note": "",
+      "updatedAtIso": "2026-11-07T13:40:31.807Z"
+    },
+    {
+      "id": "9eea3627-120a-4e5f-a62a-a439688455a1",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "longitude": 32.836246490478516,
+          "latitude": 67.91451854377826
+        },
+        {
+          "longitude": 32.83660590648651,
+          "latitude": 67.91484831516831
+        },
+        {
+          "longitude": 32.83772975206375,
+          "latitude": 67.91467384954166
+        },
+        {
+          "longitude": 32.83761978149414,
+          "latitude": 67.91457199328147
+        },
+        {
+          "longitude": 32.83732205629349,
+          "latitude": 67.9143430671869
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "longitude": 32.836938224768375,
+        "latitude": 67.91460254150216
+      },
+      "number": "3.5",
+      "installationName": "",
+      "inventoryNumber": "10008",
+      "planningDocuments": [
+        {
+          "id": "b0df4bb9-6edb-4d1d-8a4e-b90b822bc2cf",
+          "kind": "ПТП",
+          "number": "8 (46/13)"
+        },
+        {
+          "id": "f1aa50bd-b5da-4082-bf32-7f56bc939e19",
+          "kind": "ПМЛА",
+          "number": "6"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "08dfd585-81a6-4330-86cd-1b775ecfe45f",
+          "fullName": "Здание установки получения никелевого порошка",
+          "shortName": ""
+        }
+      ],
+      "sites": [],
+      "note": "Изменения внесены в раздел «Расположение таблички» администратором 07.11.2026.",
+      "updatedAtIso": "2026-11-07T14:01:19.980Z"
+    },
+    {
+      "id": "5c76b044-0d68-4cd7-b8ef-8c3aa0eb8402",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91474260848622,
+          "longitude": 32.840150949388565
+        },
+        {
+          "latitude": 67.91528036237406,
+          "longitude": 32.84072288079206
+        },
+        {
+          "latitude": 67.91517033952522,
+          "longitude": 32.841454672516925
+        },
+        {
+          "latitude": 67.91463258563738,
+          "longitude": 32.84088274111343
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.91495647400572,
+        "longitude": 32.840802810952745
+      },
+      "number": "3.4",
+      "installationName": "",
+      "inventoryNumber": "90002",
+      "planningDocuments": [
+        {
+          "id": "5587e4aa-24ac-4c74-8fb1-fadc1eaf833f",
+          "kind": "ПТП",
+          "number": "8 (46/13)"
+        },
+        {
+          "id": "9a631aac-2a52-4424-b200-d9ddf58a84b5",
+          "kind": "ПМЛА",
+          "number": "7"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "e063b533-1db6-4f22-bc59-97f0b0083329",
+          "fullName": "Серно-кислотное отделение,  рафинировочного цеха,  склад готовой продукции",
+          "shortName": "СКО РЦ СГП"
+        }
+      ],
+      "sites": [],
+      "note": "",
+      "updatedAtIso": "2026-11-07T15:57:53.261Z"
+    },
+    {
+      "id": "d404367f-7288-49f1-a58f-af67546a8daa",
+      "kind": "building",
+      "objectType": "demolished",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.9137299130295,
+          "longitude": 32.83729512794773
+        },
+        {
+          "latitude": 67.91352918518666,
+          "longitude": 32.83707539874113
+        },
+        {
+          "latitude": 67.913672395244,
+          "longitude": 32.836150037209585
+        },
+        {
+          "latitude": 67.91387312308684,
+          "longitude": 32.83636976641619
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.91370115413675,
+        "longitude": 32.83672258257866
+      },
+      "number": "0",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "",
+      "workshopShort": "",
+      "departments": [
+        {
+          "id": "cb4dc911-05f3-432d-99d7-32db6f8e93e7",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "3215dd73-0115-4b91-b3cc-f7bc16c1b0d6",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "note": "",
+      "updatedAtIso": "2026-11-07T15:59:25.468Z"
     }
   ],
   "published": [
@@ -46012,8 +46567,563 @@
       ],
       "note": "",
       "updatedAtIso": "2026-11-06T12:16:29.517Z"
+    },
+    {
+      "id": "d1f73e5e-bea7-4d64-bf61-59620a1df061",
+      "point": {
+        "longitude": 32.8283235034053,
+        "latitude": 67.91460309561269
+      },
+      "note": "Изменения внесены в раздел «Расположение таблички» администратором 07.11.2026.",
+      "updatedAtIso": "2026-11-07T13:09:31.818Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91486676948342,
+          "longitude": 32.82831997432432
+        },
+        {
+          "latitude": 67.91496786814854,
+          "longitude": 32.828424807118004
+        },
+        {
+          "latitude": 67.91500057415386,
+          "longitude": 32.82820169157778
+        },
+        {
+          "latitude": 67.91509633821562,
+          "longitude": 32.82830099273194
+        },
+        {
+          "latitude": 67.91503508359278,
+          "longitude": 32.8287188627264
+        },
+        {
+          "latitude": 67.91501669717988,
+          "longitude": 32.828699797202354
+        },
+        {
+          "latitude": 67.91480887679465,
+          "longitude": 32.83011751719133
+        },
+        {
+          "latitude": 67.91464971076243,
+          "longitude": 32.829952472283956
+        },
+        {
+          "latitude": 67.91466756589058,
+          "longitude": 32.829830667235555
+        },
+        {
+          "latitude": 67.91446858501347,
+          "longitude": 32.82962433690253
+        },
+        {
+          "latitude": 67.91442947226875,
+          "longitude": 32.82989115827302
+        },
+        {
+          "latitude": 67.9141082015778,
+          "longitude": 32.82955802129218
+        },
+        {
+          "latitude": 67.91415129534676,
+          "longitude": 32.82926404196208
+        },
+        {
+          "latitude": 67.91407474436555,
+          "longitude": 32.82918466353299
+        },
+        {
+          "latitude": 67.91445586645621,
+          "longitude": 32.82658470489279
+        },
+        {
+          "latitude": 67.91453520746315,
+          "longitude": 32.82666697639858
+        },
+        {
+          "latitude": 67.91455811133385,
+          "longitude": 32.826510729573755
+        },
+        {
+          "latitude": 67.91505626259443,
+          "longitude": 32.82702728029449
+        }
+      ],
+      "territoryNames": [],
+      "number": "3.12",
+      "installationName": "",
+      "inventoryNumber": "50001",
+      "planningDocuments": [
+        {
+          "id": "82c9eb8c-bbff-4578-ac2b-7c33245b672b",
+          "kind": "ПТП",
+          "number": "7 (46/8)"
+        },
+        {
+          "id": "016b783b-76dd-41e9-b9cb-87de375bf170",
+          "kind": "ПМЛА",
+          "number": "6"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "2f66a182-ce76-4f87-93d0-44ca2dedd168",
+          "fullName": "Отделение разделение файнштейна. Здание главного корпуса.",
+          "shortName": "ОРФ "
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "7e6c8fa7-cd6c-4d4a-b225-9a037f7dd4fd",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91405174763788,
+          "longitude": 32.82578334476505
+        },
+        {
+          "latitude": 67.91396777007147,
+          "longitude": 32.82631411849405
+        },
+        {
+          "latitude": 67.9137640512306,
+          "longitude": 32.82608613107647
+        },
+        {
+          "latitude": 67.91384802879702,
+          "longitude": 32.825555357347476
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.91390789943424,
+        "longitude": 32.82593473792076
+      },
+      "number": "3.13",
+      "installationName": "",
+      "inventoryNumber": "50003",
+      "planningDocuments": [
+        {
+          "id": "9ff72992-6094-40cc-a450-90faa550564d",
+          "kind": "ПТП",
+          "number": "7 (46/8)"
+        },
+        {
+          "id": "8d137a6e-d1f3-42d0-ac6a-f7445d67d0cc",
+          "kind": "ПМЛА",
+          "number": "6"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "53b65293-58d2-4bae-afc4-6401bd6adb5b",
+          "fullName": "Отделение разделения файнштейна. Корпус среднего и мелкого дробления.",
+          "shortName": "ОРФ КСМД"
+        }
+      ],
+      "sites": [],
+      "note": "",
+      "updatedAtIso": "2026-11-07T13:09:18.723Z"
+    },
+    {
+      "id": "3132b7c5-e201-43eb-b53b-de85689ff914",
+      "point": {
+        "latitude": 67.91518259004208,
+        "longitude": 32.83205671219193
+      },
+      "note": "Изменения внесены в разделы: «Инвентарный номер», «Участки» администратором 07.11.2026.",
+      "updatedAtIso": "2026-11-07T13:25:36.921Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91523783268809,
+          "longitude": 32.83241629600525
+        },
+        {
+          "latitude": 67.91519547770122,
+          "longitude": 32.83268451690674
+        },
+        {
+          "latitude": 67.91464716722233,
+          "longitude": 32.83207531844755
+        },
+        {
+          "latitude": 67.91468701097148,
+          "longitude": 32.831813702387734
+        },
+        {
+          "latitude": 67.91380920407839,
+          "longitude": 32.830823559033945
+        },
+        {
+          "latitude": 67.91392002079061,
+          "longitude": 32.8301215168392
+        },
+        {
+          "latitude": 67.91577936464819,
+          "longitude": 32.832190990448
+        },
+        {
+          "latitude": 67.91586407241718,
+          "longitude": 32.831651866436005
+        },
+        {
+          "latitude": 67.91592559794125,
+          "longitude": 32.83171877774339
+        },
+        {
+          "latitude": 67.91584187407358,
+          "longitude": 32.832266935706485
+        },
+        {
+          "latitude": 67.91598892733317,
+          "longitude": 32.83242681511234
+        },
+        {
+          "latitude": 67.91595028569081,
+          "longitude": 32.83263237434852
+        },
+        {
+          "latitude": 67.91587622236347,
+          "longitude": 32.83312628751315
+        }
+      ],
+      "territoryNames": [],
+      "number": "3.11",
+      "installationName": "",
+      "inventoryNumber": "50002, 10005,10006, 51891",
+      "planningDocuments": [
+        {
+          "id": "46defc14-f1a1-4b7b-bd0c-e3f394b57b94",
+          "kind": "ПТП",
+          "number": "7 (46/8)"
+        },
+        {
+          "id": "ac86f1a3-d7f6-40da-b23f-0262b55b55a0",
+          "kind": "ПМЛА",
+          "number": "6"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "fc97d950-9b3d-413c-8393-8d01fe278839",
+          "fullName": "Склад руды и флюсов",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "f10d9e27-ecee-440d-b4af-07bd53476805",
+          "fullName": "Центральная вентиляторная",
+          "shortName": ""
+        },
+        {
+          "id": "6dda6e89-00c5-4f96-8155-1b0f694ece7b",
+          "fullName": "Здание сушки восстановителя РЦ",
+          "shortName": ""
+        },
+        {
+          "id": "c2218ed5-9458-4ed7-a474-771e1f02b61f",
+          "fullName": "Здание установки приготовления восстановителей",
+          "shortName": ""
+        }
+      ]
+    },
+    {
+      "id": "e844d5ee-95cb-4998-87c0-063fc0906a21",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91344479742403,
+          "longitude": 32.83440629099971
+        },
+        {
+          "latitude": 67.91335044880421,
+          "longitude": 32.835036556841004
+        },
+        {
+          "latitude": 67.91302916038829,
+          "longitude": 32.8346963777625
+        },
+        {
+          "latitude": 67.91312350900812,
+          "longitude": 32.8340661119212
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.91323697890617,
+        "longitude": 32.8345513343811
+      },
+      "number": "3.10",
+      "installationName": "",
+      "inventoryNumber": "10003",
+      "planningDocuments": [
+        {
+          "id": "20ef6bbb-14f8-4210-a1e0-4e28cc237e7c",
+          "kind": "ПТП",
+          "number": "8"
+        },
+        {
+          "id": "1b43b7ab-127a-4bc8-80eb-78b0f61f7ed9",
+          "kind": "ПМЛА",
+          "number": "6"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "1032f683-fffa-44d8-bcca-d2ea61a4effb",
+          "fullName": "Здание механической мастерской",
+          "shortName": ""
+        }
+      ],
+      "sites": [],
+      "note": "",
+      "updatedAtIso": "2026-11-07T13:32:49.601Z"
+    },
+    {
+      "id": "7e0b0fc8-9dca-451a-b7a7-22ffd533da2d",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91397817931232,
+          "longitude": 32.83497878469107
+        },
+        {
+          "latitude": 67.91390811137134,
+          "longitude": 32.83541198874917
+        },
+        {
+          "latitude": 67.91354767143159,
+          "longitude": 32.8349996253145
+        },
+        {
+          "latitude": 67.91361773937257,
+          "longitude": 32.8345664212564
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.91376292537196,
+        "longitude": 32.834989205002785
+      },
+      "number": "3.6",
+      "installationName": "",
+      "inventoryNumber": "10002",
+      "planningDocuments": [
+        {
+          "id": "1f995640-cb5d-4592-a1b9-1bc207def2a6",
+          "kind": "ПТП",
+          "number": "8 (46/13)"
+        },
+        {
+          "id": "4e1144c8-8e8e-44d4-8f0d-05d48f5266e0",
+          "kind": "ПМЛА",
+          "number": "6"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [],
+      "sites": [
+        {
+          "id": "1150946c-0bee-4d55-9813-af6811ff9101",
+          "fullName": "участок отчистки от свинца и пыли",
+          "shortName": ""
+        }
+      ],
+      "note": "",
+      "updatedAtIso": "2026-11-07T13:40:31.807Z"
+    },
+    {
+      "id": "9eea3627-120a-4e5f-a62a-a439688455a1",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "longitude": 32.836246490478516,
+          "latitude": 67.91451854377826
+        },
+        {
+          "longitude": 32.83660590648651,
+          "latitude": 67.91484831516831
+        },
+        {
+          "longitude": 32.83772975206375,
+          "latitude": 67.91467384954166
+        },
+        {
+          "longitude": 32.83761978149414,
+          "latitude": 67.91457199328147
+        },
+        {
+          "longitude": 32.83732205629349,
+          "latitude": 67.9143430671869
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "longitude": 32.836938224768375,
+        "latitude": 67.91460254150216
+      },
+      "number": "3.5",
+      "installationName": "",
+      "inventoryNumber": "10008",
+      "planningDocuments": [
+        {
+          "id": "b0df4bb9-6edb-4d1d-8a4e-b90b822bc2cf",
+          "kind": "ПТП",
+          "number": "8 (46/13)"
+        },
+        {
+          "id": "f1aa50bd-b5da-4082-bf32-7f56bc939e19",
+          "kind": "ПМЛА",
+          "number": "6"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "08dfd585-81a6-4330-86cd-1b775ecfe45f",
+          "fullName": "Здание установки получения никелевого порошка",
+          "shortName": ""
+        }
+      ],
+      "sites": [],
+      "note": "Изменения внесены в раздел «Расположение таблички» администратором 07.11.2026.",
+      "updatedAtIso": "2026-11-07T14:01:19.980Z"
+    },
+    {
+      "id": "5c76b044-0d68-4cd7-b8ef-8c3aa0eb8402",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91474260848622,
+          "longitude": 32.840150949388565
+        },
+        {
+          "latitude": 67.91528036237406,
+          "longitude": 32.84072288079206
+        },
+        {
+          "latitude": 67.91517033952522,
+          "longitude": 32.841454672516925
+        },
+        {
+          "latitude": 67.91463258563738,
+          "longitude": 32.84088274111343
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.91495647400572,
+        "longitude": 32.840802810952745
+      },
+      "number": "3.4",
+      "installationName": "",
+      "inventoryNumber": "90002",
+      "planningDocuments": [
+        {
+          "id": "5587e4aa-24ac-4c74-8fb1-fadc1eaf833f",
+          "kind": "ПТП",
+          "number": "8 (46/13)"
+        },
+        {
+          "id": "9a631aac-2a52-4424-b200-d9ddf58a84b5",
+          "kind": "ПМЛА",
+          "number": "7"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "e063b533-1db6-4f22-bc59-97f0b0083329",
+          "fullName": "Серно-кислотное отделение,  рафинировочного цеха,  склад готовой продукции",
+          "shortName": "СКО РЦ СГП"
+        }
+      ],
+      "sites": [],
+      "note": "",
+      "updatedAtIso": "2026-11-07T15:57:53.261Z"
+    },
+    {
+      "id": "d404367f-7288-49f1-a58f-af67546a8daa",
+      "kind": "building",
+      "objectType": "demolished",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.9137299130295,
+          "longitude": 32.83729512794773
+        },
+        {
+          "latitude": 67.91352918518666,
+          "longitude": 32.83707539874113
+        },
+        {
+          "latitude": 67.913672395244,
+          "longitude": 32.836150037209585
+        },
+        {
+          "latitude": 67.91387312308684,
+          "longitude": 32.83636976641619
+        }
+      ],
+      "territoryNames": [],
+      "point": {
+        "latitude": 67.91370115413675,
+        "longitude": 32.83672258257866
+      },
+      "number": "0",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [],
+      "workshopFull": "",
+      "workshopShort": "",
+      "departments": [
+        {
+          "id": "cb4dc911-05f3-432d-99d7-32db6f8e93e7",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "sites": [
+        {
+          "id": "3215dd73-0115-4b91-b3cc-f7bc16c1b0d6",
+          "fullName": "",
+          "shortName": ""
+        }
+      ],
+      "note": "",
+      "updatedAtIso": "2026-11-07T15:59:25.468Z"
     }
   ],
-  "draftSavedAtIso": "2026-11-07T00:01:28.938Z",
-  "publishedAtIso": "2026-11-07T00:01:28.938Z"
+  "draftSavedAtIso": "2026-11-07T15:59:26.974Z",
+  "publishedAtIso": "2026-11-07T15:59:26.974Z"
 }
