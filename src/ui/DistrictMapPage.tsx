@@ -10,6 +10,7 @@ import { round } from '../core/math';
 import { MAP_BOUNDS, MAP_INITIAL_CENTER } from './defaults';
 import { DistrictMapMarker, FireReservoirPlanSymbol, HydrantPlanSymbol } from './DistrictMapMarker';
 import { declutterDistrictMarkers } from './district-marker-layout';
+import { boundsForPoints, boundsIntersect, createFrameQueue } from './district-viewport';
 import { FireDispatchTicket } from './FireDispatchTicket';
 import { HydrantIndicatorPlate } from './HydrantIndicatorPlate';
 import type {
@@ -120,6 +121,8 @@ type ContourDraft = Readonly<{
   points: readonly GeoPoint[];
   source: 'automatic' | 'manual' | 'editing';
   editingObjectId: string | null;
+  circleCenter?: GeoPoint;
+  circleRadius?: number | undefined;
 }>;
 
 const KM_PER_LATITUDE_DEGREE = 111.32;
@@ -760,8 +763,11 @@ export function DistrictMapPage(props: Props) {
   };
   const buildingContourResolverRef = useRef<((point: GeoPoint) => readonly GeoPoint[] | null) | null>(null);
   const contourDragRef = useRef<ContourDragState | null>(null);
+  const circleDragRef = useRef<{ pointerId: number; before: ContourDraft } | null>(null);
   const contourDraftRef = useRef<ContourDraft | null>(null);
   const objectsRef = useRef(props.objects);
+  const centerFrames = useMemo(() => createFrameQueue<GeoPoint>(setCenter, (callback) => window.requestAnimationFrame(callback), (id) => window.cancelAnimationFrame(id)), []);
+  useEffect(() => () => centerFrames.dispose(), [centerFrames]);
   objectsRef.current = props.objects;
 
   const setContourDraft = (value: ContourDraft | null) => {
@@ -866,8 +872,15 @@ export function DistrictMapPage(props: Props) {
     }
     return next;
   });
-  const visibleObjects = props.objects.filter((object) => object.id === searchHighlightedId
-    || visibleLayers.has(districtLayerKey(object)));
+  const objectBounds = useMemo(() => new Map(props.objects.map((object) => [object.id,
+    boundsForPoints(object.kind === 'building' ? [object.point, ...object.contour] : [object.point]),
+  ])), [props.objects]);
+  const visibleObjects = useMemo(() => {
+    // Include a generous margin for wide hydrant labels and fast panning.
+    const viewport = boundsForPoints([projection.unproject(-180, -180), projection.unproject(viewSize.width + 180, viewSize.height + 180)]);
+    return props.objects.filter((object) => (object.id === searchHighlightedId || visibleLayers.has(districtLayerKey(object)))
+      && (object.id === selectedId || object.id === searchHighlightedId || boundsIntersect(objectBounds.get(object.id) ?? viewport, viewport)));
+  }, [props.objects, projection, viewSize, visibleLayers, selectedId, searchHighlightedId, objectBounds]);
   const buildingMarkerScales = twoTierBuildingMarkerScales(visibleObjects, projection.project);
   const markerPlacements = useMemo(() => {
     const raw = visibleObjects
@@ -950,10 +963,25 @@ export function DistrictMapPage(props: Props) {
     if (contextMenu === null) return;
     props.onClearTransientHistory();
     const automatic = objectType === 'territory' ? null : buildingContourResolverRef.current?.(contextMenu.point) ?? null;
-    setContourDraft({ objectType, mapRole, points: automatic ?? [contextMenu.point], source: automatic === null ? 'manual' : 'automatic', editingObjectId: null });
+    setContourDraft({ objectType, mapRole, points: automatic ?? [contextMenu.point], source: automatic === null ? 'manual' : 'automatic', editingObjectId: null, circleCenter: contextMenu.point });
     setContourStatus('');
     setContextMenu(null);
     setSelectedId(null);
+  };
+  const makeCircle = (radius: number) => {
+    if (!contourDraft?.circleCenter || !Number.isFinite(radius) || radius <= 0 || radius > 10000) return;
+    const origin = contourDraft.circleCenter;
+    const angular = radius / 6371008.8;
+    const lat = origin.latitude * Math.PI / 180;
+    const lon = origin.longitude * Math.PI / 180;
+    const points = Array.from({ length: 96 }, (_, index) => {
+      const bearing = index * 2 * Math.PI / 96;
+      const latitude = Math.asin(Math.sin(lat) * Math.cos(angular) + Math.cos(lat) * Math.sin(angular) * Math.cos(bearing));
+      const longitude = lon + Math.atan2(Math.sin(bearing) * Math.sin(angular) * Math.cos(lat), Math.cos(angular) - Math.sin(lat) * Math.sin(latitude));
+      return { latitude: latitude * 180 / Math.PI, longitude: longitude * 180 / Math.PI };
+    });
+    applyContourStep(contourDraft, { ...contourDraft, points, source: 'automatic', circleRadius: radius }, 'Создан круговой контур');
+    setContourStatus('Тяните край круга левой кнопкой мыши: центр остаётся на месте. Затем нажмите «Принять контур».');
   };
   const startContourEdit = (object: DistrictBuilding) => {
     if (object.contour.length < (object.mapRole === 'response-boundary' ? 2 : 3)) return;
@@ -1298,6 +1326,18 @@ export function DistrictMapPage(props: Props) {
     setPanning(true);
   };
   const onPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (circleDragRef.current?.pointerId === event.pointerId) {
+      const current = contourDraftRef.current;
+      const point = locate(event.clientX, event.clientY);
+      if (current?.circleCenter && point) {
+        const origin = projection.project(current.circleCenter);
+        const edge = projection.project(point);
+        const radius = Math.max(2, Math.hypot(edge.x - origin.x, edge.y - origin.y));
+        const points = Array.from({ length: 96 }, (_, i) => projection.unproject(origin.x + radius * Math.cos(i * Math.PI / 48), origin.y + radius * Math.sin(i * Math.PI / 48)));
+        setContourDraft({ ...current, points });
+      }
+      return;
+    }
     const contourDrag = contourDragRef.current;
     if (contourDrag?.pointerId === event.pointerId) {
       const point = locate(event.clientX, event.clientY);
@@ -1327,7 +1367,7 @@ export function DistrictMapPage(props: Props) {
       const rect = stageRef.current?.getBoundingClientRect();
       if (rect === undefined) return;
       const startWorld = worldCoordinate(rulerPan.center);
-      setCenter(clampCenter(geoFromWorld(
+      centerFrames.push(clampCenter(geoFromWorld(
         startWorld.x - ((event.clientX - rulerPan.clientX) / rect.width * viewSize.width) / projection.worldPixels,
         startWorld.y - ((event.clientY - rulerPan.clientY) / rect.height * viewSize.height) / projection.worldPixels,
       )));
@@ -1372,12 +1412,21 @@ export function DistrictMapPage(props: Props) {
     const rect = stageRef.current?.getBoundingClientRect();
     if (rect === undefined) return;
     const startWorld = worldCoordinate(pan.center);
-    setCenter(clampCenter(geoFromWorld(
+    centerFrames.push(clampCenter(geoFromWorld(
       startWorld.x - ((event.clientX - pan.clientX) / rect.width * viewSize.width) / projection.worldPixels,
       startWorld.y - ((event.clientY - pan.clientY) / rect.height * viewSize.height) / projection.worldPixels,
     )));
   };
   const finishPointer = (event: ReactPointerEvent<SVGSVGElement>) => {
+    centerFrames.flush();
+    if (circleDragRef.current?.pointerId === event.pointerId) {
+      const before = circleDragRef.current.before;
+      circleDragRef.current = null;
+      const after = contourDraftRef.current;
+      if (event.type === 'pointercancel') setContourDraft(before);
+      else if (after) applyContourStep(before, after, 'Изменён размер круга');
+      return;
+    }
     const contourDrag = contourDragRef.current;
     if (contourDrag?.pointerId === event.pointerId) {
       contourDragRef.current = null;
@@ -1489,7 +1538,6 @@ export function DistrictMapPage(props: Props) {
                 setRulerPoints([]);
                 return;
               }
-              if (!props.adminMode) return;
               const point = locate(event.clientX, event.clientY);
               const rect = stageRef.current?.getBoundingClientRect();
               if (point !== null && rect !== undefined) setContextMenu({ point, x: event.clientX - rect.left, y: event.clientY - rect.top });
@@ -1512,7 +1560,18 @@ export function DistrictMapPage(props: Props) {
               {contourDraft.mapRole === 'response-boundary'
                 ? <polyline points={contourDraft.points.map((point) => { const projected = projection.project(point); return `${projected.x},${projected.y}`; }).join(' ')} />
                 : <polygon points={contourDraft.points.map((point) => { const projected = projection.project(point); return `${projected.x},${projected.y}`; }).join(' ')} />}
-              {contourDraft.points.length >= 2 && contourDraft.points.map((point, index) => {
+              {contourDraft.circleRadius !== undefined && <polygon
+                className="district-circle-resize"
+                points={contourDraft.points.map((point) => { const p = projection.project(point); return `${p.x},${p.y}`; }).join(' ')}
+                style={{ fill: 'none', stroke: 'transparent', strokeWidth: 18, pointerEvents: 'stroke', cursor: 'nwse-resize' }}
+                onPointerDown={(event) => {
+                  if (event.button !== 0) return;
+                  event.preventDefault(); event.stopPropagation();
+                  circleDragRef.current = { pointerId: event.pointerId, before: contourDraft };
+                  event.currentTarget.ownerSVGElement?.setPointerCapture(event.pointerId);
+                }}
+              />}
+              {contourDraft.circleRadius === undefined && contourDraft.points.length >= 2 && contourDraft.points.map((point, index) => {
                 const nextIndex = contourDraft.mapRole === 'response-boundary' ? index + 1 : (index + 1) % contourDraft.points.length;
                 const nextPoint = contourDraft.points[nextIndex];
                 if (nextPoint === undefined || (contourDraft.source === 'manual' && contourDraft.points.length < 3 && index === contourDraft.points.length - 1)) return null;
@@ -1561,7 +1620,7 @@ export function DistrictMapPage(props: Props) {
                   </g>}
                 </g>;
               })}
-              {contourDraft.points.map((point, index) => {
+              {contourDraft.circleRadius === undefined && contourDraft.points.map((point, index) => {
                 const projected = projection.project(point);
                 return <g
                   key={`vertex-${index}`}
@@ -1613,14 +1672,25 @@ export function DistrictMapPage(props: Props) {
             <MapRulerOverlay points={rulerPoints} project={projection.project} />
             {hoveredContourObject !== null && <DistrictContourHoverCard object={hoveredContourObject} project={projection.project} viewSize={viewSize} />}
           </svg>
-          {contextMenu !== null && <div className="district-add-menu" style={{ left: contextMenu.x, top: contextMenu.y }}><strong>Добавить на карту</strong><button onClick={() => startContour('building')}>Здание с контуром</button><button onClick={() => startContour('installation')}>Наружная установка с контуром</button><button onClick={() => startContour('territory')}>Территория с контуром</button><button onClick={() => { setEditorObject(initialHydrant(contextMenu.point)); setContextMenu(null); }}>Пожарный гидрант</button><button onClick={() => { setEditorObject(initialFireReservoir(contextMenu.point)); setContextMenu(null); }}>Пожарный водоём</button><button onClick={() => startContour('demolished')}>Демонтированный объект</button><button className="secondary" onClick={() => setContextMenu(null)}>Отмена</button></div>}
+          {contextMenu !== null && props.adminMode && <div className="district-add-menu" style={{ left: contextMenu.x, top: contextMenu.y }}><strong>Добавить на карту</strong><button onClick={() => startContour('building')}>Здание с контуром</button><button onClick={() => startContour('installation')}>Наружная установка с контуром</button><button onClick={() => startContour('territory')}>Территория с контуром</button><button onClick={() => { setEditorObject(initialHydrant(contextMenu.point)); setContextMenu(null); }}>Пожарный гидрант</button><button onClick={() => { setEditorObject(initialFireReservoir(contextMenu.point)); setContextMenu(null); }}>Пожарный водоём</button><button onClick={() => startContour('demolished')}>Демонтированный объект</button><button className="secondary" onClick={() => setContextMenu(null)}>Отмена</button></div>}
+          {contextMenu !== null && !props.adminMode && <div className="district-add-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
+            <button type="button" className="district-emergency-button" onClick={() => {
+              const containing = props.objects.filter((object): object is DistrictBuilding => object.kind === 'building'
+                && object.mapRole !== 'response-boundary' && pointInsideDistrictContour(contextMenu.point, object.contour));
+              const target = containing.find((object) => object.objectType === 'building' || object.objectType === 'installation');
+              const territoryNames = containing.filter((object) => object.objectType === 'territory').flatMap((object) => object.territoryNames);
+              setDispatchBuilding(target ?? { ...initialBuilding(contextMenu.point, 'territory', [contextMenu.point]), id: 'temporary-incident-point', number: 'Место вызова', territoryNames });
+              setContextMenu(null);
+            }}>Пожар / Авария</button>
+          </div>}
           {contourDraft !== null && <div className="district-contour-panel">
             <strong>{contourDraft.mapRole === 'response-boundary' ? `Граница района выезда: ${pointCountLabel(contourDraft.points.length)}` : contourDraft.source === 'editing' ? 'Изменение границ объекта' : contourDraft.source === 'automatic' ? 'Контур найден автоматически' : `Ручная обводка: ${pointCountLabel(contourDraft.points.length)}`}</strong>
             <span>{contourDraft.mapRole === 'response-boundary' ? 'Ставьте точки вдоль границы. ПКМ по точке удаляет её; удерживайте ПКМ на карте и тяните для перемещения.' : 'Точки и стороны можно перетаскивать; «+» добавляет угол, ПКМ по точке удаляет его. Удерживайте ПКМ на свободном месте и тяните карту.'}</span>
             {contourStatus !== '' && <p className="district-contour-status">{contourStatus}</p>}
             <div>
-              {contourDraft.source === 'automatic' && <button type="button" className="secondary" onClick={() => { applyContourStep(contourDraft, { ...contourDraft, points: [], source: 'manual' }, 'Включено ручное рисование контура'); setContourStatus(''); }}>Нарисовать вручную</button>}
-              {contourDraft.mapRole !== 'response-boundary' && contourDraft.points.length >= 4 && <button type="button" className="secondary" onClick={alignContour}>Выровнять автоматически</button>}
+              {contourDraft.circleCenter && contourDraft.mapRole !== 'response-boundary' && <button type="button" className="secondary" onClick={() => makeCircle(10)}>Сделать круг</button>}
+              {contourDraft.source === 'automatic' && <button type="button" className="secondary" onClick={() => { applyContourStep(contourDraft, { ...contourDraft, points: [], source: 'manual', circleRadius: undefined }, 'Включено ручное рисование контура'); setContourStatus(''); }}>Нарисовать вручную</button>}
+              {contourDraft.circleRadius === undefined && contourDraft.mapRole !== 'response-boundary' && contourDraft.points.length >= 4 && <button type="button" className="secondary" onClick={alignContour}>Выровнять автоматически</button>}
               <button type="button" className="primary" disabled={contourDraft.points.length < (contourDraft.mapRole === 'response-boundary' ? 2 : 3)} onClick={finishContour}>{contourDraft.source === 'editing' ? 'Сохранить границы' : 'Принять контур'}</button>
               <button type="button" className="secondary" onClick={() => { props.onClearTransientHistory(); setContourDraft(null); setContourStatus(''); }}>Отмена</button>
             </div>
@@ -1764,7 +1834,7 @@ export function DistrictMapPage(props: Props) {
         </section>
       </div>}
       {editorObject !== null && <ObjectEditor object={editorObject} objects={props.objects} onSave={upsertObject} onEditContour={startContourEdit} onClose={() => setEditorObject(null)} />}
-      {dispatchBuilding !== null && <FireDispatchTicket building={dispatchBuilding} objects={props.objects} basemap={props.basemap} onClose={() => setDispatchBuilding(null)} />}
+      {dispatchBuilding !== null && <FireDispatchTicket building={dispatchBuilding} pointCall={dispatchBuilding.id === 'temporary-incident-point'} objects={props.objects} basemap={props.basemap} onClose={() => setDispatchBuilding(null)} />}
     </div>
   );
 }

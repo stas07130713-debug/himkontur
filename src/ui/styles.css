@@ -4784,3 +4784,26 @@ svg.district-legend-building text {
   .calculation-ruler-control { top: 240px; }
   .district-ruler-control { top: 148px; right: 14px; }
 }
+.fire-dispatch-ticket-sheet .dispatch-place { min-width: 0; display: grid; gap: .55mm; color: #111; font-size: 9.2pt; font-weight: 750; text-align: left; }
+.dispatch-place-control { box-sizing: border-box; width: 100%; min-height: 11mm; border: 1px solid #555; border-radius: 1.5mm; padding: .65mm 1.8mm; background: #fff; color: #111; font: 9.6pt/1.5 Inter, "Segoe UI", Arial, sans-serif; cursor: text; }
+.fire-dispatch-ticket-sheet .dispatch-place-control textarea { width: 100%; box-sizing: border-box; border: 0; background: transparent; color: inherit; font: inherit; resize: vertical; padding: 0; box-shadow: none; }
+.dispatch-department-chips { display: inline; }
+.dispatch-department-chip { display: inline-block; max-width: 100%; box-sizing: border-box; vertical-align: baseline; border: 1px solid #92b5bf; border-radius: 9px; padding: 0 3px; margin: 1px 3px 1px 0; font: inherit; overflow-wrap: anywhere; }
+.single-department .dispatch-department-chip { border: 0; padding: 0; margin: 0; }
+.single-department .dispatch-department-chip button { display: none; }
+.dispatch-department-chip button { border: 0; background: transparent; color: inherit; padding: 0 2px; font: inherit; cursor: pointer; }
+.dispatch-place-editable { display: inline-block; min-width: 8px; min-height: 1.5em; max-width: 100%; vertical-align: baseline; outline: none; white-space: pre-wrap; overflow-wrap: anywhere; caret-color: #111; cursor: text; }
+.dispatch-place-control:focus-within { border-color: #087f91; }
+.fire-dispatch-ticket-sheet .dispatch-place[data-complete="true"] .dispatch-place-control {
+  border-color: #6dad8b;
+  background: #f2fbf5;
+  box-shadow: 0 0 0 1px #b9dfca;
+}
+.dispatch-place-editable:empty::before { content: attr(data-placeholder); color: #78858a; }
+.dispatch-chip-caret { display: inline-block; min-width: 8px; min-height: 1.5em; vertical-align: baseline; outline: none; caret-color: #111; }
+@media print {
+  .dispatch-department-chip { border: 0; padding: 0; margin: 0 3px 0 0; }
+  .dispatch-department-chip button { display: none; }
+  .dispatch-place-editable:empty::before { content: none; }
+}
+.district-add-menu .district-emergency-button { display: block; margin: 0; background: linear-gradient(180deg, #ef3f43, #bb1119); border-color: #8f0d12; font-size: 9px; }

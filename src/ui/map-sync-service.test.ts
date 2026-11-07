@@ -3,6 +3,7 @@ import {
   authenticateMapAdmin,
   clearMapSyncConfigCache,
   fetchAvailableMap,
+  fetchCoordinatedMap,
   MapSyncRequestError,
   normalizeMapSyncStatus,
   publishCoordinatedMap,
@@ -30,6 +31,13 @@ function requestUrl(input: string | URL | Request): string {
   return input instanceof URL ? input.toString() : input.url;
 }
 
+async function snapshotResponse(project: unknown, status: unknown): Promise<Response> {
+  const bytes = new TextEncoder().encode(JSON.stringify(project));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const checksum = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return jsonResponse({ checksum, offset: 0, nextOffset: bytes.length, totalBytes: bytes.length, data: btoa(String.fromCharCode(...bytes)), status });
+}
+
 afterEach(() => {
   clearMapSyncConfigCache();
   vi.unstubAllGlobals();
@@ -37,6 +45,28 @@ afterEach(() => {
 });
 
 describe('map synchronization sessions', () => {
+  it('assembles a snapshot from small parts and retries only the failed part', async () => {
+    const project = { revision: 42, published: [], note: 'Карта'.repeat(6000) };
+    const bytes = new TextEncoder().encode(JSON.stringify(project));
+    const hash = await crypto.subtle.digest('SHA-256', bytes);
+    const checksum = Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, '0')).join('');
+    const offsets: number[] = [];
+    let failed = false;
+    vi.stubGlobal('window', { setTimeout, clearTimeout });
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) => {
+      await Promise.resolve();
+      const url = requestUrl(input);
+      if (url.includes('map-sync.json')) return jsonResponse(configResponse);
+      const offset = Number(new URL(url).searchParams.get('offset'));
+      offsets.push(offset);
+      if (offset === 16384 && !failed) { failed = true; throw new TypeError('lost connection'); }
+      const part = bytes.slice(offset, offset + 16384);
+      return jsonResponse({ checksum, offset, nextOffset: offset + part.length, totalBytes: bytes.length, data: btoa(String.fromCharCode(...part)) });
+    }));
+    await expect(fetchCoordinatedMap()).resolves.toMatchObject({ project });
+    expect(offsets.filter((offset) => offset === 0)).toHaveLength(1);
+    expect(offsets.filter((offset) => offset === 16384)).toHaveLength(2);
+  });
   it('loads the map from Yandex when Cloudflare is unavailable', async () => {
     const yandexProject = { id: 'district-map', revision: 20, published: [] };
     const fetchMock = vi.fn((input: string | URL | Request) => {
@@ -74,13 +104,10 @@ describe('map synchronization sessions', () => {
       requested.push(url);
       if (url.includes('map-sync.json')) return Promise.resolve(jsonResponse(configResponse));
       if (url.startsWith(configResponse.coordinatorUrl)) {
-        return Promise.resolve(jsonResponse({
-          project: cloudflareProject,
-          status: {
+        return snapshotResponse(cloudflareProject, {
             mode: 'primary', activeProvider: 'yandex', primaryAvailable: true,
             backupAvailable: true, synchronized: false,
-          },
-        }));
+          });
       }
       if (url.startsWith(configResponse.primaryApiUrl)) return yandexResponse;
       return Promise.reject(new Error(`Unexpected URL: ${url}`));
@@ -111,10 +138,7 @@ describe('map synchronization sessions', () => {
         }));
       }
       if (url.startsWith(configResponse.coordinatorUrl)) {
-        return Promise.resolve(jsonResponse({
-          project: cloudflareProject,
-          status: { mode: 'backup', activeProvider: 'cloudflare', primaryAvailable: true, backupAvailable: true },
-        }));
+        return snapshotResponse(cloudflareProject, { mode: 'backup', activeProvider: 'cloudflare', primaryAvailable: true, backupAvailable: true });
       }
       if (url.startsWith(configResponse.primaryApiUrl)) return Promise.resolve(jsonResponse({ project: yandexProject }));
       return Promise.reject(new Error(`Unexpected URL: ${url}`));

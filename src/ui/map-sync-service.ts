@@ -301,6 +301,49 @@ async function encodedJsonRequest(value: unknown): Promise<Readonly<{ body: Body
 }
 
 export async function fetchCoordinatedMap(): Promise<CoordinatedMapResponse> {
+  try {
+    return await fetchChunkedMap();
+  } catch (error) {
+    // Older coordinators remain usable during a staged server rollout.
+    if (error instanceof MapSyncRequestError && error.status === 404) return fetchLegacyCoordinatedMap();
+    throw error;
+  }
+}
+
+async function fetchChunkedMap(): Promise<CoordinatedMapResponse> {
+  const parts: Uint8Array[] = [];
+  let offset = 0;
+  let checksum = '';
+  let total = 0;
+  for (;;) {
+    const payload = await coordinatorRequest(`/v1/map/chunk?offset=${offset}${checksum ? `&checksum=${encodeURIComponent(checksum)}` : ''}`, { method: 'GET' }, 60_000, 3);
+    if (!isObject(payload) || typeof payload.data !== 'string' || typeof payload.checksum !== 'string'
+      || payload.offset !== offset || typeof payload.totalBytes !== 'number'
+      || !Number.isSafeInteger(payload.totalBytes) || payload.totalBytes <= 0 || payload.totalBytes > 50 * 1024 * 1024
+      || (checksum !== '' && (checksum !== payload.checksum || total !== payload.totalBytes))) {
+      throw new MapSyncRequestError('Некорректная часть карты.', 502, 'invalid');
+    }
+    checksum = payload.checksum;
+    total = payload.totalBytes;
+    const bytes = Uint8Array.from(atob(payload.data), (char) => char.charCodeAt(0));
+    if (bytes.length === 0 || bytes.length > 16 * 1024 || payload.nextOffset !== offset + bytes.length || offset + bytes.length > total) {
+      throw new MapSyncRequestError('Нарушена последовательность частей карты.', 502, 'invalid');
+    }
+    parts.push(bytes);
+    offset += bytes.length;
+    if (offset === total) {
+      const buffer = new Uint8Array(total);
+      let position = 0;
+      for (const part of parts) { buffer.set(part, position); position += part.length; }
+      const digest = await crypto.subtle.digest('SHA-256', buffer);
+      const actual = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+      if (actual !== checksum) throw new MapSyncRequestError('Контрольная сумма карты не совпала.', 502, 'invalid');
+      return { project: JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(buffer)) as unknown, status: normalizeStatus(payload.status) };
+    }
+  }
+}
+
+export async function fetchLegacyCoordinatedMap(): Promise<CoordinatedMapResponse> {
   // A first launch may still require the full snapshot. Slow corporate routes
   // must be allowed to finish instead of being aborted after a few seconds.
   const payload = await coordinatorRequest('/v1/map', { method: 'GET' }, 180_000, 1);

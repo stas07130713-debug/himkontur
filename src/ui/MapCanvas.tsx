@@ -763,6 +763,10 @@ export function MapCanvas(props: Props) {
         y: sharedAnchor.y + labelNormal.y * labelOffset,
       },
       widthLabel: widthMidpoint,
+      partialDepthLabel: {
+        x: sourceScreen.x + axis.x * axialDistance * .5,
+        y: sourceScreen.y + axis.y * axialDistance * .5,
+      },
       depthRotation: readableLineAngle(
         sourceScreen.x,
         sourceScreen.y,
@@ -1115,7 +1119,7 @@ export function MapCanvas(props: Props) {
                       x2={dimensions.front.x}
                       y2={dimensions.front.y}
                     />
-                    {dimensions.showLabels && (
+                    {(
                       <text
                         className="map-measure-label dimension-depth-label"
                         style={{ fontSize: dimensions.labelSize }}
@@ -1124,9 +1128,17 @@ export function MapCanvas(props: Props) {
                         textAnchor="middle"
                         transform={`rotate(${dimensions.depthRotation} ${dimensions.depthLabel.x} ${dimensions.depthLabel.y})`}
                       >
-                        L = {round(dimensions.depthKm, 2)} км
+                        L общ. = {round(dimensions.depthKm, 2)} км
                       </text>
                     )}
+                    {widthMeasureFraction !== null && <text
+                      className="map-measure-label dimension-depth-label"
+                      style={{ fontSize: dimensions.labelSize }}
+                      x={dimensions.partialDepthLabel.x}
+                      y={dimensions.partialDepthLabel.y}
+                      textAnchor="middle"
+                      transform={`rotate(${dimensions.depthRotation} ${dimensions.partialDepthLabel.x} ${dimensions.partialDepthLabel.y})`}
+                    >L = {round(Math.abs(dimensions.widthDistanceKm), 2)} км</text>}
                     <g
                       className="dimension-width-drag-group"
                       onPointerDown={onWidthPointerDown}

@@ -598,6 +598,24 @@ async function route(request, env, ctx) {
   if (request.method === 'OPTIONS') return jsonResponse(request, env, 204, {});
   if (!corsHeaders(request, env).has('Access-Control-Allow-Origin')) return jsonResponse(request, env, 403, { error: 'Источник запроса не разрешён.' });
 
+  if (request.method === 'GET' && url.pathname === '/v1/map/chunk') {
+    const state = await readState(env);
+    if (!state) throw new HttpError(503, 'Общая карта ещё не загружена.');
+    const checksum = await sha256(JSON.stringify(state.project));
+    if (url.searchParams.has('checksum') && url.searchParams.get('checksum') !== checksum) {
+      throw new HttpError(409, 'Карта изменилась во время загрузки. Повторите получение.');
+    }
+    const offset = Number(url.searchParams.get('offset') || 0);
+    const bytes = new TextEncoder().encode(JSON.stringify(state.project));
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > bytes.length) throw new HttpError(400, 'Некорректное смещение.');
+    const end = Math.min(offset + 16 * 1024, bytes.length);
+    const data = btoa(String.fromCharCode(...bytes.subarray(offset, end)));
+    return jsonResponse(request, env, 200, {
+      checksum, offset, nextOffset: end, totalBytes: bytes.length, data,
+      status: statusFrom(state, state.mode === 'primary', true, await pendingCount(env)),
+    });
+  }
+
   if (request.method === 'GET' && url.pathname === '/v1/map') {
     const state = await readState(env);
     const queued = await pendingCount(env);

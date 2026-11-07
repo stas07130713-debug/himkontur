@@ -183,6 +183,14 @@ export async function captureDispatchSnapshot(sheet: HTMLElement, options: Reado
     removeContainer: true,
     onclone: (clonedDocument) => {
       const clonedSheet = clonedDocument.querySelector<HTMLElement>('.fire-dispatch-ticket-sheet');
+      clonedSheet?.querySelectorAll<HTMLElement>('.dispatch-department-chip').forEach((chip) => {
+        chip.querySelectorAll('button').forEach((button) => button.remove());
+        chip.replaceWith(clonedDocument.createTextNode(`${chip.textContent.trim()} `));
+      });
+      clonedSheet?.querySelectorAll<HTMLElement>('[contenteditable]').forEach((field) => {
+        field.removeAttribute('contenteditable');
+        field.removeAttribute('data-placeholder');
+      });
       clonedSheet?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea').forEach((field) => {
         const value = printableFieldValue(field);
         const replacement = clonedDocument.createElement('div');

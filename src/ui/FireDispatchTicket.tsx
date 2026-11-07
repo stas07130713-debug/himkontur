@@ -1,5 +1,5 @@
 import { Capacitor } from '@capacitor/core';
-import { useCallback, useEffect, useMemo, useRef, useState, type TouchEvent as ReactTouchEvent } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type TouchEvent as ReactTouchEvent } from 'react';
 import type { GeoPoint } from '../core/types';
 import { distanceMeters, formatRulerDistance } from './map-ruler';
 import type { Basemap } from './MapCanvas';
@@ -126,7 +126,7 @@ function geoFromWorld(point: ScreenPoint): GeoPoint {
 }
 
 function closestPointOnContour(source: GeoPoint, contour: readonly GeoPoint[]): Readonly<{ point: GeoPoint; distanceM: number }> {
-  if (contour.length < 2) return { point: contour[0] ?? source, distanceM: 0 };
+  if (contour.length === 0) return { point: source, distanceM: 0 };
   const latitudeScale = Math.PI / 180 * EARTH_RADIUS_M;
   const longitudeScale = latitudeScale * Math.cos(source.latitude * Math.PI / 180);
   const toLocal = (point: GeoPoint) => ({
@@ -401,7 +401,7 @@ function edgeLabels(
   });
 }
 
-function DispatchMap({ building, objects, basemap }: Readonly<{ building: DistrictBuilding; objects: readonly DistrictMapObject[]; basemap: Basemap }>) {
+function DispatchMap({ building, objects, basemap, pointCall = false }: Readonly<{ building: DistrictBuilding; objects: readonly DistrictMapObject[]; basemap: Basemap; pointCall?: boolean }>) {
   const [mapProjector, setMapProjector] = useState<((point: GeoPoint) => ScreenPoint) | null>(null);
   const dispatchSelection = useMemo(() => {
     const ranked = objects
@@ -483,7 +483,7 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
       ? { x: -rawNormal.x, y: -rawNormal.y }
       : rawNormal;
     const text = formatRulerDistance(target.distanceM);
-    const shortDistance = target.distanceM <= 20;
+    const shortDistance = target.distanceM < 30;
     const candidates: ScreenPoint[] = [];
     for (const fraction of [.5, .62, .38, .72, .28]) {
       for (const offset of [9, -9, 12, -12]) {
@@ -564,6 +564,20 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
         </g>;
       })}
       <polygon points={contour} className={`fire-dispatch-building-contour prefix-${buildingPrefix(building.number)}`} />
+      {pointCall && objects.filter((object): object is DistrictBuilding => object.kind === 'building' && object.objectType === 'building' && object.mapRole !== 'response-boundary').map((object) => {
+        const p = project(districtObjectMarkerPoint(object));
+        const vertices = object.contour.map(project);
+        const inside = (v: ScreenPoint) => v.x >= 0 && v.x <= MAP_WIDTH && v.y >= 0 && v.y <= MAP_HEIGHT;
+        const intersects = vertices.length > 0 && Math.max(...vertices.map((v) => v.x)) >= 0
+          && Math.min(...vertices.map((v) => v.x)) <= MAP_WIDTH && Math.max(...vertices.map((v) => v.y)) >= 0
+          && Math.min(...vertices.map((v) => v.y)) <= MAP_HEIGHT;
+        if (!inside(p) && !intersects) return null;
+        return <g key={`nearby-building-${object.id}`}>
+          <polygon points={vertices.map((v) => `${v.x},${v.y}`).join(' ')} className={`fire-dispatch-building-contour prefix-${buildingPrefix(object.number)}`} />
+          <g className={`fire-dispatch-building-label building-number-marker prefix-${buildingPrefix(object.number)}`} transform={`translate(${Math.max(26, Math.min(MAP_WIDTH - 26, p.x))} ${Math.max(18, Math.min(MAP_HEIGHT - 18, p.y))})`}><path d="M-21-13h42v26h-42z" /><text x="0" y="5" textAnchor="middle">{object.number}</text></g>
+        </g>;
+      })}
+      {pointCall && <g transform={`translate(${buildingPoint.x} ${buildingPoint.y})`}><circle r="9" fill="#e52535" stroke="white" strokeWidth="3" /><text y="-16" textAnchor="middle" className="map-measure-label">Место вызова</text></g>}
       {labels.map((label) => <text key={label.key} className="fire-dispatch-edge-label" x="0" y="0" transform={`translate(${label.x} ${label.y}) rotate(${label.angle})`} textAnchor="middle" dominantBaseline="middle">{label.text}</text>)}
       {showObjectPlate && <g className={`fire-dispatch-building-label building-number-marker prefix-${buildingPrefix(building.number)}`} transform={`translate(${buildingPoint.x} ${buildingPoint.y})`}><g transform={`scale(${markerScale})`}><path d="M-21-13h42v26h-42z" /><text x="0" y="5" textAnchor="middle">{building.mapRole === 'rescue-service' ? 'АСС' : building.number}</text></g></g>}
       {sources.map(({ source }) => {
@@ -595,11 +609,12 @@ function DispatchMap({ building, objects, basemap }: Readonly<{ building: Distri
   </div></>;
 }
 
-export function FireDispatchTicket({ building, objects, basemap, onClose }: Readonly<{
+export function FireDispatchTicket({ building, objects, basemap, onClose, pointCall = false }: Readonly<{
   building: DistrictBuilding;
   objects: readonly DistrictMapObject[];
   basemap: Basemap;
   onClose: () => void;
+  pointCall?: boolean;
 }>) {
   const sheetRef = useRef<HTMLElement>(null);
   const zoomViewportRef = useRef<HTMLDivElement>(null);
@@ -617,7 +632,11 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
   const initial = localDateAndTime();
   const [division, setDivision] = useState('МВАСО АСС');
   const [crew, setCrew] = useState('');
-  const [place, setPlace] = useState(buildingAddress(building));
+  const [place, setPlace] = useState(pointCall ? '' : buildingAddress({ ...building, departments: [], sites: [] }));
+  const [departments, setDepartments] = useState(pointCall ? [] : [
+    ...building.departments.map((unit) => ({ ...unit, id: `department-${unit.id}` })),
+    ...building.sites.map((unit) => ({ ...unit, id: `site-${unit.id}` })),
+  ].filter((unit) => (unit.fullName || unit.shortName).trim() !== ''));
   const [emergencyType, setEmergencyType] = useState('');
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);
@@ -767,11 +786,56 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
           <div className="fire-dispatch-row division-row"><label data-complete={division.trim() !== ''}>Подразделение<input value={division} onChange={(event) => setDivision(event.currentTarget.value)} /></label><label data-complete={crew.trim() !== ''}>Дежурное отделение<select value={crew} onChange={(event) => setCrew(event.currentTarget.value)}><option value="">Указать отделение</option><option value="1-е отделение">1-е отделение</option><option value="2-е отделение">2-е отделение</option><option value="3-е отделение">3-е отделение</option><option value="4-е отделение">4-е отделение</option></select></label></div>
         </header>
         <div className="fire-dispatch-form">
-          <label data-complete={place.trim() !== ''}><span>1. Место выезда, адрес</span><textarea rows={2} value={place} onChange={(event) => setPlace(event.currentTarget.value)} /></label>
+          <div className="dispatch-place" data-complete={pointCall || place.trim() !== ''}>
+            <span>1. Место выезда, адрес</span>
+            <div className="dispatch-place-control" onClick={(event) => {
+              if (event.target !== event.currentTarget) return;
+              const editable = event.currentTarget.querySelector<HTMLElement>('.dispatch-place-editable');
+              if (!editable) return;
+              editable.focus();
+              const range = document.createRange(); range.selectNodeContents(editable); range.collapse(false);
+              const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range);
+            }}>
+              {pointCall && <span>Примерные координаты: {building.point.latitude.toFixed(6)}, {building.point.longitude.toFixed(6)}; </span>}
+              {pointCall && building.territoryNames.some((unit) => unit.fullName || unit.shortName) && <span>Территория: {building.territoryNames.map((unit) => unit.fullName || unit.shortName).filter(Boolean).join(', ')}; </span>}
+              <span className="dispatch-place-editable" role="textbox" aria-label="Место выезда, адрес и примечание" contentEditable suppressContentEditableWarning data-placeholder={pointCall ? 'Уточнение места вызова, примечание' : ''} onBlur={(event) => setPlace(event.currentTarget.textContent)} onKeyDown={(event) => {
+                const selection = window.getSelection();
+                if (event.key === 'Delete' && selection?.isCollapsed && selection.anchorOffset === event.currentTarget.textContent.length) { event.preventDefault(); setDepartments((items) => items.slice(1)); }
+              }}>{place}</span>{' '}
+              <span className={`dispatch-department-chips${departments.length === 1 ? ' single-department' : ''}`}>{departments.map((unit, index) => <Fragment key={unit.id}>
+                <span contentEditable suppressContentEditableWarning className="dispatch-chip-caret" role="textbox" aria-label={`Курсор перед ${unit.fullName || unit.shortName}`} onKeyDown={(event) => {
+                  const empty = !(event.currentTarget.textContent).trim();
+                  if (!empty) return;
+                  if (event.key === 'Delete') { event.preventDefault(); setDepartments((items) => items.filter((item) => item.id !== unit.id)); }
+                  if (event.key === 'Backspace' && index > 0) { event.preventDefault(); const previous = departments[index - 1]; setDepartments((items) => items.filter((item) => item.id !== previous?.id)); }
+                }} />
+                <span className="dispatch-department-chip" tabIndex={0} onKeyDown={(event) => {
+                if (event.key === 'Backspace' || event.key === 'Delete') { event.preventDefault(); setDepartments((items) => items.filter((item) => item.id !== unit.id)); }
+              }}>
+                {unit.fullName || unit.shortName}<button type="button" data-html2canvas-ignore="true" aria-label={`Убрать отделение ${unit.fullName || unit.shortName}`} onClick={() => setDepartments((items) => items.filter((item) => item.id !== unit.id))} onKeyDown={(event) => {
+                  if (event.key === 'Backspace' || event.key === 'Delete') { event.preventDefault(); setDepartments((items) => items.filter((item) => item.id !== unit.id)); }
+                }}>×</button>
+              </span></Fragment>)}</span>
+              {departments.length > 0 && <span contentEditable suppressContentEditableWarning className="dispatch-chip-caret" aria-label="Курсор после отделений" onKeyDown={(event) => {
+                if (event.key === 'Backspace' && !(event.currentTarget.textContent).trim()) { event.preventDefault(); setDepartments((items) => items.slice(0, -1)); }
+              }} />}
+            </div>
+          </div>
           <label data-complete={emergencyType.trim() !== ''}><span>2. Вид происшествия (характер ЧС)</span><EmergencyTypeField value={emergencyType} onChange={setEmergencyType} /></label>
           <div className="fire-dispatch-row">
-            <label data-complete={date.trim() !== ''}><span>3. Дата сообщения</span><input type="date" value={date} onChange={(event) => setDate(event.currentTarget.value)} /></label>
-            <label data-complete={time.trim() !== ''}><span>Время получения сообщения</span><input type="time" value={time} onChange={(event) => setTime(event.currentTarget.value)} /></label>
+            <label data-complete={date.trim() !== ''}><span>3. Дата сообщения</span><input type="date" value={date} max={initial.date} onChange={(event) => {
+              const now = localDateAndTime();
+              const value = event.currentTarget.value;
+              if (value > now.date) { setSaveStatus('Дата сообщения не может быть в будущем.'); return; }
+              setDate(value);
+              if (value === now.date && time > now.time) setTime(now.time);
+            }} /></label>
+            <label data-complete={time.trim() !== ''}><span>Время получения сообщения</span><input type="time" value={time} max={date === initial.date || date === '' ? initial.time : undefined} onChange={(event) => {
+              const now = localDateAndTime();
+              const value = event.currentTarget.value;
+              if ((date === now.date || date === '') && value > now.time) { setSaveStatus('Время сообщения не может быть в будущем.'); return; }
+              setTime(value);
+            }} /></label>
           </div>
           <div className="fire-dispatch-row applicant">
             <label data-complete={applicantName.trim() !== ''}><span>4. Фамилия, имя, отчество заявителя (Фамилия И.О.)</span><input value={applicantName} placeholder="Фамилия И.О." onChange={(event) => setApplicantName(event.currentTarget.value)} /></label>
@@ -779,7 +843,7 @@ export function FireDispatchTicket({ building, objects, basemap, onClose }: Read
           </div>
           <div className="fire-dispatch-row dispatcher"><label data-complete={dispatcher.trim() !== ''}><span>5. Дежурный диспетчер подразделения (Фамилия И.О.)</span><input value={dispatcher} list="fire-dispatch-dispatchers" placeholder="Фамилия И.О." autoComplete="off" onBlur={rememberDispatcher} onChange={(event) => setDispatcher(event.currentTarget.value)} /><datalist id="fire-dispatch-dispatchers">{dispatcherSuggestions.map((name) => <option value={name} key={name} />)}</datalist></label><label><span>Подпись дежурного диспетчера</span><input aria-label="Подпись дежурного диспетчера" /></label></div>
         </div></>}
-        <DispatchMap building={building} objects={objects} basemap={basemap} />
+        <DispatchMap building={building} objects={objects} basemap={basemap} pointCall={pointCall} />
         <section className="fire-dispatch-planning-documents" aria-label="Документы предварительного планирования">
           <strong>Документы предварительного планирования</strong>
           <div>{planningDocuments.length === 0
