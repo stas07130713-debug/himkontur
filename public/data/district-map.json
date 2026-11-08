@@ -1,7 +1,7 @@
 {
   "id": "district-map-main",
   "name": "Карта района выезда",
-  "revision": 1794139505813,
+  "revision": 1794161043282,
   "draft": [
     {
       "id": "kml-hydrant-095f40d67c2912bd9832",
@@ -22792,57 +22792,6 @@
       ],
       "note": "",
       "updatedAtIso": "2026-11-06T12:16:08.141Z"
-    },
-    {
-      "id": "52eeb867-2338-450a-b6cf-d468b6222c0e",
-      "kind": "building",
-      "objectType": "demolished",
-      "mapRole": "ordinary",
-      "contour": [
-        {
-          "latitude": 67.91205339734209,
-          "longitude": 32.820303670980216
-        },
-        {
-          "latitude": 67.91235150201324,
-          "longitude": 32.820617030723085
-        },
-        {
-          "latitude": 67.91230964287377,
-          "longitude": 32.82089865960908
-        },
-        {
-          "latitude": 67.91201153820262,
-          "longitude": 32.82058529986621
-        }
-      ],
-      "territoryNames": [],
-      "point": {
-        "latitude": 67.91218152010794,
-        "longitude": 32.82060116529465
-      },
-      "number": "0",
-      "installationName": "",
-      "inventoryNumber": "",
-      "planningDocuments": [],
-      "workshopFull": "",
-      "workshopShort": "",
-      "departments": [
-        {
-          "id": "e2aed41c-db45-476a-8c23-b856a230a313",
-          "fullName": "",
-          "shortName": ""
-        }
-      ],
-      "sites": [
-        {
-          "id": "75837bed-1c14-4fc0-a9bb-23e5b9d45206",
-          "fullName": "",
-          "shortName": ""
-        }
-      ],
-      "note": "",
-      "updatedAtIso": "2026-11-06T12:16:29.517Z"
     },
     {
       "id": "d1f73e5e-bea7-4d64-bf61-59620a1df061",
@@ -47243,57 +47192,6 @@
       "updatedAtIso": "2026-11-06T12:16:08.141Z"
     },
     {
-      "id": "52eeb867-2338-450a-b6cf-d468b6222c0e",
-      "kind": "building",
-      "objectType": "demolished",
-      "mapRole": "ordinary",
-      "contour": [
-        {
-          "latitude": 67.91205339734209,
-          "longitude": 32.820303670980216
-        },
-        {
-          "latitude": 67.91235150201324,
-          "longitude": 32.820617030723085
-        },
-        {
-          "latitude": 67.91230964287377,
-          "longitude": 32.82089865960908
-        },
-        {
-          "latitude": 67.91201153820262,
-          "longitude": 32.82058529986621
-        }
-      ],
-      "territoryNames": [],
-      "point": {
-        "latitude": 67.91218152010794,
-        "longitude": 32.82060116529465
-      },
-      "number": "0",
-      "installationName": "",
-      "inventoryNumber": "",
-      "planningDocuments": [],
-      "workshopFull": "",
-      "workshopShort": "",
-      "departments": [
-        {
-          "id": "e2aed41c-db45-476a-8c23-b856a230a313",
-          "fullName": "",
-          "shortName": ""
-        }
-      ],
-      "sites": [
-        {
-          "id": "75837bed-1c14-4fc0-a9bb-23e5b9d45206",
-          "fullName": "",
-          "shortName": ""
-        }
-      ],
-      "note": "",
-      "updatedAtIso": "2026-11-06T12:16:29.517Z"
-    },
-    {
       "id": "d1f73e5e-bea7-4d64-bf61-59620a1df061",
       "point": {
         "longitude": 32.8283235034053,
@@ -48900,6 +48798,6 @@
       "sites": []
     }
   ],
-  "draftSavedAtIso": "2026-11-08T15:45:53.427Z",
-  "publishedAtIso": "2026-11-08T15:45:53.427Z"
+  "draftSavedAtIso": "2026-11-08T20:00:48.871Z",
+  "publishedAtIso": "2026-11-08T20:00:48.871Z"
 }
