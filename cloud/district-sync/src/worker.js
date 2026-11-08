@@ -431,19 +431,21 @@ async function conditionalBackupCommit(env, operation, status, primaryRevision, 
     env.DB.prepare('INSERT OR REPLACE INTO map_history (revision, project_json, checksum, provider, created_at) SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM map_state WHERE id = 1 AND revision = ?)')
       .bind(operation.project.revision, projectJson, checksum, mode === 'primary' ? 'yandex' : 'cloudflare', now, operation.baseRevision),
   );
+  if (operation.requestHash) {
+    statements.push(env.DB.prepare('INSERT INTO map_operation_receipts (operation_id, request_hash, revision, object_ids_json) SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM map_state WHERE id = 1 AND revision = ?)')
+      .bind(operation.operationId, operation.requestHash, operation.project.revision, JSON.stringify(objectChanges.map((change) => change.objectId)), operation.baseRevision));
+  }
+  for (let offset = 0; offset < objectChanges.length; offset += 40) {
+    const group = objectChanges.slice(offset, offset + 40);
+    for (const [index, change] of group.entries()) {
+      statements.push(env.DB.prepare('INSERT OR REPLACE INTO map_object_changes (operation_id, base_revision, target_revision, object_id, object_json, updated_at, created_at) SELECT ?, ?, ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM map_state WHERE id = 1 AND revision = ?)')
+        .bind(objectChanges.length === 1 ? operation.operationId : `${operation.operationId}.${offset + index + 1}`,
+          change.baseRevision, change.targetRevision, change.objectId, JSON.stringify(change.object ?? null), change.updatedAtIso, now, operation.baseRevision));
+    }
+  }
   const stateUpdateIndex = statements.length;
   statements.push(env.DB.prepare('UPDATE map_state SET revision = ?, project_json = ?, checksum = ?, primary_revision = ?, mode = ?, updated_at = ?, last_primary_success_at = CASE WHEN ? = \'primary\' THEN ? ELSE last_primary_success_at END, last_error = \'\' WHERE id = 1 AND revision = ?')
     .bind(operation.project.revision, projectJson, checksum, primaryRevision, mode, now, mode, now, operation.baseRevision));
-  for (let offset = 0; offset < objectChanges.length; offset += 40) {
-    const group = objectChanges.slice(offset, offset + 40);
-    const placeholders = group.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ');
-    const bindings = group.flatMap((change, index) => [
-      objectChanges.length === 1 ? operation.operationId : `${operation.operationId}.${offset + index + 1}`,
-      change.baseRevision, change.targetRevision, change.objectId,
-      JSON.stringify(change.object ?? null), change.updatedAtIso, now,
-    ]);
-    statements.push(env.DB.prepare(`INSERT OR REPLACE INTO map_object_changes (operation_id, base_revision, target_revision, object_id, object_json, updated_at, created_at) VALUES ${placeholders}`).bind(...bindings));
-  }
   statements.push(env.DB.prepare('DELETE FROM map_history WHERE revision NOT IN (SELECT revision FROM map_history ORDER BY revision DESC LIMIT ?)').bind(HISTORY_LIMIT));
   statements.push(env.DB.prepare("DELETE FROM map_operations WHERE status = 'superseded' AND operation_id NOT IN (SELECT operation_id FROM map_operations WHERE status = 'superseded' ORDER BY created_at DESC LIMIT 20)"));
   const results = await env.DB.batch(statements);
@@ -593,6 +595,23 @@ async function reconcile(env) {
   return { state, primaryAvailable: true, queued: 0, message: 'Отложенные изменения переданы в Яндекс; базы синхронизированы.' };
 }
 
+/** Immutable download lease, independent of the rolling revision history. */
+export async function readDownloadSnapshot(env, project, requestedChecksum, now = Date.now()) {
+  if (requestedChecksum) {
+    const row = await env.DB.prepare('SELECT project_json FROM map_download_snapshots WHERE checksum = ? AND created_at >= ?')
+      .bind(requestedChecksum, now - 24 * 60 * 60 * 1000).first();
+    if (!row) throw new HttpError(409, 'Срок хранения снимка истёк. Загрузка будет начата заново.');
+    return { checksum: requestedChecksum, projectJson: row.project_json };
+  }
+  const projectJson = JSON.stringify(project);
+  const checksum = await sha256(projectJson);
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM map_download_snapshots WHERE created_at < ?').bind(now - 24 * 60 * 60 * 1000),
+    env.DB.prepare('INSERT INTO map_download_snapshots (checksum, project_json, created_at) VALUES (?, ?, ?) ON CONFLICT(checksum) DO UPDATE SET created_at = excluded.created_at').bind(checksum, projectJson, now),
+  ]);
+  return { checksum, projectJson };
+}
+
 async function route(request, env, ctx) {
   const url = new URL(request.url);
   if (request.method === 'OPTIONS') return jsonResponse(request, env, 204, {});
@@ -601,12 +620,10 @@ async function route(request, env, ctx) {
   if (request.method === 'GET' && url.pathname === '/v1/map/chunk') {
     const state = await readState(env);
     if (!state) throw new HttpError(503, 'Общая карта ещё не загружена.');
-    const checksum = await sha256(JSON.stringify(state.project));
-    if (url.searchParams.has('checksum') && url.searchParams.get('checksum') !== checksum) {
-      throw new HttpError(409, 'Карта изменилась во время загрузки. Повторите получение.');
-    }
+    const snapshot = await readDownloadSnapshot(env, state.project, url.searchParams.get('checksum'));
+    const checksum = snapshot.checksum;
     const offset = Number(url.searchParams.get('offset') || 0);
-    const bytes = new TextEncoder().encode(JSON.stringify(state.project));
+    const bytes = new TextEncoder().encode(snapshot.projectJson);
     if (!Number.isSafeInteger(offset) || offset < 0 || offset > bytes.length) throw new HttpError(400, 'Некорректное смещение.');
     const end = Math.min(offset + 16 * 1024, bytes.length);
     const data = btoa(String.fromCharCode(...bytes.subarray(offset, end)));
@@ -810,7 +827,13 @@ async function route(request, env, ctx) {
     const operationId = decodeURIComponent(url.pathname.slice('/v1/operations/'.length, -'/status'.length)).slice(0, 160);
     if (operationId === '') throw new HttpError(400, 'Не указан идентификатор операции.');
     const operation = await env.DB.prepare('SELECT target_revision, status, error FROM map_operations WHERE operation_id = ?').bind(operationId).first();
-    if (!operation) throw new HttpError(404, 'Операция ещё не найдена в общей базе.');
+    if (!operation) {
+      const receipt = await env.DB.prepare('SELECT revision, object_ids_json FROM map_operation_receipts WHERE operation_id = ?').bind(operationId).first();
+      if (!receipt) throw new HttpError(404, 'Операция ещё не найдена в общей базе.');
+      const state = await readState(env);
+      return jsonResponse(request, env, 200, compactOperationStatusResponse(state, await pendingCount(env), operationId,
+        { status: state.mode === 'primary' ? 'applied' : 'queued', target_revision: receipt.revision, error: '' }, JSON.parse(receipt.object_ids_json)));
+    }
     if (operation.status === 'conflict') throw new HttpError(409, 'Операция остановлена из-за конфликта версий.', text(operation.error));
     const state = await readState(env);
     const changed = await env.DB.prepare('SELECT object_id FROM map_object_changes WHERE operation_id = ? OR operation_id LIKE ? ORDER BY sequence ASC')
@@ -898,6 +921,13 @@ async function route(request, env, ctx) {
     if (operationId === '' || requestedBaseRevision === null || !Array.isArray(payload.changes) || payload.changes.length === 0 || payload.changes.length > 500) {
       throw new HttpError(400, 'Не указан пакет изменений или базовая версия карты.');
     }
+    const requestHash = await sha256(JSON.stringify({ baseRevision: requestedBaseRevision, changes: payload.changes }));
+    const receipt = await env.DB.prepare('SELECT request_hash, revision FROM map_operation_receipts WHERE operation_id = ?').bind(operationId).first();
+    if (receipt) {
+      if (receipt.request_hash !== requestHash) throw new HttpError(422, 'Идентификатор пакета уже использован для другого содержимого.');
+      const state = await readState(env);
+      return jsonResponse(request, env, 200, compactBatchResponse(state, await pendingCount(env), operationId, state.mode === 'primary' ? 'applied' : 'queued', [], 'Пакет уже сохранён.', payload.changes.map((change) => text(change.objectId))));
+    }
     const existing = await env.DB.prepare('SELECT status FROM map_operations WHERE operation_id = ?').bind(operationId).first();
     if (existing) {
       const state = await readState(env);
@@ -928,7 +958,7 @@ async function route(request, env, ctx) {
       });
       if (applied.conflict !== null) conflicts.push(applied.conflict);
     }
-    const operation = { operationId, baseRevision: state.revision, project: workingProject, createdAt: now };
+    const operation = { operationId, baseRevision: state.revision, project: workingProject, createdAt: now, requestHash };
     const queued = await pendingCount(env);
     if (shouldUseBackupImmediately(state, queued)) {
       await conditionalBackupCommit(env, operation, 'queued', state.primaryRevision, 'backup', records);

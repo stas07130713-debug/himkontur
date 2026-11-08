@@ -198,6 +198,7 @@ export type PendingDistrictMapOperation = Readonly<{
   createdAtIso: string;
   confirmedObjects: readonly ConfirmedDistrictMapObject[];
   nextChunkSequence: number;
+  inFlight?: Readonly<{ operationId: string; baseRevision: number; changes: readonly CoordinatedObjectChange[] }> | undefined;
 }>;
 
 export type DistrictMapPublishResult = Readonly<{
@@ -210,6 +211,7 @@ export type DistrictMapPublishResult = Readonly<{
   }>[];
 }>;
 
+const STATE_KEY = 'himkontur-district-map-state-v2';
 const STORAGE_KEY = 'himkontur-district-map-project-v1';
 const PENDING_SYNC_STORAGE_KEY = 'himkontur-district-map-pending-sync-v1';
 const GIST_CONFIG_URL = './data/gist-sync.json';
@@ -458,9 +460,33 @@ function normalizeDistrictObject(value: unknown): DistrictMapObject | null {
   };
 }
 
+function readStoredDistrictState(raw: string): Record<string, unknown> {
+  const stored = JSON.parse(raw) as Record<string, unknown>;
+  if (stored.version !== 3 || !Array.isArray(stored.objects) || typeof stored.payload !== 'string') return stored;
+  const objects: unknown[] = stored.objects;
+  return JSON.parse(stored.payload, (_key: string, value: unknown): unknown => {
+    if (isObject(value) && Number.isSafeInteger(value.$object)) return objects[value.$object as number];
+    return value;
+  }) as Record<string, unknown>;
+}
+
+function encodeDistrictState(project: DistrictMapProject, operations: readonly PendingDistrictMapOperation[]): string {
+  const objects: unknown[] = [];
+  const indexes = new Map<string, number>();
+  const payload = JSON.stringify({ project, operations }, (_key: string, value: unknown): unknown => {
+    if (!isObject(value) || typeof value.id !== 'string' || !['building', 'hydrant', 'reservoir'].includes(text(value.kind))) return value;
+    const serialized = JSON.stringify(value);
+    let index = indexes.get(serialized);
+    if (index === undefined) { index = objects.length; objects.push(value); indexes.set(serialized, index); }
+    return { $object: index };
+  });
+  return JSON.stringify({ version: 3, objects, payload });
+}
+
 export function loadDistrictMapProject(): DistrictMapProject {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const state = window.localStorage.getItem(STATE_KEY);
+    const raw = state === null ? window.localStorage.getItem(STORAGE_KEY) : JSON.stringify(readStoredDistrictState(state).project);
     if (raw === null) return previewProject();
     return normalizeDistrictMapProject(JSON.parse(raw)) ?? previewProject();
   } catch {
@@ -470,10 +496,11 @@ export function loadDistrictMapProject(): DistrictMapProject {
 
 export function loadPendingDistrictMapOperations(): PendingDistrictMapOperation[] {
   try {
-    const raw = window.localStorage.getItem(PENDING_SYNC_STORAGE_KEY);
+    const state = window.localStorage.getItem(STATE_KEY);
+    const raw = state === null ? window.localStorage.getItem(PENDING_SYNC_STORAGE_KEY) : JSON.stringify({ version: 5, operations: readStoredDistrictState(state).operations });
     if (raw === null) return [];
     const parsed: unknown = JSON.parse(raw);
-    if (isObject(parsed) && (parsed.version === 2 || parsed.version === 3 || parsed.version === 4) && Array.isArray(parsed.operations)) {
+    if (isObject(parsed) && (parsed.version === 2 || parsed.version === 3 || parsed.version === 4 || parsed.version === 5) && Array.isArray(parsed.operations)) {
       const operations = parsed.operations.flatMap((value) => {
         if (!isObject(value)) return [];
         const project = normalizeDistrictMapProject(value.project);
@@ -487,6 +514,9 @@ export function loadPendingDistrictMapOperations(): PendingDistrictMapOperation[
           : [];
         return [{
           operationId,
+          ...(isObject(value.inFlight) && typeof value.inFlight.operationId === 'string'
+            && Number.isSafeInteger(value.inFlight.baseRevision) && Array.isArray(value.inFlight.changes)
+            ? { inFlight: value.inFlight as PendingDistrictMapOperation['inFlight'] } : {}),
           baseRevision: typeof value.baseRevision === 'number' && Number.isSafeInteger(value.baseRevision)
             ? Math.max(0, value.baseRevision)
             : Math.max(0, project.revision - 1),
@@ -791,7 +821,12 @@ export async function fetchCoordinatedDistrictMapUpdate(current: DistrictMapProj
         draftSavedAtIso: page.manifest.publishedAtIso,
       };
     }
-    if (page.complete) return project;
+    if (page.complete) {
+      const index = new Map(project.published.map((object) => [object.id, object.updatedAtIso]));
+      return project.published.length === page.manifest.objects.length
+        && page.manifest.objects.every((object) => index.get(object.id) === object.updatedAtIso)
+        ? project : fetchCoordinatedDistrictMapProject();
+    }
     if (page.nextRevision === project.revision && page.changes.length === 0) break;
   }
   return fetchCoordinatedDistrictMapProject();
@@ -822,9 +857,10 @@ export function chunkDistrictMapObjectChanges(
   return chunks;
 }
 
-function chunkOperationId(operationId: string, sequence: number): string {
-  const suffix = `-chunk-${sequence}`;
-  return `${operationId.slice(0, Math.max(1, 160 - suffix.length))}${suffix}`;
+async function chunkOperationId(operationId: string, baseRevision: number, changes: readonly CoordinatedObjectChange[]): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify({ baseRevision, changes })));
+  const checksum = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return operationId.slice(0, 80) + '-v2-' + checksum;
 }
 
 function hashText(value: string): string {
@@ -870,11 +906,19 @@ export async function publishDistrictMapOperation(
           activeOperation,
           districtMapObjectChanges(activeOperation.baseProject ?? operation.baseProject, activeOperation.project),
         );
-        if (changes.length === 0) break;
+        if (changes.length === 0 && activeOperation.inFlight === undefined) break;
         const chunks = chunkDistrictMapObjectChanges(changes);
-        const chunk = chunks[0];
+        const chunk = activeOperation.inFlight?.changes ?? chunks[0];
         if (chunk === undefined) break;
-        const chunkId = chunkOperationId(activeOperation.operationId, activeOperation.nextChunkSequence);
+        const flight = activeOperation.inFlight ?? {
+          operationId: await chunkOperationId(activeOperation.operationId, revision, chunk), baseRevision: revision, changes: chunk,
+        };
+        if (activeOperation.inFlight === undefined) {
+          const prepared = { ...activeOperation, inFlight: flight };
+          activeOperation = onCheckpoint === undefined ? prepared : await onCheckpoint(prepared);
+          project = activeOperation.project;
+        }
+        const chunkId = flight.operationId;
         const progressBase = {
           part: completedParts + 1,
           total: completedParts + chunks.length,
@@ -886,8 +930,8 @@ export async function publishDistrictMapOperation(
         onProgress?.({ ...progressBase, stage: 'preparing' });
         const result = await publishCoordinatedObjectChanges({
           operationId: chunkId,
-          baseRevision: revision,
-          changes: chunk,
+          baseRevision: flight.baseRevision,
+          changes: flight.changes,
           credential,
           ...(signal === undefined ? {} : { signal }),
           onTransfer: (event) => onProgress?.({ ...progressBase, ...event }),
@@ -895,6 +939,7 @@ export async function publishDistrictMapOperation(
         revision = result.revision;
         publishedAtIso = result.publishedAtIso;
         conflicts.push(...result.conflicts);
+        const preservedObjects = new Set<string>();
         for (const acknowledgement of result.activeObjects) {
           const normalized = acknowledgement.object === null ? null : normalizeDistrictObject(acknowledgement.object);
           if (acknowledgement.object !== null && normalized === null) throw new Error('Сервис синхронизации вернул повреждённый объект.');
@@ -903,6 +948,9 @@ export async function publishDistrictMapOperation(
             && !result.conflicts.some((conflict) => conflict.objectId === acknowledgement.objectId)) {
             conflicts.push({ objectId: acknowledgement.objectId, local, remote: normalized, activeSource: 'remote' });
           }
+          const current = project.published.find((item) => item.id === acknowledgement.objectId) ?? null;
+          // Acknowledgement of an older packet must not overwrite a subsequent local edit.
+          if (JSON.stringify(current) !== JSON.stringify(local)) { preservedObjects.add(acknowledgement.objectId); continue; }
           const objects = replaceDistrictObject(project.published, acknowledgement.objectId, normalized);
           project = { ...project, published: objects, draft: objects };
         }
@@ -910,6 +958,9 @@ export async function publishDistrictMapOperation(
           const active = conflict.activeSource === 'remote' ? conflict.remote : conflict.local;
           const normalized = active === null ? null : normalizeDistrictObject(active);
           if (active !== null && normalized === null) throw new Error('Сервис синхронизации вернул повреждённый конфликтующий объект.');
+          const sent = chunk.find((change) => change.objectId === conflict.objectId)?.object ?? null;
+          const current = project.published.find((item) => item.id === conflict.objectId) ?? null;
+          if (JSON.stringify(current) !== JSON.stringify(sent)) { preservedObjects.add(conflict.objectId); continue; }
           const objects = replaceDistrictObject(project.published, conflict.objectId, normalized);
           project = { ...project, published: objects, draft: objects };
         }
@@ -918,7 +969,9 @@ export async function publishDistrictMapOperation(
           const currentObject = project.published.find((item) => item.id === change.objectId) ?? null;
           confirmedById.set(change.objectId, {
             objectId: change.objectId,
-            signature: districtMapObjectChangeSignature({ objectId: change.objectId, object: currentObject }),
+            signature: districtMapObjectChangeSignature({ objectId: change.objectId,
+              object: !preservedObjects.has(change.objectId) ? currentObject
+                : (result.activeObjects.find((item) => item.objectId === change.objectId)?.object ?? change.object) }),
           });
         }
         const checkpoint: PendingDistrictMapOperation = {
@@ -927,6 +980,7 @@ export async function publishDistrictMapOperation(
           project: { ...project, revision, publishedAtIso, draftSavedAtIso: publishedAtIso },
           confirmedObjects: [...confirmedById.values()],
           nextChunkSequence: activeOperation.nextChunkSequence + 1,
+          inFlight: undefined,
         };
         activeOperation = onCheckpoint === undefined ? checkpoint : await onCheckpoint(checkpoint);
         project = activeOperation.project;
@@ -1001,7 +1055,7 @@ export function shouldAdoptSharedDistrictMap(
 }
 
 export function saveDistrictMapProject(project: DistrictMapProject): void {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
+  saveDistrictMapState(project, loadPendingDistrictMapOperations());
 }
 
 export function createPendingDistrictMapOperation(
@@ -1021,15 +1075,24 @@ export function createPendingDistrictMapOperation(
     createdAtIso: resume?.createdAtIso ?? new Date().toISOString(),
     confirmedObjects: resume?.confirmedObjects ?? [],
     nextChunkSequence: resume?.nextChunkSequence ?? 1,
+    ...(resume?.inFlight === undefined ? {} : { inFlight: resume.inFlight }),
   };
 }
 
-export function savePendingDistrictMapOperations(operations: readonly PendingDistrictMapOperation[]): void {
-  if (operations.length === 0) {
+/** One atomic storage write: a failed write keeps the previous map AND queue intact. */
+export function saveDistrictMapState(project: DistrictMapProject, operations: readonly PendingDistrictMapOperation[]): void {
+  try {
+    window.localStorage.setItem(STATE_KEY, encodeDistrictState(project, operations));
+    // Only after the atomic replacement succeeded may the legacy duplicate copies be reclaimed.
+    window.localStorage.removeItem(STORAGE_KEY);
     window.localStorage.removeItem(PENDING_SYNC_STORAGE_KEY);
-    return;
+  } catch {
+    throw new Error('Не удалось сохранить карту и очередь на устройстве. Освободите место и сохраните резервную копию; отправка не подтверждена.');
   }
-  window.localStorage.setItem(PENDING_SYNC_STORAGE_KEY, JSON.stringify({ version: 4, operations }));
+}
+
+export function savePendingDistrictMapOperations(operations: readonly PendingDistrictMapOperation[]): void {
+  saveDistrictMapState(loadDistrictMapProject(), operations);
 }
 
 export function districtObjectTitle(object: DistrictMapObject): string {

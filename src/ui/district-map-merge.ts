@@ -43,6 +43,7 @@ export function mergeDistrictMapProjects(
   base: DistrictMapProject | null,
   local: DistrictMapProject,
   remote: DistrictMapProject,
+  receiving = false,
 ): Readonly<{ project: DistrictMapProject; conflicts: readonly DistrictMapObjectConflict[] }> {
   const baseById = new Map((base?.published ?? []).map((object) => [object.id, object]));
   const localById = new Map(local.published.map((object) => [object.id, object]));
@@ -85,7 +86,9 @@ export function mergeDistrictMapProjects(
     } else if (sameObject(localObject, remoteObject)) {
       if (localObject !== undefined) objects.push(localObject);
     } else {
-      const active = activeVersion(localObject, remoteObject);
+      const active = receiving && remoteObject === undefined && baseObject !== undefined
+        ? { object: undefined, source: 'remote' as const }
+        : activeVersion(localObject, remoteObject);
       if (active.object !== undefined) objects.push(active.object);
       conflicts.push({ objectId: id, local: localObject ?? null, remote: remoteObject ?? null, activeSource: active.source });
     }

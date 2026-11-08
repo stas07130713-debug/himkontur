@@ -9,7 +9,18 @@ permissions:
   contents: write
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
   windows:
+    needs: validate
     runs-on: windows-latest
     steps:
       - name: Получить исходные файлы
@@ -44,6 +55,7 @@ jobs:
             release/windows/latest.yml
 
   android:
+    needs: validate
     runs-on: ubuntu-latest
     steps:
       - name: Получить исходные файлы

@@ -28,7 +28,7 @@ jobs:
       - name: Установить зависимости
         run: npm ci
       - name: Собрать приложение
-        run: npm run build
+        run: npm run check
       - name: Настроить GitHub Pages
         uses: actions/configure-pages@v5
       - name: Подготовить публикацию

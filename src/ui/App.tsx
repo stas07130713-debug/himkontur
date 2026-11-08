@@ -43,7 +43,8 @@ import {
   loadPendingDistrictMapOperations,
   publishDistrictMapOperation,
   saveDistrictMapProject,
-  savePendingDistrictMapOperations,
+  saveDistrictMapState,
+  districtMapObjectChanges,
   shouldAdoptSharedDistrictMap,
   type DistrictMapObject,
   type DistrictMapPublishResult,
@@ -161,43 +162,52 @@ export function App() {
     if (tab !== "district") setDistrictManagementOpen(false);
   }, [tab]);
   const refreshDistrictMapFromServer = useCallback(async (): Promise<boolean> => {
-    if (districtRefreshingRef.current) return false;
+    const busy = () => districtPublishingRef.current || districtForceLoadRef.current;
+    if (districtRefreshingRef.current || busy()) return false;
     districtRefreshingRef.current = true;
-    const hasPendingChanges = () => pendingDistrictOperationsRef.current.length > 0 || districtChangeRememberedRef.current;
-    if (hasPendingChanges()) {
-      setDistrictSyncState("pending");
-      districtRefreshingRef.current = false;
-      return false;
-    }
-    let authoritative = false;
-    let remote: DistrictMapProject | null = null;
     try {
-      remote = await fetchCoordinatedDistrictMapUpdate(districtProjectRef.current);
-      authoritative = remote !== null;
-    } catch {
-      remote = await fetchPublishedDistrictMapProject();
-    }
-    if (remote === null) {
-      if (pendingDistrictOperationsRef.current.length === 0) setDistrictSyncState("error");
-      districtRefreshingRef.current = false;
-      return false;
-    }
-    const shared = remote;
-    if (hasPendingChanges()) {
-      setDistrictSyncState("pending");
-      districtRefreshingRef.current = false;
-      return false;
-    }
-    setDistrictSyncState("ready");
-    setDistrictProject((current) => {
-      if (!shouldAdoptSharedDistrictMap(shared, current, authoritative)) return current;
-      const next = { ...shared, draft: shared.published };
+      const before = districtProjectRef.current;
+      const pendingBefore = pendingDistrictOperationsRef.current[0];
+      // Delta downloads must start from a server base, never from a locally advanced revision.
+      const base = pendingBefore?.baseProject ?? before;
+      let authoritative = true;
+      let shared: DistrictMapProject | null;
+      try { shared = await fetchCoordinatedDistrictMapUpdate(base); }
+      catch { shared = await fetchPublishedDistrictMapProject(); authoritative = false; }
+      if (shared === null || busy()) return false;
+      const current = districtProjectRef.current;
+      const pending = pendingDistrictOperationsRef.current[0];
+      if (!authoritative && !shouldAdoptSharedDistrictMap(shared, base, false)) return false;
+      if (!pending && !districtChangeRememberedRef.current) {
+        if (!shouldAdoptSharedDistrictMap(shared, current, authoritative)) return true;
+        const next = { ...shared, draft: shared.published };
+        saveDistrictMapState(next, []);
+        districtProjectRef.current = next;
+        setDistrictProject(next);
+        setDistrictSyncState('ready');
+        return true;
+      }
+      const merged = mergeDistrictMapProjects(pending?.baseProject ?? base, current, shared, true);
+      const draftMerge = mergeDistrictMapProjects(current, { ...current, published: current.draft }, merged.project, true);
+      const next = { ...merged.project, draft: draftMerge.project.published, revision: shared.revision, publishedAtIso: shared.publishedAtIso };
+      const remaining = districtMapObjectChanges(shared, next);
+      const operations = remaining.length > 0 || pending?.inFlight !== undefined
+        ? [createPendingDistrictMapOperation(shared.revision, next, shared, pending)] : [];
+      if (merged.conflicts.length > 0) {
+        setDistrictConflictCount(saveDistrictMapConflictArchive({ createdAtIso: new Date().toISOString(),
+          baseRevision: base.revision, localRevision: current.revision, remoteRevision: shared.revision, conflicts: merged.conflicts }));
+      }
+      saveDistrictMapState(next, operations);
+      pendingDistrictOperationsRef.current = operations;
       districtProjectRef.current = next;
-      saveDistrictMapProject(next);
-      return next;
-    });
-    districtRefreshingRef.current = false;
-    return true;
+      setDistrictProject(next);
+      setDistrictSyncState(operations.length > 0 ? 'pending' : 'ready');
+      return true;
+    } catch (error) {
+      setDistrictSyncState('error');
+      setNotice('Не удалось обновить карту: ' + message(error));
+      return false;
+    } finally { districtRefreshingRef.current = false; }
   }, []);
   useEffect(() => {
     let cancelled = false;
@@ -214,8 +224,13 @@ export function App() {
       interval = window.setInterval(() => void refresh(), config.pollIntervalMs);
       if (!config.coordinatorEnabled) setMapSyncStatus(disabledMapSyncStatus('Работает прямая синхронизация с основной базой.'));
     });
+    const onWake = () => { void refreshDistrictMapFromServer(); };
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("online", onWake);
+    window.addEventListener("focus", onWake);
     return () => {
+      window.removeEventListener("online", onWake);
+      window.removeEventListener("focus", onWake);
       cancelled = true;
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibility);
@@ -270,18 +285,17 @@ export function App() {
     try {
       const shared = await fetchCoordinatedDistrictMapProject();
       if (shared === null) return { success: false, message: 'Сервер не вернул общую карту.' };
+      const next = { ...shared, draft: shared.published };
+      saveDistrictMapState(next, []);
+      pendingDistrictOperationsRef.current = [];
       if (discardLocalChanges) {
-        pendingDistrictOperationsRef.current = [];
-        savePendingDistrictMapOperations([]);
         districtChangeRememberedRef.current = false;
         pastRef.current = [];
         futureRef.current = [];
         setHistoryRevision((current) => current + 1);
       }
-      const next = { ...shared, draft: shared.published };
       districtProjectRef.current = next;
       setDistrictProject(next);
-      saveDistrictMapProject(next);
       setDistrictSyncState('ready');
       return {
         success: true,
@@ -340,9 +354,6 @@ export function App() {
           draftSavedAtIso: new Date().toISOString(),
           publishedAtIso: new Date().toISOString(),
         };
-    districtProjectRef.current = restoredProject;
-    setDistrictProject(restoredProject);
-    saveDistrictMapProject(restoredProject);
     if (districtChanged) {
       const pendingBase = pendingDistrictOperationsRef.current[0];
       const operation = createPendingDistrictMapOperation(
@@ -351,8 +362,11 @@ export function App() {
         pendingBase?.baseProject ?? currentProject,
         pendingBase,
       );
+      try { saveDistrictMapState(restoredProject, [operation]); }
+      catch (error) { window.alert(message(error)); return; }
       pendingDistrictOperationsRef.current = [operation];
-      savePendingDistrictMapOperations(pendingDistrictOperationsRef.current);
+      districtProjectRef.current = restoredProject;
+      setDistrictProject(restoredProject);
       setDistrictSyncState("pending");
       void publishPendingDistrictProject();
     }
@@ -694,11 +708,11 @@ export function App() {
                   const merged = mergeDistrictMapProjects(lastCheckpoint.project, current.project, checkpoint.project);
                   persisted = { ...checkpoint, project: merged.project };
                 }
+                saveDistrictMapState(persisted.project, [persisted]);
                 pendingDistrictOperationsRef.current = [persisted];
-                savePendingDistrictMapOperations(pendingDistrictOperationsRef.current);
                 districtProjectRef.current = persisted.project;
                 setDistrictProject(persisted.project);
-                saveDistrictMapProject(persisted.project);
+
                 lastCheckpoint = persisted;
                 return persisted;
               },
@@ -723,11 +737,11 @@ export function App() {
             setDistrictConflictCount(total);
           }
           const rebased = createPendingDistrictMapOperation(remote.revision, merged.project, remote);
+          saveDistrictMapState(merged.project, [rebased]);
           pendingDistrictOperationsRef.current = [rebased];
-          savePendingDistrictMapOperations(pendingDistrictOperationsRef.current);
           districtProjectRef.current = merged.project;
           setDistrictProject(merged.project);
-          saveDistrictMapProject(merged.project);
+
           setMapSyncStatus((current) => ({
             ...current,
             mode: 'recovering',
@@ -751,8 +765,9 @@ export function App() {
           setDistrictConflictCount(total);
         }
         if (pendingDistrictOperationsRef.current[0]?.operationId === pending.operationId) {
-          pendingDistrictOperationsRef.current = pendingDistrictOperationsRef.current.slice(1);
-          savePendingDistrictMapOperations(pendingDistrictOperationsRef.current);
+          const remaining = pendingDistrictOperationsRef.current.slice(1);
+          saveDistrictMapState(synchronized, remaining);
+          pendingDistrictOperationsRef.current = remaining;
         }
         if (pendingDistrictOperationsRef.current.length === 0) {
           const next = { ...synchronized, draft: synchronized.published };
@@ -782,6 +797,7 @@ export function App() {
     } finally {
       if (districtPublicationAbortRef.current === publicationController) districtPublicationAbortRef.current = null;
       districtPublishingRef.current = false;
+      void refreshDistrictMapFromServer();
     }
   }
   useEffect(() => {
@@ -821,11 +837,12 @@ export function App() {
       pendingBase?.baseProject ?? current,
       pendingBase,
     );
+    try { saveDistrictMapState(published, [operation]); }
+    catch (error) { setDistrictSyncState('error'); window.alert(message(error)); return; }
     districtProjectRef.current = published;
     pendingDistrictOperationsRef.current = [operation];
-    savePendingDistrictMapOperations(pendingDistrictOperationsRef.current);
     setDistrictProject(published);
-    saveDistrictMapProject(published);
+
     setDistrictSyncState("pending");
     void publishPendingDistrictProject();
   };

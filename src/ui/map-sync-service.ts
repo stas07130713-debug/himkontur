@@ -302,7 +302,12 @@ async function encodedJsonRequest(value: unknown): Promise<Readonly<{ body: Body
 
 export async function fetchCoordinatedMap(): Promise<CoordinatedMapResponse> {
   try {
-    return await fetchChunkedMap();
+    for (let restart = 0; ; restart += 1) {
+      try { return await fetchChunkedMap(); }
+      catch (error) {
+        if (!(error instanceof MapSyncRequestError) || error.status !== 409 || restart >= 2) throw error;
+      }
+    }
   } catch (error) {
     // Older coordinators remain usable during a staged server rollout.
     if (error instanceof MapSyncRequestError && error.status === 404) return fetchLegacyCoordinatedMap();
@@ -692,6 +697,11 @@ export async function publishCoordinatedObjectChanges(request: Readonly<{
       : [],
     status: normalizeStatus(payload.status),
   };
+  const expectedIds = new Set(request.changes.map((change) => change.objectId));
+  const acknowledgedIds = new Set(response.activeObjects.map((item) => item.objectId));
+  if (acknowledgedIds.size !== expectedIds.size || [...expectedIds].some((id) => !acknowledgedIds.has(id))) {
+    throw new MapSyncRequestError('Сервер не подтвердил все объекты пакета. Очередь сохранена для повторной отправки.', 502, 'invalid');
+  }
   request.onTransfer?.({
     stage: 'confirmed', payloadBytes, attempt: 1, confirmation,
     revision: response.revision,

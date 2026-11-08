@@ -1,7 +1,7 @@
 {
   "name": "ahov-decision-support",
   "private": true,
-  "version": "0.3.60",
+  "version": "0.3.61",
   "description": "Автономная система поддержки решений при химической аварии",
   "author": "Проект АХОВ",
   "repository": "https://github.com/stas07130713-debug/himkontur.git",
@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "build": "tsc -b && vite build",
     "test": "vitest run",
-    "test:worker": "node --test cloud/district-sync/src/worker.test.js",
+    "test:worker": "node --test cloud/district-sync/src/worker.test.js cloud/district-sync/src/sync-integration.test.js",
     "test:desktop": "node --test desktop/update-metadata.test.mjs",
     "test:acceptance": "node scripts/acceptance-test.mjs",
     "test:input-layout": "node scripts/input-panel-layout-audit.mjs",

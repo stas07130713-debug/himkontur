@@ -192,3 +192,17 @@ describe('calculation core', () => {
     expect(() => calculate({ ...INPUT, substanceId: 'sulfuric-acid' })).toThrow(MISSING_TABLE_V3_DATA_MESSAGE);
   });
 });
+
+
+describe('invalid external calculation inputs', () => {
+  it.each(['massT', 'windSpeedMps', 'windFromDegrees', 'elapsedHours', 'temperatureC', 'cloudCoverPercent'] as const)('rejects non-finite %s', (field) => {
+    for (const value of [NaN, Infinity, -Infinity]) expect(() => calculate({ ...INPUT, [field]: value })).toThrow();
+  });
+  it('rejects invalid bund geometry and unknown enums', () => {
+    expect(() => calculate({ ...INPUT, spillKind: 'separateBund', bundHeightM: NaN })).toThrow();
+    expect(() => calculate({ ...INPUT, spillKind: 'commonBund', commonBundAreaM2: NaN })).toThrow();
+    expect(() => calculate({ ...INPUT, stability: 'invalid' } as unknown as CalculationInput)).toThrow();
+    expect(() => calculate({ ...INPUT, spillKind: 'invalid' } as unknown as CalculationInput)).toThrow();
+    expect(() => calculate({ ...INPUT, sourcePoint: null } as unknown as CalculationInput)).toThrow();
+  });
+});

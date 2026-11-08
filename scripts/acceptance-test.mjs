@@ -344,7 +344,7 @@ try {
     check('source marker remains visible at maximum map zoom', Number.parseFloat(sourceInnerTransform.replace('scale(', '')) >= 0.56, sourceInnerTransform);
     const zoomOutButton = document.querySelector('.zoom button[aria-label="Уменьшить карту"]');
     for (let index = 0; index < 18; index += 1) { zoomOutButton?.click(); await wait(20); }
-    check('dimension and area captions hide at minimum map zoom', document.querySelector('.dimension-depth-label') === null && document.querySelector('.dimension-width-label') === null && document.querySelector('.plume-area-labels') === null);
+    check('total depth remains visible while width and area hide at minimum map zoom', document.querySelector('.dimension-depth-label') !== null && document.querySelector('.dimension-width-label') === null && document.querySelector('.plume-area-labels') === null);
 
     document.querySelector('.source-marker')?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })); await wait();
     check('right click opens source menu', document.querySelector('.map-context-menu')?.textContent?.includes('Удалить'));
