@@ -1,5 +1,5 @@
 import { Capacitor } from '@capacitor/core';
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type TouchEvent as ReactTouchEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type TouchEvent as ReactTouchEvent } from 'react';
 import type { GeoPoint } from '../core/types';
 import { distanceMeters, formatRulerDistance } from './map-ruler';
 import type { Basemap } from './MapCanvas';
@@ -10,6 +10,7 @@ import { districtObjectMarkerPoint, fittedBuildingMarkerScale } from './district
 import { OfflineBasemap } from './OfflineBasemap';
 import { UiIcon } from './UiIcon';
 import { CompassRose } from './CompassRose';
+import { nextDispatchUnitSelection } from './dispatch-unit-selection';
 import { canChooseDispatchPdfDirectory, captureDispatchSnapshot, createDispatchPdf, prepareDispatchPdfDirectory, printDispatchSnapshot, saveDispatchPdf, warmDispatchExport } from './dispatch-pdf';
 
 const MAP_WIDTH = 1000;
@@ -22,6 +23,13 @@ const EARTH_RADIUS_M = 6_371_000;
 
 type WaterSource = DistrictHydrant | DistrictFireReservoir;
 type ScreenPoint = Readonly<{ x: number; y: number }>;
+type DispatchUnit = Readonly<{
+  id: string;
+  kind: 'department' | 'site';
+  fullName: string;
+  shortName: string;
+  parentDepartmentId?: string;
+}>;
 
 const EMERGENCY_TYPES = [
   'Сработка АПС',
@@ -557,6 +565,7 @@ function DispatchMap({ building, objects, basemap, pointCall = false }: Readonly
     <svg viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} role="img" aria-label={`Объект ${building.number} и водоисточники в пределах схемы`}>
       <defs>
         <marker id="dispatch-water-arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="userSpaceOnUse"><path className="fire-dispatch-water-arrow" d="M0,0 L0,6 L7,3 z" /></marker>
+        <pattern id="dispatch-demolished-hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="rgba(213,45,54,.14)" /><line x1="0" y1="0" x2="0" y2="10" stroke="#d52d36" strokeWidth="3" /></pattern>
       </defs>
       {displayedWaterLinks.map(({ source, from, to }) => {
         return <g key={source.id} className="fire-dispatch-water-link">
@@ -564,6 +573,15 @@ function DispatchMap({ building, objects, basemap, pointCall = false }: Readonly
         </g>;
       })}
       <polygon points={contour} className={`fire-dispatch-building-contour prefix-${buildingPrefix(building.number)}`} />
+      {objects.filter((object): object is DistrictBuilding => object.kind === 'building' && object.objectType === 'demolished' && object.contour.length >= 3).map((object) => {
+        const vertices = object.contour.map(project);
+        const intersects = Math.max(...vertices.map((vertex) => vertex.x)) >= 0
+          && Math.min(...vertices.map((vertex) => vertex.x)) <= MAP_WIDTH
+          && Math.max(...vertices.map((vertex) => vertex.y)) >= 0
+          && Math.min(...vertices.map((vertex) => vertex.y)) <= MAP_HEIGHT;
+        if (!intersects) return null;
+        return <polygon key={`demolished-${object.id}`} points={vertices.map((vertex) => `${vertex.x},${vertex.y}`).join(' ')} className="fire-dispatch-demolished-contour" />;
+      })}
       {pointCall && objects.filter((object): object is DistrictBuilding => object.kind === 'building' && object.objectType === 'building' && object.mapRole !== 'response-boundary').map((object) => {
         const p = project(districtObjectMarkerPoint(object));
         const vertices = object.contour.map(project);
@@ -633,10 +651,17 @@ export function FireDispatchTicket({ building, objects, basemap, onClose, pointC
   const [division, setDivision] = useState('МВАСО АСС');
   const [crew, setCrew] = useState('');
   const [place, setPlace] = useState(pointCall ? '' : buildingAddress({ ...building, departments: [], sites: [] }));
-  const [departments, setDepartments] = useState(pointCall ? [] : [
-    ...building.departments.map((unit) => ({ ...unit, id: `department-${unit.id}` })),
-    ...building.sites.map((unit) => ({ ...unit, id: `site-${unit.id}` })),
-  ].filter((unit) => (unit.fullName || unit.shortName).trim() !== ''));
+  const dispatchUnits = useMemo<readonly DispatchUnit[]>(() => pointCall ? [] : [
+    ...building.departments.map((unit) => ({ ...unit, id: `department-${unit.id}`, kind: 'department' as const })),
+    ...building.sites.map((unit) => ({
+      ...unit,
+      id: `site-${unit.id}`,
+      kind: 'site' as const,
+      ...(unit.parentDepartmentId === undefined ? {} : { parentDepartmentId: `department-${unit.parentDepartmentId}` }),
+    })),
+  ].filter((unit) => (unit.fullName || unit.shortName).trim() !== ''), [building.departments, building.sites, pointCall]);
+  const [selectedUnitIds, setSelectedUnitIds] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleUnit = (unit: DispatchUnit) => setSelectedUnitIds((current) => nextDispatchUnitSelection(current, unit, dispatchUnits));
   const [emergencyType, setEmergencyType] = useState('');
   const [date, setDate] = useState(initial.date);
   const [time, setTime] = useState(initial.time);
@@ -798,27 +823,12 @@ export function FireDispatchTicket({ building, objects, basemap, onClose, pointC
             }}>
               {pointCall && <span>Примерные координаты: {building.point.latitude.toFixed(6)}, {building.point.longitude.toFixed(6)}; </span>}
               {pointCall && building.territoryNames.some((unit) => unit.fullName || unit.shortName) && <span>Территория: {building.territoryNames.map((unit) => unit.fullName || unit.shortName).filter(Boolean).join(', ')}; </span>}
-              <span className="dispatch-place-editable" role="textbox" aria-label="Место выезда, адрес и примечание" contentEditable suppressContentEditableWarning data-placeholder={pointCall ? 'Уточнение места вызова, примечание' : ''} onBlur={(event) => setPlace(event.currentTarget.textContent)} onKeyDown={(event) => {
-                const selection = window.getSelection();
-                if (event.key === 'Delete' && selection?.isCollapsed && selection.anchorOffset === event.currentTarget.textContent.length) { event.preventDefault(); setDepartments((items) => items.slice(1)); }
-              }}>{place}</span>{' '}
-              <span className={`dispatch-department-chips${departments.length === 1 ? ' single-department' : ''}`}>{departments.map((unit, index) => <Fragment key={unit.id}>
-                <span contentEditable suppressContentEditableWarning className="dispatch-chip-caret" role="textbox" aria-label={`Курсор перед ${unit.fullName || unit.shortName}`} onKeyDown={(event) => {
-                  const empty = !(event.currentTarget.textContent).trim();
-                  if (!empty) return;
-                  if (event.key === 'Delete') { event.preventDefault(); setDepartments((items) => items.filter((item) => item.id !== unit.id)); }
-                  if (event.key === 'Backspace' && index > 0) { event.preventDefault(); const previous = departments[index - 1]; setDepartments((items) => items.filter((item) => item.id !== previous?.id)); }
-                }} />
-                <span className="dispatch-department-chip" tabIndex={0} onKeyDown={(event) => {
-                if (event.key === 'Backspace' || event.key === 'Delete') { event.preventDefault(); setDepartments((items) => items.filter((item) => item.id !== unit.id)); }
-              }}>
-                {unit.fullName || unit.shortName}<button type="button" data-html2canvas-ignore="true" aria-label={`Убрать отделение ${unit.fullName || unit.shortName}`} onClick={() => setDepartments((items) => items.filter((item) => item.id !== unit.id))} onKeyDown={(event) => {
-                  if (event.key === 'Backspace' || event.key === 'Delete') { event.preventDefault(); setDepartments((items) => items.filter((item) => item.id !== unit.id)); }
-                }}>×</button>
-              </span></Fragment>)}</span>
-              {departments.length > 0 && <span contentEditable suppressContentEditableWarning className="dispatch-chip-caret" aria-label="Курсор после отделений" onKeyDown={(event) => {
-                if (event.key === 'Backspace' && !(event.currentTarget.textContent).trim()) { event.preventDefault(); setDepartments((items) => items.slice(0, -1)); }
-              }} />}
+              <span className="dispatch-place-editable" role="textbox" aria-label="Место выезда, адрес и примечание" contentEditable suppressContentEditableWarning data-placeholder={pointCall ? 'Уточнение места вызова, примечание' : ''} onBlur={(event) => setPlace(event.currentTarget.textContent)}>{place}</span>{' '}
+              <span className="dispatch-department-chips">{dispatchUnits.map((unit) => {
+                const selected = selectedUnitIds.has(unit.id);
+                const label = unit.fullName || unit.shortName;
+                return <button type="button" key={unit.id} className={`dispatch-department-chip ${selected ? 'selected' : 'not-selected'}`} aria-pressed={selected} onClick={() => toggleUnit(unit)}>{label}</button>;
+              })}</span>
             </div>
           </div>
           <label data-complete={emergencyType.trim() !== ''}><span>2. Вид происшествия (характер ЧС)</span><EmergencyTypeField value={emergencyType} onChange={setEmergencyType} /></label>

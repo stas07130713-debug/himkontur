@@ -70,7 +70,16 @@ function squaredDistanceToSegment(point: GeoPoint, start: GeoPoint, end: GeoPoin
 }
 
 /** Chooses a stable interior anchor, even when an old movable label was saved outside its building. */
+// Objects are immutable: a new edit gets a new key, and obsolete entries can be collected.
+const markerPointCache = new WeakMap<DistrictMapObject, GeoPoint>();
 export function districtObjectMarkerPoint(object: DistrictMapObject): GeoPoint {
+  const cached = markerPointCache.get(object);
+  if (cached !== undefined) return cached;
+  const point = computeDistrictObjectMarkerPoint(object);
+  markerPointCache.set(object, point);
+  return point;
+}
+function computeDistrictObjectMarkerPoint(object: DistrictMapObject): GeoPoint {
   if (object.kind !== 'building' || object.contour.length < 3) return object.point;
   const contour = object.contour;
   // A label moved by the administrator keeps its exact position while it is

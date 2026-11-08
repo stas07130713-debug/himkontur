@@ -32,14 +32,17 @@ const androidUpdater = registerPlugin<AndroidUpdater>("HimkonturUpdater");
 export function UpdateCenter() {
   const [state, setState] = useState<State>({ mode: "hidden", text: "" });
   const automaticCheck = useRef(true);
+  const installing = useRef(false);
+  const androidCheckInFlight = useRef(false);
   const lastAutomaticCheck = useRef(0);
   const isAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
 
   const checkAndroid = useCallback(async (manual = false) => {
-    if (!isAndroid) return;
+    if (!isAndroid || installing.current || androidCheckInFlight.current) return;
     const now = Date.now();
     if (!manual && now - lastAutomaticCheck.current < AUTOMATIC_CHECK_INTERVAL_MS) return;
     if (!manual) lastAutomaticCheck.current = now;
+    androidCheckInFlight.current = true;
     automaticCheck.current = !manual;
     if (manual) setState({ mode: "checking", text: "Проверяем обновления…" });
     try {
@@ -56,6 +59,8 @@ export function UpdateCenter() {
       }
     } catch {
       if (manual) setState({ mode: "message", text: "Сервер обновлений недоступен. Автономная работа продолжается." });
+    } finally {
+      androidCheckInFlight.current = false;
     }
   }, [isAndroid]);
 
@@ -65,7 +70,7 @@ export function UpdateCenter() {
       if (status.state === "available") setState({ mode: "available", text: `Доступна новая версия ${status.version ?? ""}`.trim(), ...(status.version === undefined ? {} : { version: status.version }) });
       else if (status.state === "downloading") setState({ mode: "downloading", text: "Загрузка обновления Windows", ...(status.percent === undefined ? {} : { percent: status.percent }) });
       else if (status.state === "downloaded") setState({ mode: "ready", text: `Версия ${status.version ?? ""} готова к установке`.trim(), ...(status.version === undefined ? {} : { version: status.version }) });
-      else if (status.state === "error" && !automaticCheck.current) setState({ mode: "message", text: status.message ?? "Не удалось проверить обновления." });
+      else if (status.state === "error") setState({ mode: "message", text: status.message ?? "Не удалось проверить обновления." });
       else if (status.state === "current" && !automaticCheck.current) setState({ mode: "message", text: `Установлена актуальная версия ${status.version ?? packageInformation.version}` });
     };
     const unsubscribe = window.himkonturUpdates.onStatus(receiveStatus);
@@ -139,7 +144,8 @@ export function UpdateCenter() {
       await window.himkonturUpdates.install();
       return;
     }
-    if (!isAndroid || state.url === undefined || state.version === undefined) return;
+    if (!isAndroid || installing.current || state.url === undefined || state.version === undefined) return;
+    installing.current = true;
     try {
       const permission = await androidUpdater.requestInstallPermission();
       if (!permission.allowed) {
@@ -147,9 +153,16 @@ export function UpdateCenter() {
         return;
       }
       setState({ ...state, mode: "downloading", text: "Загрузка обновления Android" });
-      await androidUpdater.installUpdate({ url: state.url, version: state.version });
+      // Recheck at installation: the offer may have been open across several releases.
+      const release = await androidUpdater.checkUpdate();
+      const latest = release.assets.find((item) => /HIMKONTUR.*Android.*\.apk$/iu.test(item.name));
+      if (!latest) throw new Error("В последнем релизе отсутствует установщик Android.");
+      const version = release.tag_name.replace(/^v/iu, "");
+      await androidUpdater.installUpdate({ url: latest.browser_download_url, version });
     } catch (error) {
       setState({ ...state, mode: "message", text: error instanceof Error ? error.message : "Не удалось установить обновление." });
+    } finally {
+      installing.current = false;
     }
   };
 

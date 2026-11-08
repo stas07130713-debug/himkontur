@@ -159,6 +159,20 @@ describe('district map backup', () => {
     expect(restored?.published[0] && districtObjectTitle(restored.published[0])).toBe('Открытая насосная установка');
   });
 
+  it('preserves the hierarchy between a site and its department', () => {
+    const source = project(29, '2026-10-24T08:00:00Z');
+    const hierarchical = {
+      ...building,
+      departments: [{ id: 'department-1', fullName: 'Основное отделение', shortName: 'ОО' }],
+      sites: [{ id: 'site-1', fullName: 'Участок подготовки', shortName: 'УП', parentDepartmentId: 'department-1' }],
+    };
+    const restored = parseDistrictMapBackup(serializeDistrictMapBackup({ ...source, draft: [hierarchical], published: [hierarchical] }));
+    expect(restored?.published[0]).toMatchObject({
+      departments: [{ id: 'department-1' }],
+      sites: [{ id: 'site-1', parentDepartmentId: 'department-1' }],
+    });
+  });
+
   it('keeps a demolished contour distinct and without a building card', () => {
     const source = project(29, '2026-10-24T08:00:00Z');
     const demolished = {

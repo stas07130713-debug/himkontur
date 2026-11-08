@@ -31,6 +31,7 @@ export type DistrictNamedUnit = Readonly<{
   id: string;
   fullName: string;
   shortName: string;
+  parentDepartmentId?: string;
 }>;
 
 export type DistrictPlanningDocumentKind = 'ПТП' | 'КТП' | 'ПМЛА' | 'ПЛРН';
@@ -348,6 +349,7 @@ function namedUnits(value: unknown, legacyFull: unknown, legacyShort: unknown, p
       id: text(unit.id) || `${prefix}-${index + 1}`,
       fullName: text(unit.fullName),
       shortName: text(unit.shortName),
+      ...(text(unit.parentDepartmentId) === '' ? {} : { parentDepartmentId: text(unit.parentDepartmentId) }),
     }));
   const fullName = text(legacyFull);
   const shortName = text(legacyShort);

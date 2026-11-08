@@ -140,3 +140,13 @@ describe('district map visual helpers', () => {
     expect(isBuildingWithContour({ ...boundary, mapRole: 'ordinary' })).toBe(false);
   });
 });
+
+describe('marker anchor cache', () => {
+  it('reuses geometry during pan and recomputes after an object edit', () => {
+    const first = districtObjectMarkerPoint(building);
+    expect(districtObjectMarkerPoint(building)).toBe(first);
+    const moved = { ...building, point: { latitude: 0.5, longitude: 0.5 } };
+    expect(districtObjectMarkerPoint(moved)).toEqual(moved.point);
+    expect(districtObjectMarkerPoint(moved)).not.toBe(first);
+  });
+});

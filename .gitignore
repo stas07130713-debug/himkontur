@@ -17,3 +17,5 @@ edge-*.png
 tile-*
 cloud/**/*.zip
 cloud/**/.wrangler/
+
+android/.kotlin/

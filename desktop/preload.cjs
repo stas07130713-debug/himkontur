@@ -1,4 +1,6 @@
-import { contextBridge, ipcRenderer } from 'electron';
+// Sandboxed Electron preloads must use CommonJS; ESM imports cannot run here.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('himkonturWeather', {
   platform: 'windows',

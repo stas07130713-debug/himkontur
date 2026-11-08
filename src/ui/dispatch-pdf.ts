@@ -166,6 +166,26 @@ export function warmDispatchExport(): void {
   void Promise.all([import('pdfmake/build/pdfmake'), import('pdfmake/build/vfs_fonts')]);
 }
 
+export function prepareDispatchCloneForPrint(clonedDocument: Document): void {
+  const clonedSheet = clonedDocument.querySelector<HTMLElement>('.fire-dispatch-ticket-sheet');
+  clonedSheet?.querySelectorAll<HTMLElement>('.dispatch-department-chip.not-selected').forEach((chip) => chip.remove());
+  clonedSheet?.querySelectorAll<HTMLElement>('.dispatch-department-chip').forEach((chip) => {
+    chip.replaceWith(clonedDocument.createTextNode(`${chip.textContent.trim()} `));
+  });
+  clonedSheet?.querySelectorAll<HTMLElement>('[contenteditable]').forEach((field) => {
+    field.removeAttribute('contenteditable');
+    field.removeAttribute('data-placeholder');
+  });
+  clonedSheet?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea').forEach((field) => {
+    const value = printableFieldValue(field);
+    const replacement = clonedDocument.createElement('div');
+    replacement.className = 'fire-dispatch-capture-value';
+    if (field.tagName === 'TEXTAREA') replacement.classList.add('multiline');
+    replacement.textContent = value === '' ? '\u00a0' : value;
+    field.replaceWith(replacement);
+  });
+}
+
 export async function captureDispatchSnapshot(sheet: HTMLElement, options: Readonly<{ scale?: number }> = {}): Promise<string> {
   await document.fonts.ready;
   await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
@@ -181,25 +201,7 @@ export async function captureDispatchSnapshot(sheet: HTMLElement, options: Reado
     allowTaint: false,
     logging: false,
     removeContainer: true,
-    onclone: (clonedDocument) => {
-      const clonedSheet = clonedDocument.querySelector<HTMLElement>('.fire-dispatch-ticket-sheet');
-      clonedSheet?.querySelectorAll<HTMLElement>('.dispatch-department-chip').forEach((chip) => {
-        chip.querySelectorAll('button').forEach((button) => button.remove());
-        chip.replaceWith(clonedDocument.createTextNode(`${chip.textContent.trim()} `));
-      });
-      clonedSheet?.querySelectorAll<HTMLElement>('[contenteditable]').forEach((field) => {
-        field.removeAttribute('contenteditable');
-        field.removeAttribute('data-placeholder');
-      });
-      clonedSheet?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input, select, textarea').forEach((field) => {
-        const value = printableFieldValue(field);
-        const replacement = clonedDocument.createElement('div');
-        replacement.className = 'fire-dispatch-capture-value';
-        if (field.tagName === 'TEXTAREA') replacement.classList.add('multiline');
-        replacement.textContent = value === '' ? '\u00a0' : value;
-        field.replaceWith(replacement);
-      });
-    },
+    onclone: prepareDispatchCloneForPrint,
   });
   return canvas.toDataURL('image/png');
 }

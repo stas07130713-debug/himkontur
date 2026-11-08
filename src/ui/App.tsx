@@ -368,7 +368,6 @@ export function App() {
       districtProjectRef.current = restoredProject;
       setDistrictProject(restoredProject);
       setDistrictSyncState("pending");
-      void publishPendingDistrictProject();
     }
   };
   const undo = () => {
@@ -800,27 +799,6 @@ export function App() {
       void refreshDistrictMapFromServer();
     }
   }
-  useEffect(() => {
-    const resumePendingPublication = () => {
-      if (pendingDistrictOperationsRef.current.length === 0) return;
-      adminCredentialRef.current ??= { password: MAP_ADMIN_PASSWORD, sessionToken: "" };
-      void publishPendingDistrictProject();
-    };
-    const onVisibility = () => { if (document.visibilityState === "visible") resumePendingPublication(); };
-    resumePendingPublication();
-    // One bounded retry source is enough. A slow corporate connection must not
-    // be surrounded by overlapping 15/30 second retry timers.
-    const interval = window.setInterval(resumePendingPublication, 60_000);
-    window.addEventListener("online", resumePendingPublication);
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      window.clearInterval(interval);
-      window.removeEventListener("online", resumePendingPublication);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-    // The locally persisted queue resumes until the server confirms it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   const commitDistrictObjects = (objects: readonly DistrictMapObject[]) => {
     if (!districtChangeRememberedRef.current) remember("Изменена карта района выезда");
     districtChangeRememberedRef.current = false;
@@ -844,7 +822,6 @@ export function App() {
     setDistrictProject(published);
 
     setDistrictSyncState("pending");
-    void publishPendingDistrictProject();
   };
   const downloadDistrictConflictArchive = () => {
     const blob = new Blob([serializeDistrictMapConflictReport()], { type: 'text/plain;charset=utf-8' });
@@ -1028,7 +1005,13 @@ export function App() {
           onCommitObjects={commitDistrictObjects}
           managementOpen={districtManagementOpen}
           onCloseManagement={() => setDistrictManagementOpen(false)}
-          onExitAdmin={() => {
+          onExitAdmin={async () => {
+            const result = await publishPendingDistrictProject();
+            if (!result.success) {
+              setDistrictManagementOpen(true);
+              setNotice(result.message);
+              return;
+            }
             adminCredentialRef.current = null;
             setAdminPassword("");
             setDistrictManagementOpen(false);
@@ -1431,7 +1414,6 @@ export function App() {
                     adminCredentialRef.current = authenticated.credential;
                     setMapSyncStatus(authenticated.status);
                   }).catch(() => undefined);
-                  if (pendingDistrictOperationsRef.current.length > 0) void publishPendingDistrictProject();
                 } catch (error) {
                   setAdminPasswordError(message(error));
                 }

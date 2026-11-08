@@ -4022,6 +4022,7 @@ button.wide { width: 100%; margin-top: 10px; }
 .fire-dispatch-map > .offline-vector-map { z-index: 1; }
 .fire-dispatch-map > svg { position: absolute; z-index: 3; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .fire-dispatch-building-contour { --object-color: #2d6fd0; fill: var(--object-color); fill-opacity: .38; stroke: var(--object-color); stroke-width: 6; stroke-linejoin: round; filter: drop-shadow(0 0 5px var(--object-color)); }
+.fire-dispatch-demolished-contour { fill: url(#dispatch-demolished-hatch); stroke: #d52d36; stroke-width: 4; stroke-linejoin: round; }
 .fire-dispatch-building-contour.prefix-0 { --object-color: #191d20; }
 .fire-dispatch-building-contour.prefix-1 { --object-color: #2d6fd0; }
 .fire-dispatch-building-contour.prefix-2 { --object-color: #1e633f; }
@@ -4788,10 +4789,9 @@ svg.district-legend-building text {
 .dispatch-place-control { box-sizing: border-box; width: 100%; min-height: 11mm; border: 1px solid #555; border-radius: 1.5mm; padding: .65mm 1.8mm; background: #fff; color: #111; font: 9.6pt/1.5 Inter, "Segoe UI", Arial, sans-serif; cursor: text; }
 .fire-dispatch-ticket-sheet .dispatch-place-control textarea { width: 100%; box-sizing: border-box; border: 0; background: transparent; color: inherit; font: inherit; resize: vertical; padding: 0; box-shadow: none; }
 .dispatch-department-chips { display: inline; }
-.dispatch-department-chip { display: inline-block; max-width: 100%; box-sizing: border-box; vertical-align: baseline; border: 1px solid #92b5bf; border-radius: 9px; padding: 0 3px; margin: 1px 3px 1px 0; font: inherit; overflow-wrap: anywhere; }
-.single-department .dispatch-department-chip { border: 0; padding: 0; margin: 0; }
-.single-department .dispatch-department-chip button { display: none; }
-.dispatch-department-chip button { border: 0; background: transparent; color: inherit; padding: 0 2px; font: inherit; cursor: pointer; }
+.dispatch-department-chip { display: inline; max-width: 100%; box-sizing: border-box; vertical-align: baseline; border: 1px solid #9aa7aa; border-radius: 9px; padding: 0 4px; margin: 1px 3px 1px 0; background: #e5e8e9; color: #536065; font: inherit; line-height: inherit; overflow-wrap: anywhere; cursor: pointer; }
+.dispatch-department-chip.selected { border-color: #2f8f61; background: #d9f2e4; color: #155b3b; }
+.dispatch-department-chip:focus-visible { outline: 2px solid #138c91; outline-offset: 1px; }
 .dispatch-place-editable { display: inline-block; min-width: 8px; min-height: 1.5em; max-width: 100%; vertical-align: baseline; outline: none; white-space: pre-wrap; overflow-wrap: anywhere; caret-color: #111; cursor: text; }
 .dispatch-place-control:focus-within { border-color: #087f91; }
 .fire-dispatch-ticket-sheet .dispatch-place[data-complete="true"] .dispatch-place-control {
@@ -4802,8 +4802,17 @@ svg.district-legend-building text {
 .dispatch-place-editable:empty::before { content: attr(data-placeholder); color: #78858a; }
 .dispatch-chip-caret { display: inline-block; min-width: 8px; min-height: 1.5em; vertical-align: baseline; outline: none; caret-color: #111; }
 @media print {
-  .dispatch-department-chip { border: 0; padding: 0; margin: 0 3px 0 0; }
-  .dispatch-department-chip button { display: none; }
+  .dispatch-department-chip.not-selected { display: none; }
+  .dispatch-department-chip.selected { border: 0; padding: 0; margin: 0 3px 0 0; background: transparent; color: inherit; }
   .dispatch-place-editable:empty::before { content: none; }
 }
 .district-add-menu .district-emergency-button { display: block; margin: 0; background: linear-gradient(180deg, #ef3f43, #bb1119); border-color: #8f0d12; font-size: 9px; }
+
+/* Expensive SVG shadow passes are unnecessary while the user is dragging.
+   Restore them immediately on release; markers and contours remain visible. */
+@media (pointer: coarse) {
+  .district-map-surface > svg.panning * {
+    filter: none !important;
+    animation-play-state: paused !important;
+  }
+}

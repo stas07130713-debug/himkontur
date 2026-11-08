@@ -78,7 +78,7 @@ type Props = Readonly<{
   onCommitObjects: (objects: readonly DistrictMapObject[]) => void;
   managementOpen: boolean;
   onCloseManagement: () => void;
-  onExitAdmin: () => void;
+  onExitAdmin: () => void | Promise<void>;
   syncStatus: MapSyncStatus;
   localPendingOperations: number;
   syncCheckBusy: boolean;
@@ -389,13 +389,19 @@ function pressureFromAct(value: string, fallback: number | null): number | null 
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function NamedUnitsEditor({ label, units, onChange }: Readonly<{
+function NamedUnitsEditor({ label, units, departments = [], onChange }: Readonly<{
   label: 'Отделение' | 'Участок' | 'Название территории';
   units: readonly DistrictNamedUnit[];
+  departments?: readonly DistrictNamedUnit[];
   onChange: (units: readonly DistrictNamedUnit[]) => void;
 }>) {
   const rows = units.length === 0 ? [{ id: crypto.randomUUID(), fullName: '', shortName: '' }] : units;
   const patch = (id: string, changes: Partial<DistrictNamedUnit>) => onChange(rows.map((unit) => unit.id === id ? { ...unit, ...changes } : unit));
+  const patchParent = (id: string, parentDepartmentId: string) => onChange(rows.map((unit) => {
+    if (unit.id !== id) return unit;
+    if (parentDepartmentId === '') return { id: unit.id, fullName: unit.fullName, shortName: unit.shortName };
+    return { ...unit, parentDepartmentId };
+  }));
   return (
     <fieldset className="district-repeatable-fields">
       <legend><span>{label}</span><button type="button" aria-label={`Добавить ${label.toLocaleLowerCase('ru-RU')}`} title={`Добавить ${label.toLocaleLowerCase('ru-RU')}`} onClick={() => onChange([...rows, { id: crypto.randomUUID(), fullName: '', shortName: '' }])}><UiIcon name="plus" /></button></legend>
@@ -403,6 +409,7 @@ function NamedUnitsEditor({ label, units, onChange }: Readonly<{
         <div className="paired-field repeatable-row" key={unit.id}>
           <label>{label} {rows.length > 1 ? index + 1 : ''} — полное название<input value={unit.fullName} onChange={(event) => patch(unit.id, { fullName: event.currentTarget.value })} /></label>
           <label>Сокращённо<input value={unit.shortName} placeholder="Необязательно" onChange={(event) => patch(unit.id, { shortName: event.currentTarget.value })} /></label>
+          {label === 'Участок' && departments.length > 0 && <label>Относится к отделению<select value={unit.parentDepartmentId ?? ''} onChange={(event) => patchParent(unit.id, event.currentTarget.value)}><option value="">Не указано</option>{departments.map((department) => <option value={department.id} key={department.id}>{department.fullName || department.shortName || 'Без названия'}</option>)}</select></label>}
           {rows.length > 1 && <button type="button" className="remove-unit" aria-label={`Удалить ${label.toLocaleLowerCase('ru-RU')} ${index + 1}`} onClick={() => onChange(rows.filter((item) => item.id !== unit.id))}><UiIcon name="close" /></button>}
         </div>
       ))}
@@ -553,7 +560,7 @@ function ObjectEditor({ object, objects, onSave, onEditContour, onClose }: Reado
             {(value.mapRole === 'rescue-service' || buildingPrefix(value.number) === '9' || (buildingPrefix(value.number) === '1' && customPrefixOne)) && <div className="paired-field"><label>{value.mapRole === 'rescue-service' ? 'Наименование формирования' : buildingPrefix(value.number) === '9' ? 'Организация — полное название' : 'Подразделение — полное название'}<input value={value.workshopFull} placeholder="Введите полное название" onChange={(event) => patch({ workshopFull: event.currentTarget.value })} /></label><label>Сокращённое название<input value={value.workshopShort} placeholder="АСС" onChange={(event) => patch({ workshopShort: event.currentTarget.value })} /></label></div>}
             {value.mapRole !== 'rescue-service' && FIXED_WORKSHOPS[buildingPrefix(value.number)] !== undefined && <div className="district-auto-workshop"><span>Цех определён по номеру:</span><strong>{value.workshopFull} ({value.workshopShort})</strong></div>}
             <NamedUnitsEditor label="Отделение" units={value.departments} onChange={(departments) => patch({ departments })} />
-            <NamedUnitsEditor label="Участок" units={value.sites} onChange={(sites) => patch({ sites })} />
+            <NamedUnitsEditor label="Участок" units={value.sites} departments={value.departments} onChange={(sites) => patch({ sites })} />
             </>}
           </div>
         ) : value.kind === 'hydrant' ? (
@@ -584,11 +591,12 @@ function ObjectEditor({ object, objects, onSave, onEditContour, onClose }: Reado
   );
 }
 
-function ObjectDetails({ object, adminMode, onEdit, onDelete, onOpenDispatch }: Readonly<{
+function ObjectDetails({ object, adminMode, onEdit, onDelete, onDeleteContour, onOpenDispatch }: Readonly<{
   object: DistrictMapObject | null;
   adminMode: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  onDeleteContour: () => void;
   onOpenDispatch: () => void;
 }>) {
   if (object === null) return null;
@@ -669,8 +677,8 @@ function ObjectDetails({ object, adminMode, onEdit, onDelete, onOpenDispatch }: 
       )}
       {object.note !== '' && <div className="district-details-note"><strong>Примечание</strong><p>{object.note}</p></div>}
       <p className="district-details-coordinates">{object.point.latitude.toFixed(6)}° с.ш.<br />{object.point.longitude.toFixed(6)}° в.д.</p>
-      {adminMode && <div className="district-details-actions"><button onClick={onEdit}>Редактировать</button><button className="danger" onClick={onDelete}>Удалить</button></div>}
-      {object.kind === 'building' && object.mapRole !== 'response-boundary' && <button type="button" className="district-emergency-button" onClick={onOpenDispatch}>Пожар / Авария</button>}
+      {adminMode && <div className="district-details-actions"><button onClick={onEdit}>Редактировать</button>{object.kind === 'building' && object.contour.length > 0 && <button className="danger" onClick={onDeleteContour}>Удалить контур</button>}<button className="danger" onClick={onDelete}>Удалить объект</button></div>}
+      {object.kind === 'building' && object.objectType !== 'demolished' && object.mapRole !== 'response-boundary' && <button type="button" className="district-emergency-button" onClick={onOpenDispatch}>Пожар / Авария</button>}
     </article>
   );
 }
@@ -1115,6 +1123,16 @@ export function DistrictMapPage(props: Props) {
     props.onCommitObjects(props.objects.filter((item) => item.id !== selected.id));
     setSelectedId(null);
   };
+  const deleteSelectedContour = () => {
+    if (selected?.kind !== 'building' || selected.contour.length === 0 || !window.confirm(`Удалить контур объекта «${districtObjectTitle(selected)}»?`)) return;
+    if (selected.objectType === 'demolished') {
+      props.onCommitObjects(props.objects.filter((item) => item.id !== selected.id));
+      setSelectedId(null);
+      return;
+    }
+    const changed = withAdminChangeNote({ ...selected, contour: [], updatedAtIso: new Date().toISOString() }, ['Контур объекта']);
+    props.onCommitObjects(props.objects.map((item) => item.id === selected.id ? changed : item));
+  };
   const downloadMapBackup = () => {
     const now = new Date();
     const stamp = [
@@ -1554,7 +1572,7 @@ export function DistrictMapPage(props: Props) {
           >
             <rect width={viewSize.width} height={viewSize.height} className="map-base" />
             {visibleObjects.filter((object): object is DistrictBuilding => object.kind === 'building').map((object) => <DistrictObjectContour key={`${object.id}-contour`} object={object} project={projection.project} selected={selectedId === object.id && searchHighlightedId !== object.id} highlighted={searchHighlightedId === object.id} interactionDisabled={rulerActive || contourDraft !== null} onSelect={() => {
-              if (object.objectType !== 'demolished') selectObject(object.id);
+              if (object.objectType !== 'demolished' || props.adminMode) selectObject(object.id);
             }} onHoverChange={(hovered) => setHoveredId(hovered ? object.id : null)} />)}
             {contourDraft !== null && <g className={`district-contour-draft ${contourDraft.source}${contourDraft.objectType === 'demolished' ? ' demolished-draft' : ''}${contourDraft.mapRole === 'response-boundary' ? ' response-boundary-draft' : ''}`}>
               {contourDraft.mapRole === 'response-boundary'
@@ -1705,7 +1723,7 @@ export function DistrictMapPage(props: Props) {
       </main>
       {selected !== null && <aside className="district-details-panel" ref={detailsPanelRef}>
         <div className="district-panel-heading"><span>Объекты района выезда</span></div>
-        <ObjectDetails object={selected} adminMode={props.adminMode} onEdit={() => setEditorObject(selected)} onDelete={deleteSelected} onOpenDispatch={() => { if (selected.kind === 'building') setDispatchBuilding(selected); }} />
+        <ObjectDetails object={selected} adminMode={props.adminMode} onEdit={() => setEditorObject(selected)} onDelete={deleteSelected} onDeleteContour={deleteSelectedContour} onOpenDispatch={() => { if (selected.kind === 'building') setDispatchBuilding(selected); }} />
       </aside>}
       {props.adminMode && props.managementOpen && <div className="dialog-backdrop district-management-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) props.onCloseManagement(); }}>
         <section className="district-management-dialog" role="dialog" aria-modal="true" aria-labelledby="district-management-title">
@@ -1732,7 +1750,7 @@ export function DistrictMapPage(props: Props) {
               <span className="district-sync-shared-state"><small>Общая карта на сервере</small><strong className={props.syncStatus.backupAvailable === false ? 'is-error' : ''}>{props.syncStatus.backupAvailable === true ? 'Данные сохранены' : 'Сервер недоступен'}</strong>{props.syncStatus.sharedUpdatedAtIso !== '' && <em>Обновлено {synchronizationTime(props.syncStatus.sharedUpdatedAtIso)}</em>}</span>
               <span className="district-sync-local-state"><small>Только на этом устройстве</small><strong className={props.localPendingOperations > 0 ? 'is-error' : ''}>{localSynchronizationPacketCount(props.localPendingOperations)}</strong></span>
             </div>
-            <small className="district-sync-queue-note">После изменения объекта программа сразу сохраняет новую редакцию общей карты в доступном облачном сервисе. Поэтому значение «Все изменения отправлены» означает, что актуальная карта уже доступна другим устройствам. Обмен между облачными сервисами выполняется автоматически и не требует ожидания пользователя.</small>
+            <small className="district-sync-queue-note">Во время настройки изменения сохраняются только на этом устройстве, поэтому их можно отменять кнопкой «Назад». Отправка начинается после нажатия «Опубликовать для всех устройств» либо «Завершить режим настройки».</small>
             <button type="button" className="secondary district-composition-check-open" onClick={() => void checkMapComposition()}><UiIcon name="check" /><span>Сверить состав карты</span></button>
             <button type="button" className="secondary district-composition-check-open" disabled={props.syncCheckBusy} onClick={() => void loadFromServer()}><UiIcon name="cloud" /><span>{props.syncCheckBusy ? 'Получаю карту…' : 'Загрузить общую карту с сервера'}</span></button>
             {serverReplaceConfirmationOpen && <div className="district-server-replace-confirmation" role="alertdialog" aria-label="Замена локальной карты общей картой">
@@ -1772,7 +1790,7 @@ export function DistrictMapPage(props: Props) {
           {sharedPublishStatus !== null && <p className={`district-publish-status ${sharedPublishStatus.success ? 'is-success' : 'is-error'}`} role="status">{sharedPublishStatus.message}</p>}
           <div className="district-management-footer-actions">
             <button type="button" className="primary publish-shared-map" disabled={props.publishBusy || props.syncCheckBusy} onClick={() => void publishForAllDevices()}><UiIcon name="upload" /><span>{props.publishBusy ? 'Загружаю изменения…' : 'Опубликовать для всех устройств'}</span></button>
-            <button className="secondary exit-admin" onClick={() => { props.onCloseManagement(); props.onExitAdmin(); }}>Завершить режим настройки</button>
+            <button className="secondary exit-admin" disabled={props.publishBusy} onClick={() => { void props.onExitAdmin(); }}>{props.publishBusy ? 'Публикую изменения…' : 'Завершить режим настройки'}</button>
           </div>
         </section>
       </div>}

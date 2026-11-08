@@ -1,5 +1,4 @@
-import { app, BrowserWindow, ipcMain, powerMonitor, shell } from 'electron';
-import electronUpdater from 'electron-updater';
+import { app, BrowserWindow, ipcMain, powerMonitor, shell, net } from 'electron';
 import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import { createServer } from 'node:http';
@@ -12,7 +11,6 @@ const HOST = '127.0.0.1';
 const PORT = Number(process.env.HIMKONTUR_LOCAL_PORT ?? '32174');
 const PROJECT_EOL_ENDPOINT = 'https://weatherapi.projecteol.ru/mcp/';
 const CURRENT_DIRECTORY = resolve(fileURLToPath(new URL('.', import.meta.url)));
-const { autoUpdater } = electronUpdater;
 const WEB_ROOT = resolve(CURRENT_DIRECTORY, '..', 'dist');
 const MIME = Object.freeze({
   '.css': 'text/css; charset=utf-8',
@@ -37,10 +35,8 @@ const UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 const UPDATE_CHECK_COOLDOWN_MS = 2 * 60 * 1000;
 const UPDATE_MANIFEST_URL = 'https://github.com/stas07130713-debug/himkontur/releases/latest/download/latest.yml';
 const UPDATE_RELEASE_API_URL = 'https://api.github.com/repos/stas07130713-debug/himkontur/releases/latest';
-const UPDATE_DOWNLOAD_BASE_URL = 'https://github.com/stas07130713-debug/himkontur/releases/latest/download';
 let latestReleaseMetadata = null;
 let downloadedInstallerPath = '';
-let autoUpdaterReady = false;
 
 function sendUpdateStatus(status) {
   lastUpdateStatus = status;
@@ -61,7 +57,9 @@ async function fetchWithTimeout(url, timeoutMs) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, { cache: 'no-store', redirect: 'follow', signal: controller.signal });
+    const response = await net.fetch(url, { cache: 'no-store', redirect: 'follow', signal: controller.signal });
+    const body = await response.text();
+    return { ok: response.ok, status: response.status, text: async () => body, json: async () => JSON.parse(body) };
   } finally {
     clearTimeout(timeout);
   }
@@ -75,7 +73,7 @@ async function fetchLatestReleaseMetadata() {
     if (parsed === null) throw new Error('Некорректный latest.yml');
     return {
       version: parsed.version,
-      installerUrl: `${UPDATE_DOWNLOAD_BASE_URL}/${encodeURIComponent(parsed.path)}`,
+      installerUrl: `https://github.com/stas07130713-debug/himkontur/releases/download/v${parsed.version}/${encodeURIComponent(parsed.path)}`,
       sha512: parsed.sha512,
     };
   } catch {
@@ -97,7 +95,7 @@ async function downloadInstallerDirect(metadata) {
   const destination = join(app.getPath('temp'), `HIMKONTUR-${safeVersion}-Setup.exe`);
   const partial = `${destination}.part`;
   if (existsSync(partial)) unlinkSync(partial);
-  const response = await fetch(metadata.installerUrl, { cache: 'no-store', redirect: 'follow' });
+  const response = await net.fetch(metadata.installerUrl, { cache: 'no-store', redirect: 'follow', signal: AbortSignal.timeout(30 * 60 * 1000) });
   if (!response.ok || response.body === null) throw new Error(`Сервер обновлений вернул HTTP ${response.status}.`);
   const total = Number(response.headers.get('content-length') ?? 0);
   const output = createWriteStream(partial);
@@ -133,28 +131,18 @@ async function downloadInstallerDirect(metadata) {
 
 async function checkForApplicationUpdate({ force = false } = {}) {
   if (!app.isPackaged) return { state: 'development', version: app.getVersion() };
+  if (['downloading', 'downloaded', 'installing'].includes(lastUpdateStatus.state)) return lastUpdateStatus;
   if (updateCheckInFlight !== null) return updateCheckInFlight;
   if (!force && Date.now() - lastUpdateCheckAt < UPDATE_CHECK_COOLDOWN_MS) return lastUpdateStatus;
   lastUpdateCheckAt = Date.now();
   updateCheckInFlight = (async () => {
-    let metadataError = null;
     try {
       latestReleaseMetadata = await fetchLatestReleaseMetadata();
-      if (isNewerRelease(latestReleaseMetadata.version, app.getVersion())) {
-        sendUpdateStatus({ state: 'available', version: latestReleaseMetadata.version });
-      }
+      sendUpdateStatus(isNewerRelease(latestReleaseMetadata.version, app.getVersion())
+        ? { state: 'available', version: latestReleaseMetadata.version }
+        : { state: 'current', version: app.getVersion() });
     } catch (error) {
-      metadataError = error;
-    }
-    try {
-      await autoUpdater.checkForUpdates();
-    } catch (error) {
-      if (latestReleaseMetadata !== null && isNewerRelease(latestReleaseMetadata.version, app.getVersion())) {
-        sendUpdateStatus({ state: 'available', version: latestReleaseMetadata.version });
-      } else {
-        const result = { state: 'error', message: friendlyUpdateError(metadataError ?? error) };
-        sendUpdateStatus(result);
-      }
+      sendUpdateStatus({ state: 'error', message: friendlyUpdateError(error) });
     }
     return lastUpdateStatus;
   })()
@@ -163,65 +151,20 @@ async function checkForApplicationUpdate({ force = false } = {}) {
 }
 
 function configureUpdates() {
-  // The GitHub provider first calls api.github.com. Some providers allow the
-  // release download itself but block that API domain, so installed copies
-  // never learn that an update exists. The generic feed follows GitHub's
-  // stable /releases/latest/download redirect and reads the same signed
-  // latest.yml without depending on api.github.com.
-  autoUpdater.setFeedURL({
-    provider: 'generic',
-    url: 'https://github.com/stas07130713-debug/himkontur/releases/latest/download',
-    useMultipleRangeRequest: false
-  });
-  // First tell the user that a new version exists. A 400+ MB installer must
-  // not be downloaded silently on a metered or slow connection.
-  autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = true;
-  autoUpdater.autoRunAppAfterInstall = true;
-  autoUpdater.allowPrerelease = false;
-  autoUpdater.on('checking-for-update', () => {
-    if (lastUpdateStatus.state !== 'available') sendUpdateStatus({ state: 'checking' });
-  });
-  autoUpdater.on('update-available', (info) => {
-    autoUpdaterReady = true;
-    sendUpdateStatus({ state: 'available', version: info.version });
-  });
-  autoUpdater.on('update-not-available', (info) => {
-    if (latestReleaseMetadata === null || !isNewerRelease(latestReleaseMetadata.version, app.getVersion())) {
-      sendUpdateStatus({ state: 'current', version: info.version });
-    }
-  });
-  autoUpdater.on('download-progress', (progress) => sendUpdateStatus({
-    state: 'downloading',
-    percent: Math.max(0, Math.min(100, Math.round(progress.percent)))
-  }));
-  autoUpdater.on('update-downloaded', (info) => sendUpdateStatus({ state: 'downloaded', version: info.version }));
-  autoUpdater.on('error', (error) => {
-    if (latestReleaseMetadata !== null && isNewerRelease(latestReleaseMetadata.version, app.getVersion())) {
-      sendUpdateStatus({ state: 'available', version: latestReleaseMetadata.version });
-    } else {
-      sendUpdateStatus({ state: 'error', message: friendlyUpdateError(error) });
-    }
-  });
-
+  // One bounded metadata check and one pinned download path for installed and
+  // portable builds. Both use Chromium's system-proxy-aware network stack.
   ipcMain.handle('himkontur:update-version', () => app.getVersion());
   ipcMain.handle('himkontur:update-status-current', () => lastUpdateStatus);
   ipcMain.handle('himkontur:update-check', async () => {
-    sendUpdateStatus({ state: 'checking', version: app.getVersion() });
     return checkForApplicationUpdate({ force: true });
   });
   ipcMain.handle('himkontur:update-download', async () => {
+    if (['downloading', 'downloaded', 'installing'].includes(lastUpdateStatus.state)) return lastUpdateStatus;
+    if (updateCheckInFlight !== null) await updateCheckInFlight;
+    if (['downloading', 'downloaded', 'installing'].includes(lastUpdateStatus.state)) return lastUpdateStatus;
     try {
       sendUpdateStatus({ state: 'downloading', version: lastUpdateStatus.version, percent: 0 });
-      if (autoUpdaterReady) {
-        try {
-          await autoUpdater.downloadUpdate();
-          return lastUpdateStatus;
-        } catch {
-          autoUpdaterReady = false;
-        }
-      }
-      latestReleaseMetadata ??= await fetchLatestReleaseMetadata();
+      latestReleaseMetadata = await fetchLatestReleaseMetadata();
       if (!isNewerRelease(latestReleaseMetadata.version, app.getVersion())) {
         const current = { state: 'current', version: app.getVersion() };
         sendUpdateStatus(current);
@@ -245,8 +188,9 @@ function configureUpdates() {
       });
       return { state: 'installing' };
     }
-    autoUpdater.quitAndInstall(false, true);
-    return { state: 'installing' };
+    const result = { state: 'error', message: 'Сначала загрузите обновление.' };
+    sendUpdateStatus(result);
+    return result;
   });
 }
 
@@ -453,7 +397,7 @@ async function createWindow() {
     titleBarStyle: 'default',
     show: false,
     webPreferences: {
-      preload: join(CURRENT_DIRECTORY, 'preload.mjs'),
+      preload: join(CURRENT_DIRECTORY, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true

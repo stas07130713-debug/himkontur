@@ -42,29 +42,13 @@ public class HimkonturUpdaterPlugin extends Plugin {
     @PluginMethod
     public void checkUpdate(PluginCall call) {
         getBridge().execute(() -> {
-            HttpURLConnection connection = null;
             try {
-                connection = (HttpURLConnection) new URL(RELEASE_MANIFEST_URL).openConnection();
-                connection.setConnectTimeout(15_000);
-                connection.setReadTimeout(30_000);
-                // The endpoint always represents the newest stable release.
-                // Never reuse an earlier response: a device may have skipped
-                // several versions and must jump straight to the current one.
-                connection.setUseCaches(false);
-                connection.setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0");
-                connection.setRequestProperty("Pragma", "no-cache");
-                connection.setRequestProperty("Accept", "application/json");
-                connection.setRequestProperty("User-Agent", "HIMKONTUR-Android/" + installedVersion());
-                connection.connect();
-                int status = connection.getResponseCode();
-                if (status < 200 || status >= 300) throw new IllegalStateException("HTTP " + status);
-
-                StringBuilder body = new StringBuilder();
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) body.append(line);
+                JSONObject release;
+                try {
+                    release = readLatestRelease(RELEASE_MANIFEST_URL);
+                } catch (Exception manifestError) {
+                    release = readLatestRelease("https://api.github.com/repos/stas07130713-debug/himkontur/releases/latest");
                 }
-                JSONObject release = new JSONObject(body.toString());
                 JSONArray sourceAssets = release.getJSONArray("assets");
                 JSONArray assets = new JSONArray();
                 for (int index = 0; index < sourceAssets.length(); index++) {
@@ -73,7 +57,10 @@ public class HimkonturUpdaterPlugin extends Plugin {
                     if (!name.matches("(?iu)HIMKONTUR.*Android.*\\.apk")) continue;
                     JSONObject asset = new JSONObject();
                     asset.put("name", name);
-                    asset.put("browser_download_url", sourceAsset.getString("browser_download_url"));
+                    String tag = release.getString("tag_name");
+                    if (!tag.matches("v?[0-9]+\\.[0-9]+\\.[0-9]+")) throw new IllegalStateException("Invalid release version");
+                    // Pin the APK to the checked release, avoiding cached /latest redirects.
+                    asset.put("browser_download_url", "https://github.com/stas07130713-debug/himkontur/releases/download/" + tag + "/" + name);
                     assets.put(asset);
                 }
                 JSObject result = new JSObject();
@@ -82,10 +69,34 @@ public class HimkonturUpdaterPlugin extends Plugin {
                 call.resolve(result);
             } catch (Exception error) {
                 call.reject("Сервер обновлений недоступен. Проверьте подключение к интернету.", error);
-            } finally {
-                if (connection != null) connection.disconnect();
             }
         });
+    }
+
+    private JSONObject readLatestRelease(String endpoint) throws Exception {
+        HttpURLConnection connection = (HttpURLConnection) new URL(endpoint + "?ts=" + System.currentTimeMillis()).openConnection();
+        try {
+            connection.setConnectTimeout(15_000);
+            connection.setReadTimeout(30_000);
+            connection.setUseCaches(false);
+            connection.setRequestProperty("Cache-Control", "no-cache, no-store, max-age=0");
+            connection.setRequestProperty("Pragma", "no-cache");
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestProperty("User-Agent", "HIMKONTUR-Android/" + installedVersion());
+            int status = connection.getResponseCode();
+            if (status < 200 || status >= 300) throw new IllegalStateException("HTTP " + status);
+            StringBuilder body = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) body.append(line);
+            }
+            JSONObject release = new JSONObject(body.toString());
+            if (!release.has("tag_name") || release.getJSONArray("assets").length() == 0)
+                throw new IllegalStateException("Incomplete release metadata");
+            return release;
+        } finally {
+            connection.disconnect();
+        }
     }
 
     @PluginMethod

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { GeoPoint } from '../core/types';
 import type { DistrictBuilding } from './district-map-model';
 import { buildingPrefix } from './district-map-model';
@@ -70,13 +70,13 @@ export function DistrictObjectContour({ object, project, selected = false, highl
   const responseBoundary = object.mapRole === 'response-boundary';
   const demolished = object.objectType === 'demolished';
   const hatchId = `demolished-hatch-${object.id.replace(/[^a-z0-9_-]/giu, '-')}`;
+  const corners = useMemo(() => responseBoundary ? object.contour : logicalCorners(object.contour), [object.contour, responseBoundary]);
   if (object.contour.length < (responseBoundary ? 2 : 3)) return null;
   const contourPoints = object.contour.map((point) => {
     const projected = project(point);
     return `${projected.x},${projected.y}`;
   }).join(' ');
   const showWallDimensions = object.objectType === 'building';
-  const corners = responseBoundary ? object.contour : logicalCorners(object.contour);
   const walls = showWallDimensions ? corners.map((start, index) => {
     const end = responseBoundary ? corners[index + 1] : corners[(index + 1) % corners.length];
     if (end === undefined) return null;
@@ -106,7 +106,7 @@ export function DistrictObjectContour({ object, project, selected = false, highl
           className={`district-object-contour prefix-${buildingPrefix(object.number)}${object.objectType === 'territory' || buildingPrefix(object.number) === '0' ? ' territory' : ''}${demolished ? ' demolished' : ''}${roleClass}${hovered ? ' hovered' : ''}${selected ? ' selected' : ''}${highlighted ? ' search-highlight' : ''}`}
           style={demolished ? { fill: `url(#${hatchId})` } : undefined}
           onClick={(event) => { if (!interactionDisabled) { event.stopPropagation(); onSelect?.(); } }}
-          onPointerDown={(event) => { if (!interactionDisabled && event.button === 0) event.stopPropagation(); }}
+          onPointerDown={(event) => { if (!interactionDisabled && event.button === 0 && event.pointerType !== 'touch') event.stopPropagation(); }}
         />}
     {walls.map((edge, index) => <line
       key={`measure-${index}`}
@@ -118,7 +118,7 @@ export function DistrictObjectContour({ object, project, selected = false, highl
       onPointerEnter={() => { if (!interactionDisabled) setHoveredWall(index); }}
       onPointerLeave={() => setHoveredWall((current) => current === index ? null : current)}
       onClick={(event) => { if (!interactionDisabled) { event.stopPropagation(); onSelect?.(); } }}
-      onPointerDown={(event) => { if (!interactionDisabled && event.button === 0) event.stopPropagation(); }}
+      onPointerDown={(event) => { if (!interactionDisabled && event.button === 0 && event.pointerType !== 'touch') event.stopPropagation(); }}
     />)}
     {wall !== null && <text
       className="district-contour-length-label"
