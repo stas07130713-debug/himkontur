@@ -198,7 +198,7 @@ describe('object upload fragments', () => {
       targetRevision: 20,
     }));
     const chunks = chunkDistrictMapObjectChanges(changes);
-    expect(chunks.map((chunk) => chunk.length)).toEqual([8, 8, 3]);
+    expect(chunks.map((chunk) => chunk.length)).toEqual([2, 2, 2, 2, 2, 2, 2, 2, 2, 1]);
     expect(chunks.flat().map((change) => change.objectId)).toEqual(changes.map((change) => change.objectId));
   });
 

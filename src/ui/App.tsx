@@ -153,6 +153,9 @@ export function App() {
   const districtForceLoadRef = useRef(false);
   const districtPublicationAbortRef = useRef<AbortController | null>(null);
   const adminCredentialRef = useRef<MapAdminCredential | null>(null);
+  const districtAdminRef = useRef(false);
+  const districtBackgroundPublicationRef = useRef(false);
+  const districtBackgroundPublicationStartRef = useRef<() => void>(() => undefined);
   useEffect(() => { districtProjectRef.current = districtProject; }, [districtProject]);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -224,7 +227,12 @@ export function App() {
       interval = window.setInterval(() => void refresh(), config.pollIntervalMs);
       if (!config.coordinatorEnabled) setMapSyncStatus(disabledMapSyncStatus('Работает прямая синхронизация с основной базой.'));
     });
-    const onWake = () => { void refreshDistrictMapFromServer(); };
+    const onWake = () => {
+      void refreshDistrictMapFromServer();
+      if (!districtAdminRef.current && pendingDistrictOperationsRef.current.length > 0 && adminCredentialRef.current !== null) {
+        districtBackgroundPublicationStartRef.current();
+      }
+    };
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("online", onWake);
     window.addEventListener("focus", onWake);
@@ -687,6 +695,7 @@ export function App() {
                   objectIds: progress.objectIds,
                   objectLabels,
                   ...(progress.payloadBytes === undefined ? {} : { payloadBytes: progress.payloadBytes }),
+                  ...(progress.attempt === undefined ? {} : { attempt: progress.attempt }),
                   confirmedObjects: progress.stage === 'confirmed' ? progress.part : Math.max(0, progress.part - 1),
                   totalObjects: progress.total,
                   ...(progress.revision === undefined ? {} : { serverRevision: progress.revision }),
@@ -695,6 +704,8 @@ export function App() {
                 }));
                 const action = progress.stage === 'verifying'
                   ? 'Ответ потерян, проверяю сервер'
+                  : progress.stage === 'splitting'
+                    ? 'Делю фрагмент для медленного соединения'
                   : progress.stage === 'confirmed'
                     ? 'Сервер подтвердил фрагмент'
                     : 'Загрузка изменений';
@@ -799,6 +810,32 @@ export function App() {
       void refreshDistrictMapFromServer();
     }
   }
+  function publishPendingDistrictProjectInBackground(): void {
+    if (districtBackgroundPublicationRef.current) return;
+    districtBackgroundPublicationRef.current = true;
+    void (async () => {
+      const retryDelays = [0, 15_000, 60_000, 180_000, 300_000];
+      for (const retryDelay of retryDelays) {
+        if (pendingDistrictOperationsRef.current.length === 0 || adminCredentialRef.current === null) return;
+        if (retryDelay > 0) await new Promise<void>((resolve) => window.setTimeout(resolve, retryDelay));
+        if (pendingDistrictOperationsRef.current.length === 0) return;
+        while (districtPublishingRef.current && !districtForceLoadRef.current) {
+          await new Promise<void>((resolve) => window.setTimeout(resolve, 1_000));
+        }
+        if (districtForceLoadRef.current) return;
+        const result = await publishPendingDistrictProject();
+        if (result.success) {
+          setNotice('Фоновая публикация завершена. Общая карта обновлена для всех устройств.');
+          return;
+        }
+        setNotice('Связь нестабильна. Изменения сохранены на устройстве; следующая фоновая попытка выполнится автоматически.');
+      }
+    })().finally(() => {
+      districtBackgroundPublicationRef.current = false;
+      if (!districtAdminRef.current && pendingDistrictOperationsRef.current.length === 0) adminCredentialRef.current = null;
+    });
+  }
+  districtBackgroundPublicationStartRef.current = publishPendingDistrictProjectInBackground;
   const commitDistrictObjects = (objects: readonly DistrictMapObject[]) => {
     if (!districtChangeRememberedRef.current) remember("Изменена карта района выезда");
     districtChangeRememberedRef.current = false;
@@ -1005,17 +1042,18 @@ export function App() {
           onCommitObjects={commitDistrictObjects}
           managementOpen={districtManagementOpen}
           onCloseManagement={() => setDistrictManagementOpen(false)}
-          onExitAdmin={async () => {
-            const result = await publishPendingDistrictProject();
-            if (!result.success) {
-              setDistrictManagementOpen(true);
-              setNotice(result.message);
-              return;
-            }
-            adminCredentialRef.current = null;
+          onExitAdmin={() => {
+            const hasPendingPublication = pendingDistrictOperationsRef.current.length > 0 || districtPublishingRef.current;
+            districtAdminRef.current = false;
             setAdminPassword("");
             setDistrictManagementOpen(false);
             setDistrictAdmin(false);
+            if (hasPendingPublication) {
+              setNotice("Режим настройки завершён. Изменения продолжают отправляться в фоне; карта доступна для обычной работы.");
+              publishPendingDistrictProjectInBackground();
+            } else {
+              adminCredentialRef.current = null;
+            }
           }}
           syncStatus={mapSyncStatus}
           localPendingOperations={pendingDistrictOperationsRef.current.length}
@@ -1406,6 +1444,7 @@ export function App() {
                 try {
                   if (adminPassword !== MAP_ADMIN_PASSWORD) throw new Error("Неверный пароль администратора.");
                   adminCredentialRef.current = { password: adminPassword, sessionToken: "" };
+                   districtAdminRef.current = true;
                   setDistrictAdmin(true);
                   setDistrictManagementOpen(true);
                   setAdminLoginOpen(false);

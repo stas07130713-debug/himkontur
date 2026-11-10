@@ -1,4 +1,4 @@
-export type DistrictUploadStage = 'preparing' | 'sending' | 'verifying' | 'confirmed' | 'failed';
+export type DistrictUploadStage = 'preparing' | 'sending' | 'verifying' | 'splitting' | 'confirmed' | 'failed';
 
 export type DistrictUploadDiagnostic = Readonly<{
   chunkOperationId: string;

@@ -154,8 +154,9 @@ function localSynchronizationPacketCount(count: number): string {
 
 function uploadStageLabel(entry: DistrictUploadDiagnostic): string {
   if (entry.stage === 'preparing') return 'Подготовка';
-  if (entry.stage === 'sending') return 'Отправляется';
-  if (entry.stage === 'verifying') return 'Проверяю на сервере';
+  if (entry.stage === 'sending') return entry.attempt > 1 ? `Повторная отправка ${entry.attempt}/3` : 'Отправляется';
+  if (entry.stage === 'verifying') return entry.attempt > 1 ? `Проверка после попытки ${entry.attempt}/3` : 'Проверяю на сервере';
+  if (entry.stage === 'splitting') return 'Делится на меньшие части';
   if (entry.stage === 'confirmed') return entry.confirmation === 'status-check' ? 'Подтверждено проверкой' : 'Подтверждено';
   return 'Ошибка';
 }
@@ -1750,7 +1751,7 @@ export function DistrictMapPage(props: Props) {
               <span className="district-sync-shared-state"><small>Общая карта на сервере</small><strong className={props.syncStatus.backupAvailable === false ? 'is-error' : ''}>{props.syncStatus.backupAvailable === true ? 'Данные сохранены' : 'Сервер недоступен'}</strong>{props.syncStatus.sharedUpdatedAtIso !== '' && <em>Обновлено {synchronizationTime(props.syncStatus.sharedUpdatedAtIso)}</em>}</span>
               <span className="district-sync-local-state"><small>Только на этом устройстве</small><strong className={props.localPendingOperations > 0 ? 'is-error' : ''}>{localSynchronizationPacketCount(props.localPendingOperations)}</strong></span>
             </div>
-            <small className="district-sync-queue-note">Во время настройки изменения сохраняются только на этом устройстве, поэтому их можно отменять кнопкой «Назад». Отправка начинается после нажатия «Опубликовать для всех устройств» либо «Завершить режим настройки».</small>
+            <small className="district-sync-queue-note">Во время настройки изменения сохраняются только на этом устройстве, поэтому их можно отменять кнопкой «Назад». После публикации или завершения настройки отправка продолжается в фоне и не блокирует работу с картой.</small>
             <button type="button" className="secondary district-composition-check-open" onClick={() => void checkMapComposition()}><UiIcon name="check" /><span>Сверить состав карты</span></button>
             <button type="button" className="secondary district-composition-check-open" disabled={props.syncCheckBusy} onClick={() => void loadFromServer()}><UiIcon name="cloud" /><span>{props.syncCheckBusy ? 'Получаю карту…' : 'Загрузить общую карту с сервера'}</span></button>
             {serverReplaceConfirmationOpen && <div className="district-server-replace-confirmation" role="alertdialog" aria-label="Замена локальной карты общей картой">
@@ -1790,7 +1791,7 @@ export function DistrictMapPage(props: Props) {
           {sharedPublishStatus !== null && <p className={`district-publish-status ${sharedPublishStatus.success ? 'is-success' : 'is-error'}`} role="status">{sharedPublishStatus.message}</p>}
           <div className="district-management-footer-actions">
             <button type="button" className="primary publish-shared-map" disabled={props.publishBusy || props.syncCheckBusy} onClick={() => void publishForAllDevices()}><UiIcon name="upload" /><span>{props.publishBusy ? 'Загружаю изменения…' : 'Опубликовать для всех устройств'}</span></button>
-            <button className="secondary exit-admin" disabled={props.publishBusy} onClick={() => { void props.onExitAdmin(); }}>{props.publishBusy ? 'Публикую изменения…' : 'Завершить режим настройки'}</button>
+            <button className="secondary exit-admin" onClick={() => { void props.onExitAdmin(); }}>Завершить режим настройки</button>
           </div>
         </section>
       </div>}

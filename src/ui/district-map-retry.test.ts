@@ -1,9 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createPendingDistrictMapOperation, publishDistrictMapOperation, saveDistrictMapState, loadDistrictMapProject, loadPendingDistrictMapOperations, type DistrictMapProject, type DistrictBuilding, type PendingDistrictMapOperation } from './district-map-model';
-import type { CoordinatedObjectChange } from './map-sync-service';
+import { MapSyncRequestError, type CoordinatedObjectChange } from './map-sync-service';
 import { mergeDistrictMapProjects } from './district-map-merge';
 const transport = vi.hoisted(() => ({ send: vi.fn() }));
 vi.mock('./map-sync-service', () => ({
+  MapSyncRequestError: class MapSyncRequestError extends Error {
+    status: number;
+    kind: string;
+    constructor(message: string, status = 0, kind = 'unavailable') { super(message); this.status = status; this.kind = kind; }
+  },
   loadMapSyncConfig: () => Promise.resolve({ coordinatorEnabled: true }),
   publishCoordinatedObjectChanges: transport.send,
 }));
@@ -52,6 +57,30 @@ describe('durable object upload', () => {
     const pending = createPendingDistrictMapOperation(1, project([edit('new', '2026-11-07T10:01:00Z')]), base);
     await expect(publishDistrictMapOperation(pending, { password: '', sessionToken: '' }, undefined, undefined, () => { throw new Error('disk full'); })).rejects.toThrow('disk full');
     expect(transport.send).not.toHaveBeenCalled();
+  });
+  it('splits an unavailable multi-object fragment and confirms each object independently', async () => {
+    storage();
+    const second = { ...object, id: 'b2', number: 'second' };
+    const base = project([object, second]);
+    const next = project([
+      edit('first changed', '2026-11-07T10:01:00Z'),
+      { ...second, number: 'second changed', updatedAtIso: '2026-11-07T10:01:01Z' },
+    ], 2);
+    const pending = createPendingDistrictMapOperation(1, next, base);
+    transport.send.mockImplementation((request: { changes: readonly CoordinatedObjectChange[] }) => {
+      if (request.changes.length > 1) throw new MapSyncRequestError('slow route');
+      const change = request.changes[0];
+      return {
+        revision: Date.now(), publishedAtIso: change?.updatedAtIso ?? '', conflicts: [],
+        activeObjects: change === undefined ? [] : [{ objectId: change.objectId, object: change.object }],
+      };
+    });
+    const result = await publishDistrictMapOperation(pending, { password: '', sessionToken: '' }, undefined, undefined, (value) => value);
+    expect(transport.send.mock.calls.map((call) => (call[0] as { changes: readonly CoordinatedObjectChange[] }).changes.length)).toEqual([2, 1, 1]);
+    expect(result.project.published).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'b1', number: 'first changed' }),
+      expect.objectContaining({ id: 'b2', number: 'second changed' }),
+    ]));
   });
   it('keeps the old map and queue together on a storage failure', () => {
     const { setItem } = storage();

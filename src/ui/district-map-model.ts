@@ -6,6 +6,7 @@ import {
   loadMapSyncConfig,
   publishCoordinatedMap,
   publishCoordinatedObjectChanges,
+  MapSyncRequestError,
   type CoordinatedObjectChange,
   type CoordinatedObjectTransferEvent,
   type MapAdminCredential,
@@ -179,8 +180,9 @@ export type DistrictMapPublishProgress = Readonly<{
   rootOperationId: string;
   chunkOperationId: string;
   objectIds: readonly string[];
-  stage: 'preparing' | CoordinatedObjectTransferEvent['stage'];
+  stage: 'preparing' | 'splitting' | CoordinatedObjectTransferEvent['stage'];
   payloadBytes?: number;
+  attempt?: number;
   confirmation?: CoordinatedObjectTransferEvent['confirmation'];
   revision?: number;
   message?: string;
@@ -834,8 +836,11 @@ export async function fetchCoordinatedDistrictMapUpdate(current: DistrictMapProj
   return fetchCoordinatedDistrictMapProject();
 }
 
-const OBJECT_CHUNK_MAX_COUNT = 8;
-const OBJECT_CHUNK_MAX_BYTES = 24 * 1024;
+// Corporate networks can successfully open the service but drop larger POST
+// responses. Keep normal batches deliberately small; a failed batch is split
+// again below until each object is sent independently.
+const OBJECT_CHUNK_MAX_COUNT = 2;
+const OBJECT_CHUNK_MAX_BYTES = 8 * 1024;
 
 export function chunkDistrictMapObjectChanges(
   changes: readonly CoordinatedObjectChange[],
@@ -903,13 +908,15 @@ export async function publishDistrictMapOperation(
       let revision = activeOperation.baseRevision;
       let publishedAtIso = activeOperation.project.publishedAtIso;
       let completedParts = Math.max(0, activeOperation.nextChunkSequence - 1);
+      let adaptiveMaxCount = OBJECT_CHUNK_MAX_COUNT;
+      let adaptiveMaxBytes = OBJECT_CHUNK_MAX_BYTES;
       for (;;) {
         const changes = unconfirmedDistrictMapObjectChanges(
           activeOperation,
           districtMapObjectChanges(activeOperation.baseProject ?? operation.baseProject, activeOperation.project),
         );
         if (changes.length === 0 && activeOperation.inFlight === undefined) break;
-        const chunks = chunkDistrictMapObjectChanges(changes);
+        const chunks = chunkDistrictMapObjectChanges(changes, adaptiveMaxCount, adaptiveMaxBytes);
         const chunk = activeOperation.inFlight?.changes ?? chunks[0];
         if (chunk === undefined) break;
         const flight = activeOperation.inFlight ?? {
@@ -930,14 +937,30 @@ export async function publishDistrictMapOperation(
           objectIds: chunk.map((change) => change.objectId),
         } as const;
         onProgress?.({ ...progressBase, stage: 'preparing' });
-        const result = await publishCoordinatedObjectChanges({
-          operationId: chunkId,
-          baseRevision: flight.baseRevision,
-          changes: flight.changes,
-          credential,
-          ...(signal === undefined ? {} : { signal }),
-          onTransfer: (event) => onProgress?.({ ...progressBase, ...event }),
-        });
+        let result;
+        try {
+          result = await publishCoordinatedObjectChanges({
+            operationId: chunkId,
+            baseRevision: flight.baseRevision,
+            changes: flight.changes,
+            credential,
+            ...(signal === undefined ? {} : { signal }),
+            onTransfer: (event) => onProgress?.({ ...progressBase, ...event }),
+          });
+        } catch (error) {
+          if (!(error instanceof MapSyncRequestError) || error.kind !== 'unavailable' || chunk.length <= 1) throw error;
+          adaptiveMaxCount = Math.max(1, Math.floor(chunk.length / 2));
+          adaptiveMaxBytes = Math.max(1_024, Math.floor(adaptiveMaxBytes / 2));
+          onProgress?.({
+            ...progressBase,
+            stage: 'splitting',
+            message: `Фрагмент не прошёл по медленному каналу. Делим его на части по ${adaptiveMaxCount} объект(а).`,
+          });
+          const splitCheckpoint = { ...activeOperation, inFlight: undefined };
+          activeOperation = onCheckpoint === undefined ? splitCheckpoint : await onCheckpoint(splitCheckpoint);
+          project = activeOperation.project;
+          continue;
+        }
         revision = result.revision;
         publishedAtIso = result.publishedAtIso;
         conflicts.push(...result.conflicts);

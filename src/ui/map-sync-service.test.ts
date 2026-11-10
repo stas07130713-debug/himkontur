@@ -39,6 +39,7 @@ async function snapshotResponse(project: unknown, status: unknown): Promise<Resp
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   clearMapSyncConfigCache();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -301,6 +302,35 @@ describe('map synchronization sessions', () => {
     expect(events).toEqual(['sending:', 'verifying:', 'confirmed:status-check']);
     const request = fetchMock.mock.calls[1]?.[1] as RequestInit;
     expect((request.headers as Record<string, string>)['Content-Type']).toBe('application/json');
+  });
+
+  it('retries the exact idempotent object batch when both the response and first status check are lost', async () => {
+    vi.useFakeTimers();
+    const publishedAtIso = '2026-11-10T09:00:00.000Z';
+    const change = { objectId: 'building-1', baseObject: null, object: null, updatedAtIso: publishedAtIso, targetRevision: 44 };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(configResponse))
+      .mockResolvedValueOnce(jsonResponse({ error: 'gateway timeout' }, 503))
+      .mockResolvedValueOnce(jsonResponse({ error: 'status timeout' }, 503))
+      .mockResolvedValueOnce(jsonResponse({
+        revision: 44, publishedAtIso, conflicts: [],
+        objects: [{ objectId: 'building-1', object: null }],
+        status: { mode: 'backup', activeProvider: 'cloudflare' },
+      }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal('window', { setTimeout, clearTimeout });
+
+    const pending = publishCoordinatedObjectChanges({
+      operationId: 'retry-safe-operation', baseRevision: 43, changes: [change],
+      credential: { password: 'administrator-password', sessionToken: 'active-session' },
+    });
+    await vi.advanceTimersByTimeAsync(1_500);
+    await expect(pending).resolves.toMatchObject({ revision: 44 });
+    const postCalls = fetchMock.mock.calls.filter((call) => requestUrl(call[0] as string | URL | Request) === 'https://coordinator.example.test/v1/objects');
+    expect(postCalls).toHaveLength(2);
+    const firstRequest = postCalls[0]?.[1] as RequestInit | undefined;
+    const secondRequest = postCalls[1]?.[1] as RequestInit | undefined;
+    expect(firstRequest?.body).toBe(secondRequest?.body);
   });
 
   it('compresses a full map before sending it to the coordinator', async () => {

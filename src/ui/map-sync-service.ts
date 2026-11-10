@@ -479,7 +479,7 @@ function normalizeManifest(value: unknown): MapSyncManifest | null {
 }
 
 export async function fetchCoordinatedMapManifest(): Promise<Readonly<{ manifest: MapSyncManifest; status: MapSyncStatus }>> {
-  const payload = await coordinatorRequest('/v1/manifest', { method: 'GET' }, 30_000);
+  const payload = await coordinatorRequest('/v1/manifest', { method: 'GET' }, 45_000, 3);
   const manifest = isObject(payload) ? normalizeManifest(payload.manifest) : null;
   if (!isObject(payload) || manifest === null) throw new MapSyncRequestError('Сервис вернул некорректный состав карты.', 502, 'invalid');
   return { manifest, status: normalizeStatus(payload.status) };
@@ -543,19 +543,20 @@ async function verifyCoordinatedOperationStatus(
   operationId: string,
   credential: MapAdminCredential,
   signal?: AbortSignal,
+  maxAttempts = 1,
 ): Promise<JsonRecord | null> {
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       const verified = await coordinatorRequest(`/v1/operations/${encodeURIComponent(operationId)}/status`, {
         method: 'GET',
         headers: { Authorization: `Bearer ${credential.sessionToken}` },
         ...(signal === undefined ? {} : { signal }),
-      }, 30_000, 1);
+      }, 20_000, 1);
       if (isObject(verified) && typeof verified.revision === 'number') return verified;
     } catch (error) {
       if (signal?.aborted === true) throw error;
       if (error instanceof MapSyncRequestError && error.kind === 'authorization') throw error;
-      if (attempt === 3) return null;
+      if (attempt === maxAttempts) return null;
     }
     await new Promise<void>((resolve, reject) => {
       const abort = () => {
@@ -651,37 +652,67 @@ export async function publishCoordinatedObjectChanges(request: Readonly<{
     updatedBy: 'Администратор ХИМКОНТУР',
   });
   const payloadBytes = new TextEncoder().encode(body).byteLength;
-  request.onTransfer?.({ stage: 'sending', payloadBytes, attempt: 1 });
   let payload: unknown;
   let confirmation: CoordinatedObjectTransferEvent['confirmation'] = 'direct';
-  try {
-    payload = await coordinatorRequest('/v1/objects', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${request.credential.sessionToken}` },
-      body,
-      ...(request.signal === undefined ? {} : { signal: request.signal }),
-    }, 60_000, 1);
-  } catch (error) {
-    if (request.signal?.aborted === true) throw error;
-    if (!(error instanceof MapSyncRequestError) || error.kind !== 'unavailable') throw error;
-    // A slow corporate route can lose the response after D1 has committed the
-    // object batch. Verify the idempotent operation before keeping an already
-    // shared edit in the device-only queue.
+  let lastUnavailableError: MapSyncRequestError | null = null;
+  const maxSendAttempts = 3;
+  for (let attempt = 1; attempt <= maxSendAttempts; attempt += 1) {
     request.onTransfer?.({
-      stage: 'verifying', payloadBytes, attempt: 1,
-      message: 'Ответ на отправку не получен. Проверяю короткий статус операции на сервере.',
+      stage: 'sending', payloadBytes, attempt,
+      ...(attempt === 1 ? {} : { message: `Повторная отправка сохранённого фрагмента: попытка ${attempt} из ${maxSendAttempts}.` }),
     });
-    const verified = await verifyCoordinatedOperationStatus(request.operationId, request.credential, request.signal);
-    if (verified === null || typeof verified.revision !== 'number') throw error;
-    payload = {
-      revision: verified.revision,
-      publishedAtIso: stringValue(verified.publishedAtIso),
-      conflicts: [],
-      objects: Array.isArray(verified.objects) ? verified.objects : [],
-      status: verified.status,
-    };
-    confirmation = 'status-check';
+    try {
+      payload = await coordinatorRequest('/v1/objects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${request.credential.sessionToken}` },
+        body,
+        ...(request.signal === undefined ? {} : { signal: request.signal }),
+      }, 35_000, 1);
+      break;
+    } catch (error) {
+      if (request.signal?.aborted === true) throw error;
+      if (!(error instanceof MapSyncRequestError) || error.kind !== 'unavailable') throw error;
+      lastUnavailableError = error;
+      // The POST is idempotent: retrying the exact operation id and body cannot
+      // apply an already committed edit for a second time.
+      request.onTransfer?.({
+        stage: 'verifying', payloadBytes, attempt,
+        message: 'Ответ на отправку не получен. Проверяю, сохранил ли сервер этот фрагмент.',
+      });
+      const verified = await verifyCoordinatedOperationStatus(
+        request.operationId,
+        request.credential,
+        request.signal,
+        attempt === maxSendAttempts ? 2 : 1,
+      );
+      if (verified !== null && typeof verified.revision === 'number') {
+        payload = {
+          revision: verified.revision,
+          publishedAtIso: stringValue(verified.publishedAtIso),
+          conflicts: [],
+          objects: Array.isArray(verified.objects) ? verified.objects : [],
+          status: verified.status,
+        };
+        confirmation = 'status-check';
+        break;
+      }
+      if (attempt < maxSendAttempts) {
+        await new Promise<void>((resolve, reject) => {
+          const abort = () => {
+            window.clearTimeout(timeout);
+            reject(new MapSyncRequestError('Отправка отменена.'));
+          };
+          const timeout = window.setTimeout(() => {
+            request.signal?.removeEventListener('abort', abort);
+            resolve();
+          }, 1_500 * attempt);
+          if (request.signal?.aborted === true) abort();
+          else request.signal?.addEventListener('abort', abort, { once: true });
+        });
+      }
+    }
   }
+  if (payload === undefined) throw lastUnavailableError ?? new MapSyncRequestError('Сервис синхронизации не подтвердил сохранение фрагмента.');
   if (!isObject(payload) || typeof payload.revision !== 'number' || !Array.isArray(payload.conflicts)) {
     throw new MapSyncRequestError('Сервис синхронизации вернул некорректное подтверждение пакета.', 502, 'invalid');
   }
