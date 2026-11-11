@@ -1,7 +1,7 @@
 {
   "id": "district-map-main",
   "name": "Карта района выезда",
-  "revision": 1794232578914,
+  "revision": 1794379265206,
   "draft": [
     {
       "id": "kml-hydrant-095f40d67c2912bd9832",
@@ -22964,11 +22964,11 @@
     {
       "id": "3132b7c5-e201-43eb-b53b-de85689ff914",
       "point": {
-        "latitude": 67.91518259004208,
-        "longitude": 32.83205671219193
+        "longitude": 32.83185706233587,
+        "latitude": 67.9149959509341
       },
-      "note": "Изменения внесены в раздел «Номер здания» администратором 09.11.2026.",
-      "updatedAtIso": "2026-11-09T13:48:05.556Z",
+      "note": "Изменения внесены в раздел «Расположение таблички» администратором 11.11.2026.",
+      "updatedAtIso": "2026-11-11T06:35:40.330Z",
       "kind": "building",
       "objectType": "building",
       "mapRole": "ordinary",
@@ -24541,11 +24541,11 @@
     {
       "id": "6f3ee267-cfb6-4cf1-bf4a-d286c87e4708",
       "point": {
-        "latitude": 67.91334962646826,
-        "longitude": 32.84102787614884
+        "longitude": 32.841067433610306,
+        "latitude": 67.91337609794326
       },
-      "note": "Изменения внесены в раздел «Документы предварительного планирования» администратором 09.11.2026.",
-      "updatedAtIso": "2026-11-09T06:40:11.204Z",
+      "note": "Изменения внесены в раздел «Расположение таблички» администратором 11.11.2026.",
+      "updatedAtIso": "2026-11-11T06:35:47.391Z",
       "kind": "building",
       "objectType": "building",
       "mapRole": "ordinary",
@@ -24673,6 +24673,384 @@
       ],
       "note": "",
       "updatedAtIso": "2026-11-09T06:41:42.362Z"
+    },
+    {
+      "id": "3a1aae0b-3c25-42f2-9a32-12da963069da",
+      "point": {
+        "longitude": 32.841227813125414,
+        "latitude": 67.91422420888978
+      },
+      "note": "Изменения внесены в раздел «Расположение таблички» администратором 11.11.2026.",
+      "updatedAtIso": "2026-11-11T06:35:57.032Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91430042760419,
+          "longitude": 32.842041924806814
+        },
+        {
+          "latitude": 67.91390312720729,
+          "longitude": 32.84161503393055
+        },
+        {
+          "latitude": 67.91407532624494,
+          "longitude": 32.84048139096634
+        },
+        {
+          "latitude": 67.91419831051135,
+          "longitude": 32.84061353496032
+        },
+        {
+          "latitude": 67.91432756419573,
+          "longitude": 32.83976261539715
+        },
+        {
+          "latitude": 67.91460231033275,
+          "longitude": 32.84005782431237
+        },
+        {
+          "latitude": 67.91458618178707,
+          "longitude": 32.84016400383919
+        },
+        {
+          "latitude": 67.9146845873317,
+          "longitude": 32.8402697385163
+        },
+        {
+          "latitude": 67.91460999932075,
+          "longitude": 32.840760775951836
+        },
+        {
+          "latitude": 67.91451116376956,
+          "longitude": 32.84065457924179
+        }
+      ],
+      "territoryNames": [],
+      "number": "3.3",
+      "installationName": "",
+      "inventoryNumber": "90007, 90012",
+      "planningDocuments": [
+        {
+          "id": "a1e472fc-b5c6-4535-bb4b-3d9d81c287a2",
+          "kind": "ПТП",
+          "number": "8 (46/13)"
+        },
+        {
+          "id": "b1ca7b2e-0307-47a2-898d-2343408db616",
+          "kind": "ПМЛА",
+          "number": "7"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "66845d83-6077-4b11-a4d7-89f97a3b5da9",
+          "fullName": "Серно-кислотное отделение, здание контактно-компрессионного отделения",
+          "shortName": "СКО РЦ"
+        }
+      ],
+      "sites": [
+        {
+          "id": "ebfd042a-38ce-423d-95a6-0541a51af072",
+          "fullName": "Серно-кислотное отделение, здание контактно-компрессионного отделения",
+          "shortName": "СКО РЦ",
+          "parentDepartmentId": "66845d83-6077-4b11-a4d7-89f97a3b5da9"
+        }
+      ]
+    },
+    {
+      "id": "905c6b60-5596-49b5-a4db-e9872ad83008",
+      "point": {
+        "latitude": 67.9136518775194,
+        "longitude": 32.83913215250297
+      },
+      "note": "Изменения внесены в раздел «Контур объекта» администратором 11.11.2026.",
+      "updatedAtIso": "2026-11-11T06:38:39.904Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91315536332608,
+          "longitude": 32.83881325431986
+        },
+        {
+          "latitude": 67.91315195668307,
+          "longitude": 32.83881286568783
+        },
+        {
+          "latitude": 67.9132175651452,
+          "longitude": 32.838389575481415
+        },
+        {
+          "latitude": 67.9142422179718,
+          "longitude": 32.83951073884964
+        },
+        {
+          "latitude": 67.9141978441786,
+          "longitude": 32.83979505300522
+        },
+        {
+          "latitude": 67.91417061476355,
+          "longitude": 32.839765548706055
+        },
+        {
+          "latitude": 67.9141539002759,
+          "longitude": 32.83990864441702
+        }
+      ],
+      "territoryNames": [],
+      "number": "3.4",
+      "installationName": "",
+      "inventoryNumber": "90001, 90009, 90013",
+      "planningDocuments": [
+        {
+          "id": "bb999c99-d9e5-48d8-ac96-6312d9822635",
+          "kind": "ПМЛА",
+          "number": "7"
+        },
+        {
+          "id": "630a4f45-6c32-46ff-9ebe-2747856d31c6",
+          "kind": "ПТП",
+          "number": "8 (46/13)"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "8c2bc7c0-f66a-4ae1-8426-d05ef7410a80",
+          "fullName": "Серно-кислотное отделение",
+          "shortName": "СКО РЦ"
+        }
+      ],
+      "sites": [
+        {
+          "id": "fda6cd9f-22ea-4c4e-a59d-cbf307db5203",
+          "fullName": "Административно-бытовой корпус",
+          "shortName": "АБК СКО РЦ",
+          "parentDepartmentId": "8c2bc7c0-f66a-4ae1-8426-d05ef7410a80"
+        }
+      ]
+    },
+    {
+      "id": "dbda5cde-e257-4dea-89ba-afd7d7044616",
+      "point": {
+        "latitude": 67.91504218751622,
+        "longitude": 32.83459529185458
+      },
+      "note": "",
+      "updatedAtIso": "2026-11-09T13:36:16.677Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91475150203428,
+          "longitude": 32.8348571062088
+        },
+        {
+          "latitude": 67.91499756796011,
+          "longitude": 32.83332824707031
+        },
+        {
+          "latitude": 67.91518614950922,
+          "longitude": 32.83355087041855
+        },
+        {
+          "latitude": 67.91534447615257,
+          "longitude": 32.833730578422546
+        },
+        {
+          "latitude": 67.91538279708888,
+          "longitude": 32.833778858184814
+        },
+        {
+          "latitude": 67.91533439168515,
+          "longitude": 32.83406853675842
+        },
+        {
+          "latitude": 67.91499252565168,
+          "longitude": 32.836235761642456
+        },
+        {
+          "latitude": 67.91478679853611,
+          "longitude": 32.836005091667175
+        },
+        {
+          "latitude": 67.91460347902785,
+          "longitude": 32.83580257631817
+        }
+      ],
+      "territoryNames": [],
+      "number": "3.9",
+      "installationName": "",
+      "inventoryNumber": "10001",
+      "planningDocuments": [
+        {
+          "id": "b9843f3b-b7db-414f-a1a5-a48244440a0f",
+          "kind": "ПМЛА",
+          "number": "7"
+        },
+        {
+          "id": "8650fe0b-b30f-4ff8-b3e9-8790dc18fddf",
+          "kind": "ПТП",
+          "number": "8 (46/13)"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "7aebeb94-4ad6-4644-99b1-3eaba43b11cf",
+          "fullName": "Электропечное отделение",
+          "shortName": "ЭПО РЦ"
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "e2d5a99d-6340-42c8-9347-7f49fe2a6128",
+      "point": {
+        "latitude": 67.91417583971537,
+        "longitude": 32.833583793657446
+      },
+      "note": "",
+      "updatedAtIso": "2026-11-09T13:45:27.204Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91414338531663,
+          "longitude": 32.834755182266235
+        },
+        {
+          "latitude": 67.9136562753778,
+          "longitude": 32.83424288034439
+        },
+        {
+          "latitude": 67.91383579120114,
+          "longitude": 32.83304125070572
+        },
+        {
+          "latitude": 67.91399931368301,
+          "longitude": 32.831905260241854
+        },
+        {
+          "latitude": 67.91449786988085,
+          "longitude": 32.83246994018555
+        },
+        {
+          "latitude": 67.91441013167272,
+          "longitude": 32.832984924316406
+        },
+        {
+          "latitude": 67.91427297702879,
+          "longitude": 32.83385396003723
+        },
+        {
+          "latitude": 67.91445551354587,
+          "longitude": 32.83405244350433
+        },
+        {
+          "latitude": 67.91431129973134,
+          "longitude": 32.83494830131531
+        }
+      ],
+      "territoryNames": [],
+      "number": "3.11",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [
+        {
+          "id": "e2546ff2-18c9-4961-ac61-bbe69e5b8625",
+          "kind": "ПМЛА",
+          "number": "7"
+        },
+        {
+          "id": "e0f34c75-76c1-416a-9810-1f769e8f8706",
+          "kind": "ПТП",
+          "number": "8 (46/13)"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "caa7d826-c23a-4c00-9e13-761eee13296d",
+          "fullName": "Обжиго-восстановительное отделение",
+          "shortName": "ОО РЦ"
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "b9db626f-b1f0-4687-afeb-7009906fc743",
+      "point": {
+        "latitude": 67.9146310273366,
+        "longitude": 32.833839613206074
+      },
+      "note": "",
+      "updatedAtIso": "2026-11-09T13:51:46.020Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91445601778838,
+          "longitude": 32.83405244350433
+        },
+        {
+          "latitude": 67.91427348127527,
+          "longitude": 32.83385396003723
+        },
+        {
+          "latitude": 67.91441063591625,
+          "longitude": 32.832984924316406
+        },
+        {
+          "latitude": 67.91494939874775,
+          "longitude": 32.833644497435614
+        },
+        {
+          "latitude": 67.91488058612342,
+          "longitude": 32.83404976129532
+        },
+        {
+          "latitude": 67.91481604416845,
+          "longitude": 32.83445209264755
+        }
+      ],
+      "territoryNames": [],
+      "number": "3.12",
+      "installationName": "",
+      "inventoryNumber": "10004",
+      "planningDocuments": [
+        {
+          "id": "70d25332-e826-4602-abbc-38b5ddb81e88",
+          "kind": "ПМЛА",
+          "number": "7"
+        },
+        {
+          "id": "c1077d7a-dba5-411f-b9b6-18d7af94caa4",
+          "kind": "ПТП",
+          "number": "8 (46/13)"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "7584fda3-102c-4fcb-ae07-ce0d863153c8",
+          "fullName": "Административно-бытовой корпус",
+          "shortName": "АБК РЦ"
+        }
+      ],
+      "sites": []
     }
   ],
   "published": [
@@ -47637,11 +48015,11 @@
     {
       "id": "3132b7c5-e201-43eb-b53b-de85689ff914",
       "point": {
-        "latitude": 67.91518259004208,
-        "longitude": 32.83205671219193
+        "longitude": 32.83185706233587,
+        "latitude": 67.9149959509341
       },
-      "note": "Изменения внесены в раздел «Номер здания» администратором 09.11.2026.",
-      "updatedAtIso": "2026-11-09T13:48:05.556Z",
+      "note": "Изменения внесены в раздел «Расположение таблички» администратором 11.11.2026.",
+      "updatedAtIso": "2026-11-11T06:35:40.330Z",
       "kind": "building",
       "objectType": "building",
       "mapRole": "ordinary",
@@ -49214,11 +49592,11 @@
     {
       "id": "6f3ee267-cfb6-4cf1-bf4a-d286c87e4708",
       "point": {
-        "latitude": 67.91334962646826,
-        "longitude": 32.84102787614884
+        "longitude": 32.841067433610306,
+        "latitude": 67.91337609794326
       },
-      "note": "Изменения внесены в раздел «Документы предварительного планирования» администратором 09.11.2026.",
-      "updatedAtIso": "2026-11-09T06:40:11.204Z",
+      "note": "Изменения внесены в раздел «Расположение таблички» администратором 11.11.2026.",
+      "updatedAtIso": "2026-11-11T06:35:47.391Z",
       "kind": "building",
       "objectType": "building",
       "mapRole": "ordinary",
@@ -49346,8 +49724,386 @@
       ],
       "note": "",
       "updatedAtIso": "2026-11-09T06:41:42.362Z"
+    },
+    {
+      "id": "3a1aae0b-3c25-42f2-9a32-12da963069da",
+      "point": {
+        "longitude": 32.841227813125414,
+        "latitude": 67.91422420888978
+      },
+      "note": "Изменения внесены в раздел «Расположение таблички» администратором 11.11.2026.",
+      "updatedAtIso": "2026-11-11T06:35:57.032Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91430042760419,
+          "longitude": 32.842041924806814
+        },
+        {
+          "latitude": 67.91390312720729,
+          "longitude": 32.84161503393055
+        },
+        {
+          "latitude": 67.91407532624494,
+          "longitude": 32.84048139096634
+        },
+        {
+          "latitude": 67.91419831051135,
+          "longitude": 32.84061353496032
+        },
+        {
+          "latitude": 67.91432756419573,
+          "longitude": 32.83976261539715
+        },
+        {
+          "latitude": 67.91460231033275,
+          "longitude": 32.84005782431237
+        },
+        {
+          "latitude": 67.91458618178707,
+          "longitude": 32.84016400383919
+        },
+        {
+          "latitude": 67.9146845873317,
+          "longitude": 32.8402697385163
+        },
+        {
+          "latitude": 67.91460999932075,
+          "longitude": 32.840760775951836
+        },
+        {
+          "latitude": 67.91451116376956,
+          "longitude": 32.84065457924179
+        }
+      ],
+      "territoryNames": [],
+      "number": "3.3",
+      "installationName": "",
+      "inventoryNumber": "90007, 90012",
+      "planningDocuments": [
+        {
+          "id": "a1e472fc-b5c6-4535-bb4b-3d9d81c287a2",
+          "kind": "ПТП",
+          "number": "8 (46/13)"
+        },
+        {
+          "id": "b1ca7b2e-0307-47a2-898d-2343408db616",
+          "kind": "ПМЛА",
+          "number": "7"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "66845d83-6077-4b11-a4d7-89f97a3b5da9",
+          "fullName": "Серно-кислотное отделение, здание контактно-компрессионного отделения",
+          "shortName": "СКО РЦ"
+        }
+      ],
+      "sites": [
+        {
+          "id": "ebfd042a-38ce-423d-95a6-0541a51af072",
+          "fullName": "Серно-кислотное отделение, здание контактно-компрессионного отделения",
+          "shortName": "СКО РЦ",
+          "parentDepartmentId": "66845d83-6077-4b11-a4d7-89f97a3b5da9"
+        }
+      ]
+    },
+    {
+      "id": "905c6b60-5596-49b5-a4db-e9872ad83008",
+      "point": {
+        "latitude": 67.9136518775194,
+        "longitude": 32.83913215250297
+      },
+      "note": "Изменения внесены в раздел «Контур объекта» администратором 11.11.2026.",
+      "updatedAtIso": "2026-11-11T06:38:39.904Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91315536332608,
+          "longitude": 32.83881325431986
+        },
+        {
+          "latitude": 67.91315195668307,
+          "longitude": 32.83881286568783
+        },
+        {
+          "latitude": 67.9132175651452,
+          "longitude": 32.838389575481415
+        },
+        {
+          "latitude": 67.9142422179718,
+          "longitude": 32.83951073884964
+        },
+        {
+          "latitude": 67.9141978441786,
+          "longitude": 32.83979505300522
+        },
+        {
+          "latitude": 67.91417061476355,
+          "longitude": 32.839765548706055
+        },
+        {
+          "latitude": 67.9141539002759,
+          "longitude": 32.83990864441702
+        }
+      ],
+      "territoryNames": [],
+      "number": "3.4",
+      "installationName": "",
+      "inventoryNumber": "90001, 90009, 90013",
+      "planningDocuments": [
+        {
+          "id": "bb999c99-d9e5-48d8-ac96-6312d9822635",
+          "kind": "ПМЛА",
+          "number": "7"
+        },
+        {
+          "id": "630a4f45-6c32-46ff-9ebe-2747856d31c6",
+          "kind": "ПТП",
+          "number": "8 (46/13)"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "8c2bc7c0-f66a-4ae1-8426-d05ef7410a80",
+          "fullName": "Серно-кислотное отделение",
+          "shortName": "СКО РЦ"
+        }
+      ],
+      "sites": [
+        {
+          "id": "fda6cd9f-22ea-4c4e-a59d-cbf307db5203",
+          "fullName": "Административно-бытовой корпус",
+          "shortName": "АБК СКО РЦ",
+          "parentDepartmentId": "8c2bc7c0-f66a-4ae1-8426-d05ef7410a80"
+        }
+      ]
+    },
+    {
+      "id": "dbda5cde-e257-4dea-89ba-afd7d7044616",
+      "point": {
+        "latitude": 67.91504218751622,
+        "longitude": 32.83459529185458
+      },
+      "note": "",
+      "updatedAtIso": "2026-11-09T13:36:16.677Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91475150203428,
+          "longitude": 32.8348571062088
+        },
+        {
+          "latitude": 67.91499756796011,
+          "longitude": 32.83332824707031
+        },
+        {
+          "latitude": 67.91518614950922,
+          "longitude": 32.83355087041855
+        },
+        {
+          "latitude": 67.91534447615257,
+          "longitude": 32.833730578422546
+        },
+        {
+          "latitude": 67.91538279708888,
+          "longitude": 32.833778858184814
+        },
+        {
+          "latitude": 67.91533439168515,
+          "longitude": 32.83406853675842
+        },
+        {
+          "latitude": 67.91499252565168,
+          "longitude": 32.836235761642456
+        },
+        {
+          "latitude": 67.91478679853611,
+          "longitude": 32.836005091667175
+        },
+        {
+          "latitude": 67.91460347902785,
+          "longitude": 32.83580257631817
+        }
+      ],
+      "territoryNames": [],
+      "number": "3.9",
+      "installationName": "",
+      "inventoryNumber": "10001",
+      "planningDocuments": [
+        {
+          "id": "b9843f3b-b7db-414f-a1a5-a48244440a0f",
+          "kind": "ПМЛА",
+          "number": "7"
+        },
+        {
+          "id": "8650fe0b-b30f-4ff8-b3e9-8790dc18fddf",
+          "kind": "ПТП",
+          "number": "8 (46/13)"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "7aebeb94-4ad6-4644-99b1-3eaba43b11cf",
+          "fullName": "Электропечное отделение",
+          "shortName": "ЭПО РЦ"
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "e2d5a99d-6340-42c8-9347-7f49fe2a6128",
+      "point": {
+        "latitude": 67.91417583971537,
+        "longitude": 32.833583793657446
+      },
+      "note": "",
+      "updatedAtIso": "2026-11-09T13:45:27.204Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91414338531663,
+          "longitude": 32.834755182266235
+        },
+        {
+          "latitude": 67.9136562753778,
+          "longitude": 32.83424288034439
+        },
+        {
+          "latitude": 67.91383579120114,
+          "longitude": 32.83304125070572
+        },
+        {
+          "latitude": 67.91399931368301,
+          "longitude": 32.831905260241854
+        },
+        {
+          "latitude": 67.91449786988085,
+          "longitude": 32.83246994018555
+        },
+        {
+          "latitude": 67.91441013167272,
+          "longitude": 32.832984924316406
+        },
+        {
+          "latitude": 67.91427297702879,
+          "longitude": 32.83385396003723
+        },
+        {
+          "latitude": 67.91445551354587,
+          "longitude": 32.83405244350433
+        },
+        {
+          "latitude": 67.91431129973134,
+          "longitude": 32.83494830131531
+        }
+      ],
+      "territoryNames": [],
+      "number": "3.11",
+      "installationName": "",
+      "inventoryNumber": "",
+      "planningDocuments": [
+        {
+          "id": "e2546ff2-18c9-4961-ac61-bbe69e5b8625",
+          "kind": "ПМЛА",
+          "number": "7"
+        },
+        {
+          "id": "e0f34c75-76c1-416a-9810-1f769e8f8706",
+          "kind": "ПТП",
+          "number": "8 (46/13)"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "caa7d826-c23a-4c00-9e13-761eee13296d",
+          "fullName": "Обжиго-восстановительное отделение",
+          "shortName": "ОО РЦ"
+        }
+      ],
+      "sites": []
+    },
+    {
+      "id": "b9db626f-b1f0-4687-afeb-7009906fc743",
+      "point": {
+        "latitude": 67.9146310273366,
+        "longitude": 32.833839613206074
+      },
+      "note": "",
+      "updatedAtIso": "2026-11-09T13:51:46.020Z",
+      "kind": "building",
+      "objectType": "building",
+      "mapRole": "ordinary",
+      "contour": [
+        {
+          "latitude": 67.91445601778838,
+          "longitude": 32.83405244350433
+        },
+        {
+          "latitude": 67.91427348127527,
+          "longitude": 32.83385396003723
+        },
+        {
+          "latitude": 67.91441063591625,
+          "longitude": 32.832984924316406
+        },
+        {
+          "latitude": 67.91494939874775,
+          "longitude": 32.833644497435614
+        },
+        {
+          "latitude": 67.91488058612342,
+          "longitude": 32.83404976129532
+        },
+        {
+          "latitude": 67.91481604416845,
+          "longitude": 32.83445209264755
+        }
+      ],
+      "territoryNames": [],
+      "number": "3.12",
+      "installationName": "",
+      "inventoryNumber": "10004",
+      "planningDocuments": [
+        {
+          "id": "70d25332-e826-4602-abbc-38b5ddb81e88",
+          "kind": "ПМЛА",
+          "number": "7"
+        },
+        {
+          "id": "c1077d7a-dba5-411f-b9b6-18d7af94caa4",
+          "kind": "ПТП",
+          "number": "8 (46/13)"
+        }
+      ],
+      "workshopFull": "Рафинировочный цех",
+      "workshopShort": "РЦ",
+      "departments": [
+        {
+          "id": "7584fda3-102c-4fcb-ae07-ce0d863153c8",
+          "fullName": "Административно-бытовой корпус",
+          "shortName": "АБК РЦ"
+        }
+      ],
+      "sites": []
     }
   ],
-  "draftSavedAtIso": "2026-11-09T13:56:29.607Z",
-  "publishedAtIso": "2026-11-09T13:56:29.607Z"
+  "draftSavedAtIso": "2026-11-11T06:41:14.156Z",
+  "publishedAtIso": "2026-11-11T06:41:14.156Z"
 }
