@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#063746" />
+    <title>ХИМКОНТУР — демонстрационный QR-код</title>
+    <style>
+      :root { color-scheme: dark; font-family: Inter, "Segoe UI", Arial, sans-serif; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        color: #f5ffff;
+        background:
+          radial-gradient(circle at 14% 12%, rgba(42, 219, 208, .23), transparent 32%),
+          radial-gradient(circle at 88% 84%, rgba(4, 136, 153, .25), transparent 35%),
+          linear-gradient(145deg, #031c2a 0%, #063746 52%, #02141f 100%);
+      }
+      .card {
+        width: min(100%, 650px);
+        overflow: hidden;
+        border: 1px solid rgba(115, 238, 232, .45);
+        border-radius: 30px;
+        background: rgba(5, 48, 62, .88);
+        box-shadow: 0 28px 80px rgba(0, 0, 0, .38);
+        backdrop-filter: blur(12px);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 30px 34px 24px;
+        border-bottom: 1px solid rgba(130, 239, 234, .18);
+      }
+      .brand img { width: 72px; height: 72px; border-radius: 16px; }
+      .brand strong { display: block; font-size: clamp(27px, 6vw, 42px); line-height: 1; letter-spacing: .02em; }
+      .brand small { display: block; margin-top: 8px; color: #afe6e7; font-size: 14px; }
+      .content { padding: 34px; }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 18px;
+        padding: 9px 14px;
+        border-radius: 999px;
+        color: #063746;
+        background: #9eeeea;
+        font-weight: 800;
+        font-size: 14px;
+      }
+      .status::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #078b87; }
+      h1 { margin: 0 0 18px; font-size: clamp(27px, 6vw, 40px); line-height: 1.12; }
+      p { margin: 0 0 18px; color: #d5f2f2; font-size: 18px; line-height: 1.55; }
+      .phone {
+        display: block;
+        margin: 28px 0 14px;
+        color: #fff;
+        font-size: clamp(29px, 8vw, 45px);
+        font-weight: 850;
+        letter-spacing: .025em;
+        text-decoration: none;
+      }
+      .call {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 58px;
+        border-radius: 16px;
+        color: #032e3b;
+        background: linear-gradient(135deg, #31dfd2, #8aeeee);
+        box-shadow: 0 12px 30px rgba(23, 204, 196, .22);
+        font-size: 18px;
+        font-weight: 850;
+        text-decoration: none;
+      }
+      .note { margin: 18px 0 0; color: #9dcdd0; font-size: 14px; text-align: center; }
+      @media (max-width: 520px) {
+        body { padding: 14px; }
+        .brand, .content { padding-left: 22px; padding-right: 22px; }
+        .brand img { width: 58px; height: 58px; }
+        p { font-size: 16px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <header class="brand">
+        <img src="./icon.svg" alt="Логотип ХИМКОНТУР" />
+        <div><strong>ХИМКОНТУР</strong><small>Система поддержки принятия решений при ЧС</small></div>
+      </header>
+      <section class="content">
+        <span class="status">Демонстрационный QR-код</span>
+        <h1>Информация о программе</h1>
+        <p>Этот QR-код использовался в презентационных материалах и не предназначен для загрузки приложения.</p>
+        <p>По вопросам взаимодействия и приобретения программы свяжитесь с разработчиком.</p>
+        <a class="phone" href="tel:+79522733470" aria-label="Позвонить разработчику по номеру плюс семь 952 273 34 70">+7 952 273-34-70</a>
+        <a class="call" href="tel:+79522733470">Позвонить разработчику</a>
+        <p class="note">Актуальная версия приложения предоставляется после согласования.</p>
+      </section>
+    </main>
+  </body>
+</html>

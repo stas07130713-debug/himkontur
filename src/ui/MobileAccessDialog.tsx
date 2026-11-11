@@ -80,10 +80,10 @@ export function MobileAccessDialog({ open, onClose }: Props) {
         <div className="mobile-download-layout">
           <div className="mobile-qr-block">
             <h3>Приложение для Android</h3>
-            <p>Наведите камеру телефона: QR-код сразу открывает загрузку APK.</p>
+            <p>Наведите камеру телефона: QR-код сразу откроет загрузку актуального APK.</p>
             <div className="mobile-qr-frame">
               {qr ? (
-                <img src={qr} alt="QR-код прямой загрузки ХИМКОНТУР для Android" />
+                <img src={qr} alt="QR-код прямой загрузки актуальной версии ХИМКОНТУР для Android" />
               ) : (
                 <span className="branded-download-progress"><DownloadMark />Подготавливается QR-код…</span>
               )}
