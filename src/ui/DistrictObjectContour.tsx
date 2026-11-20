@@ -96,11 +96,21 @@ export function DistrictObjectContour({ object, project, selected = false, highl
   >
     {demolished && <defs><pattern id={hatchId} width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="9" height="9" fill="rgba(213,45,54,.14)" /><line x1="0" y1="0" x2="0" y2="9" stroke="#d52d36" strokeWidth="3" /></pattern></defs>}
     {responseBoundary
-      ? <polyline
+      ? <>
+        <polyline
           points={contourPoints}
           className={`district-object-contour prefix-${buildingPrefix(object.number)} territory${roleClass}${hovered ? ' hovered' : ''}${selected ? ' selected' : ''}${highlighted ? ' search-highlight' : ''}`}
           onClick={(event) => { if (!interactionDisabled) { event.stopPropagation(); onSelect?.(); } }}
+          onPointerDown={(event) => { if (!interactionDisabled && event.button === 0 && event.pointerType !== 'touch') event.stopPropagation(); }}
         />
+        <polyline
+          points={contourPoints}
+          className="district-response-boundary-hit"
+          aria-label="Выбрать границу района выезда"
+          onClick={(event) => { if (!interactionDisabled) { event.stopPropagation(); onSelect?.(); } }}
+          onPointerDown={(event) => { if (!interactionDisabled && event.button === 0 && event.pointerType !== 'touch') event.stopPropagation(); }}
+        />
+      </>
       : <polygon
           points={contourPoints}
           className={`district-object-contour prefix-${buildingPrefix(object.number)}${object.objectType === 'territory' || buildingPrefix(object.number) === '0' ? ' territory' : ''}${demolished ? ' demolished' : ''}${roleClass}${hovered ? ' hovered' : ''}${selected ? ' selected' : ''}${highlighted ? ' search-highlight' : ''}`}

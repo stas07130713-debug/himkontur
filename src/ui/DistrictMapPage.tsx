@@ -592,10 +592,11 @@ function ObjectEditor({ object, objects, onSave, onEditContour, onClose }: Reado
   );
 }
 
-function ObjectDetails({ object, adminMode, onEdit, onDelete, onDeleteContour, onOpenDispatch }: Readonly<{
+function ObjectDetails({ object, adminMode, onEdit, onEditContour, onDelete, onDeleteContour, onOpenDispatch }: Readonly<{
   object: DistrictMapObject | null;
   adminMode: boolean;
   onEdit: () => void;
+  onEditContour: () => void;
   onDelete: () => void;
   onDeleteContour: () => void;
   onOpenDispatch: () => void;
@@ -678,7 +679,12 @@ function ObjectDetails({ object, adminMode, onEdit, onDelete, onDeleteContour, o
       )}
       {object.note !== '' && <div className="district-details-note"><strong>Примечание</strong><p>{object.note}</p></div>}
       <p className="district-details-coordinates">{object.point.latitude.toFixed(6)}° с.ш.<br />{object.point.longitude.toFixed(6)}° в.д.</p>
-      {adminMode && <div className="district-details-actions"><button onClick={onEdit}>Редактировать</button>{object.kind === 'building' && object.contour.length > 0 && <button className="danger" onClick={onDeleteContour}>Удалить контур</button>}<button className="danger" onClick={onDelete}>Удалить объект</button></div>}
+      {adminMode && <div className="district-details-actions">
+        {object.kind === 'building' && object.mapRole === 'response-boundary' && object.contour.length >= 2 && <button className="boundary-edit" onClick={onEditContour}>Изменить точки границы</button>}
+        <button onClick={onEdit}>Редактировать</button>
+        {object.kind === 'building' && object.contour.length > 0 && <button className="danger" onClick={onDeleteContour}>Удалить контур</button>}
+        <button className="danger" onClick={onDelete}>Удалить объект</button>
+      </div>}
       {object.kind === 'building' && object.objectType !== 'demolished' && object.mapRole !== 'response-boundary' && <button type="button" className="district-emergency-button" onClick={onOpenDispatch}>Пожар / Авария</button>}
     </article>
   );
@@ -1717,7 +1723,7 @@ export function DistrictMapPage(props: Props) {
           </div>}
           {contourDraft !== null && <div className="district-contour-panel">
             <strong>{contourDraft.mapRole === 'response-boundary' ? `Граница района выезда: ${pointCountLabel(contourDraft.points.length)}` : contourDraft.source === 'editing' ? 'Изменение границ объекта' : contourDraft.source === 'automatic' ? 'Контур найден автоматически' : `Ручная обводка: ${pointCountLabel(contourDraft.points.length)}`}</strong>
-            <span>{contourDraft.mapRole === 'response-boundary' ? 'Ставьте точки вдоль границы. ПКМ по точке удаляет её; удерживайте ПКМ на карте и тяните для перемещения.' : 'Точки и стороны можно перетаскивать; «+» добавляет угол, ПКМ по точке удаляет его. Удерживайте ПКМ на свободном месте и тяните карту.'}</span>
+            <span>{contourDraft.mapRole === 'response-boundary' ? 'Перетаскивайте существующие точки и участки линии. «+» добавляет точку, ПКМ по точке удаляет её; удерживайте ПКМ на свободном месте и тяните карту.' : 'Точки и стороны можно перетаскивать; «+» добавляет угол, ПКМ по точке удаляет его. Удерживайте ПКМ на свободном месте и тяните карту.'}</span>
             {contourStatus !== '' && <p className="district-contour-status">{contourStatus}</p>}
             <div>
               {contourDraft.circleCenter && contourDraft.mapRole !== 'response-boundary' && <button type="button" className="secondary" onClick={() => makeCircle(10)}>Сделать круг</button>}
@@ -1737,7 +1743,7 @@ export function DistrictMapPage(props: Props) {
       </main>
       {selected !== null && <aside className="district-details-panel" ref={detailsPanelRef}>
         <div className="district-panel-heading"><span>Объекты района выезда</span></div>
-        <ObjectDetails object={selected} adminMode={props.adminMode} onEdit={() => setEditorObject(selected)} onDelete={deleteSelected} onDeleteContour={deleteSelectedContour} onOpenDispatch={() => { if (selected.kind === 'building') setDispatchBuilding(selected); }} />
+        <ObjectDetails object={selected} adminMode={props.adminMode} onEdit={() => setEditorObject(selected)} onEditContour={() => { if (selected.kind === 'building') startContourEdit(selected); }} onDelete={deleteSelected} onDeleteContour={deleteSelectedContour} onOpenDispatch={() => { if (selected.kind === 'building') setDispatchBuilding(selected); }} />
       </aside>}
       {props.adminMode && props.managementOpen && <div className="dialog-backdrop district-management-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) props.onCloseManagement(); }}>
         <section className="district-management-dialog" role="dialog" aria-modal="true" aria-labelledby="district-management-title">

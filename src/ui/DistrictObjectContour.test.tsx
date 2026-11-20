@@ -28,6 +28,8 @@ describe('DistrictObjectContour', () => {
     const markup = renderToStaticMarkup(<svg><DistrictObjectContour object={{ ...baseObject, mapRole: 'response-boundary' }} project={project} /></svg>);
     expect(markup).toContain('<polyline');
     expect(markup).toContain('response-boundary');
+    expect(markup).toContain('district-response-boundary-hit');
+    expect(markup).toContain('Выбрать границу района выезда');
     expect(markup).not.toContain('<polygon');
   });
 

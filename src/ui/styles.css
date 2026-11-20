@@ -2318,6 +2318,7 @@ button.wide { width: 100%; margin-top: 10px; }
 .district-details-coordinates { margin: 11px 0 0; color: #789094; font-family: Consolas, monospace; font-size: 10px; line-height: 1.4; }
 .district-details-actions { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .district-details-actions button { min-height: 34px; border: 1px solid #168e99; border-radius: 6px; background: #e8f7f7; color: #087580; font-size: 10px; font-weight: 800; }
+.district-details-actions button.boundary-edit { grid-column: 1 / -1; min-height: 40px; background: #087c89; color: #fff; font-size: 11px; }
 .district-details-actions button.danger { border-color: #c98787; background: #fff0f0; color: #a42c33; }
 .district-summary { margin-top: auto; padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; border-top: 1px solid #d3e4e5; }
 .district-summary > div { padding: 8px; display: grid; justify-items: center; border-radius: 7px; background: #eaf4f5; }
@@ -3527,6 +3528,15 @@ button.wide { width: 100%; margin-top: 10px; }
   stroke-dasharray: none;
   filter: drop-shadow(0 0 3px #630000) drop-shadow(0 0 2px #fff);
   pointer-events: stroke;
+}
+.district-response-boundary-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 22;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: stroke;
+  cursor: pointer;
 }
 .district-object-contour.rescue-service,
 .district-object-contour.rescue-service:hover,
