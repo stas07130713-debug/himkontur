@@ -890,6 +890,13 @@ export function DistrictMapPage(props: Props) {
     return props.objects.filter((object) => (object.id === searchHighlightedId || visibleLayers.has(districtLayerKey(object)))
       && (object.id === selectedId || object.id === searchHighlightedId || boundsIntersect(objectBounds.get(object.id) ?? viewport, viewport)));
   }, [props.objects, projection, viewSize, visibleLayers, selectedId, searchHighlightedId, objectBounds]);
+  const concealedDemolishedContours = useMemo(() => visibleLayers.has('demolished')
+    ? []
+    : props.objects.flatMap((object) => object.kind === 'building'
+      && object.objectType === 'demolished'
+      && object.contour.length >= 3
+      ? [object.contour]
+      : []), [props.objects, visibleLayers]);
   const buildingMarkerScales = twoTierBuildingMarkerScales(visibleObjects, projection.project);
   const markerPlacements = useMemo(() => {
     const raw = visibleObjects
@@ -1536,7 +1543,13 @@ export function DistrictMapPage(props: Props) {
           />}
         </div>
         <div className={`district-map-surface ${props.basemap}`} ref={stageRef}>
-          <OfflineBasemap center={center} zoom={mapLibreZoom} basemap={props.basemap} onBuildingContourResolver={(resolver) => { buildingContourResolverRef.current = resolver; }} />
+          <OfflineBasemap
+            center={center}
+            zoom={mapLibreZoom}
+            basemap={props.basemap}
+            concealedBuildingContours={concealedDemolishedContours}
+            onBuildingContourResolver={(resolver) => { buildingContourResolverRef.current = resolver; }}
+          />
           <svg
             ref={svgRef}
             className={`${panning ? 'panning' : ''}${rulerActive ? ' ruler-active' : ''}${contourDraft?.source === 'manual' ? ' contour-drawing' : ''}`.trim()}

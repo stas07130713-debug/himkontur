@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { Map as MapLibreMap, addProtocol, setWorkerUrl, type StyleSpecification } from 'maplibre-gl';
+import { Map as MapLibreMap, addProtocol, setWorkerUrl, type GeoJSONSource, type StyleSpecification } from 'maplibre-gl';
 import mapWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { FetchSource, PMTiles, type RangeResponse, type Source } from 'pmtiles';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -144,9 +144,31 @@ function satelliteTileTemplate(useOnlineDetail: boolean): string {
   return 'https://tiledbasemaps.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 }
 
+const DEMOLISHED_MASK_SOURCE_ID = 'demolished-building-mask-source';
+const DEMOLISHED_MASK_LAYER_ID = 'demolished-building-mask';
+const DEMOLISHED_MASK_EDGE_LAYER_ID = 'demolished-building-mask-edge';
+
 const LOCAL_LAYER_IDS = [
-  'earth', 'landcover', 'landuse', 'water', 'buildings', 'roads-casing', 'roads', 'boundaries',
+  'earth', 'landcover', 'landuse', 'water', 'buildings', DEMOLISHED_MASK_LAYER_ID,
+  DEMOLISHED_MASK_EDGE_LAYER_ID, 'roads-casing', 'roads', 'boundaries',
 ] as const;
+
+function demolishedMaskData(contours: readonly (readonly GeoPoint[])[]) {
+  return {
+    type: 'FeatureCollection' as const,
+    features: contours.filter((contour) => contour.length >= 3).map((contour, index) => {
+      const coordinates = contour.map((point) => [point.longitude, point.latitude]);
+      const first = coordinates[0];
+      if (first !== undefined) coordinates.push([...first]);
+      return {
+        type: 'Feature' as const,
+        id: index,
+        properties: {},
+        geometry: { type: 'Polygon' as const, coordinates: [coordinates] },
+      };
+    }),
+  };
+}
 
 function basemapStyle(): StyleSpecification {
   return {
@@ -341,10 +363,11 @@ type BuildingContourResolver = (point: GeoPoint) => readonly GeoPoint[] | null;
 
 type NormalizedMapProjector = (point: GeoPoint) => Readonly<{ x: number; y: number }>;
 
-export function OfflineBasemap({ center, zoom, basemap, onBuildingContourResolver, onProjectorReady, fitPoints, fitPaddingRatio = .14, fitPrimaryPoints, fitPrimaryWidthRatio = .68, fitPrimaryHeightRatio = .62 }: Readonly<{
+export function OfflineBasemap({ center, zoom, basemap, concealedBuildingContours = [], onBuildingContourResolver, onProjectorReady, fitPoints, fitPaddingRatio = .14, fitPrimaryPoints, fitPrimaryWidthRatio = .68, fitPrimaryHeightRatio = .62 }: Readonly<{
   center: GeoPoint;
   zoom: number;
   basemap: Basemap;
+  concealedBuildingContours?: readonly (readonly GeoPoint[])[];
   onBuildingContourResolver?: (resolver: BuildingContourResolver | null) => void;
   onProjectorReady?: (projector: NormalizedMapProjector | null) => void;
   fitPoints?: readonly GeoPoint[];
@@ -358,6 +381,8 @@ export function OfflineBasemap({ center, zoom, basemap, onBuildingContourResolve
   const initialViewRef = useRef({ center, zoom });
   const initialStyleRef = useRef(basemapStyle());
   const desiredBasemapRef = useRef(basemap);
+  const concealedBuildingContoursRef = useRef(concealedBuildingContours);
+  concealedBuildingContoursRef.current = concealedBuildingContours;
   const buildingResolverCallbackRef = useRef(onBuildingContourResolver);
   buildingResolverCallbackRef.current = onBuildingContourResolver;
   const projectorReadyCallbackRef = useRef(onProjectorReady);
@@ -428,6 +453,39 @@ export function OfflineBasemap({ center, zoom, basemap, onBuildingContourResolve
     };
     map.on('load', () => {
       mapReadyRef.current = true;
+      map.addSource(DEMOLISHED_MASK_SOURCE_ID, {
+        type: 'geojson',
+        data: demolishedMaskData(concealedBuildingContoursRef.current),
+      });
+      map.addLayer({
+        id: DEMOLISHED_MASK_LAYER_ID,
+        type: 'fill',
+        source: DEMOLISHED_MASK_SOURCE_ID,
+        paint: {
+          // Industrial land in the bundled standard style is earth covered by
+          // a translucent land-use tint. This solid composite removes the OSM
+          // building footprint while roads remain above the mask.
+          'fill-color': '#e9ece0',
+          'fill-opacity': 1,
+        },
+      }, 'roads-casing');
+      map.addLayer({
+        id: DEMOLISHED_MASK_EDGE_LAYER_ID,
+        type: 'line',
+        source: DEMOLISHED_MASK_SOURCE_ID,
+        paint: {
+          // The manually traced contour can be a little tighter than the OSM
+          // footprint. A small rounded buffer hides the remaining wall edges;
+          // roads are rendered afterwards and therefore stay intact.
+          'line-color': '#e9ece0',
+          'line-width': 10,
+          'line-blur': .25,
+        },
+        layout: {
+          'line-cap': 'round',
+          'line-join': 'round',
+        },
+      }, 'roads-casing');
       applyBasemap(map, desiredBasemapRef.current, container);
       appliedBasemapRef.current = desiredBasemapRef.current;
       container.dataset.mapReady = 'true';
@@ -571,6 +629,14 @@ export function OfflineBasemap({ center, zoom, basemap, onBuildingContourResolve
     applyBasemap(map, basemap, container);
     appliedBasemapRef.current = basemap;
   }, [basemap]);
+
+  useEffect(() => {
+    concealedBuildingContoursRef.current = concealedBuildingContours;
+    const map = mapRef.current;
+    if (map === null || !mapReadyRef.current) return;
+    const source = map.getSource<GeoJSONSource>(DEMOLISHED_MASK_SOURCE_ID);
+    if (source !== undefined) void source.setData(demolishedMaskData(concealedBuildingContours));
+  }, [concealedBuildingContours]);
 
   useEffect(() => {
     if (fitPointsRef.current !== undefined && fitPointsRef.current.length >= 2) return;
