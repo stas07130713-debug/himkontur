@@ -698,6 +698,7 @@ export function DistrictMapPage(props: Props) {
   const [visibleLayers, setVisibleLayers] = useState<ReadonlySet<DistrictLayerKey>>(() => {
     const layers = new Set<DistrictLayerKey>(DISTRICT_LAYER_KEYS);
     layers.delete('building-0');
+    layers.delete('demolished');
     if (compactViewport()) for (const key of NPPV_LAYER_KEYS) layers.delete(key);
     return layers;
   });
@@ -1872,7 +1873,16 @@ export function DistrictMapPage(props: Props) {
         </section>
       </div>}
       {editorObject !== null && <ObjectEditor object={editorObject} objects={props.objects} onSave={upsertObject} onEditContour={startContourEdit} onClose={() => setEditorObject(null)} />}
-      {dispatchBuilding !== null && <FireDispatchTicket building={dispatchBuilding} pointCall={dispatchBuilding.id === 'temporary-incident-point'} objects={props.objects} basemap={props.basemap} onClose={() => setDispatchBuilding(null)} />}
+      {dispatchBuilding !== null && <FireDispatchTicket
+        building={dispatchBuilding}
+        pointCall={dispatchBuilding.id === 'temporary-incident-point'}
+        objects={props.objects.filter((object) =>
+          object.kind === 'hydrant' || object.kind === 'reservoir' || visibleLayers.has(districtLayerKey(object))
+        )}
+        concealedBuildingContours={concealedDemolishedContours}
+        basemap={props.basemap}
+        onClose={() => setDispatchBuilding(null)}
+      />}
     </div>
   );
 }

@@ -409,7 +409,15 @@ function edgeLabels(
   });
 }
 
-function DispatchMap({ building, objects, basemap, pointCall = false }: Readonly<{ building: DistrictBuilding; objects: readonly DistrictMapObject[]; basemap: Basemap; pointCall?: boolean }>) {
+type DispatchMapProps = Readonly<{
+  building: DistrictBuilding;
+  objects: readonly DistrictMapObject[];
+  concealedBuildingContours: readonly (readonly GeoPoint[])[];
+  basemap: Basemap;
+  pointCall?: boolean;
+}>;
+
+function DispatchMap({ building, objects, concealedBuildingContours, basemap, pointCall = false }: DispatchMapProps) {
   const [mapProjector, setMapProjector] = useState<((point: GeoPoint) => ScreenPoint) | null>(null);
   const dispatchSelection = useMemo(() => {
     const ranked = objects
@@ -555,6 +563,7 @@ function DispatchMap({ building, objects, basemap, pointCall = false }: Readonly
       center={projection.center}
       zoom={projection.zoom}
       basemap={basemap}
+      concealedBuildingContours={concealedBuildingContours}
       fitPoints={fitPoints}
       fitPaddingRatio={.11}
       fitPrimaryPoints={building.contour}
@@ -627,10 +636,7 @@ function DispatchMap({ building, objects, basemap, pointCall = false }: Readonly
   </div></>;
 }
 
-export function FireDispatchTicket({ building, objects, basemap, onClose, pointCall = false }: Readonly<{
-  building: DistrictBuilding;
-  objects: readonly DistrictMapObject[];
-  basemap: Basemap;
+export function FireDispatchTicket({ building, objects, concealedBuildingContours, basemap, onClose, pointCall = false }: DispatchMapProps & Readonly<{
   onClose: () => void;
   pointCall?: boolean;
 }>) {
@@ -853,7 +859,7 @@ export function FireDispatchTicket({ building, objects, basemap, onClose, pointC
           </div>
           <div className="fire-dispatch-row dispatcher"><label data-complete={dispatcher.trim() !== ''}><span>5. Дежурный диспетчер подразделения (Фамилия И.О.)</span><input value={dispatcher} list="fire-dispatch-dispatchers" placeholder="Фамилия И.О." autoComplete="off" onBlur={rememberDispatcher} onChange={(event) => setDispatcher(event.currentTarget.value)} /><datalist id="fire-dispatch-dispatchers">{dispatcherSuggestions.map((name) => <option value={name} key={name} />)}</datalist></label><label><span>Подпись дежурного диспетчера</span><input aria-label="Подпись дежурного диспетчера" /></label></div>
         </div></>}
-        <DispatchMap building={building} objects={objects} basemap={basemap} pointCall={pointCall} />
+        <DispatchMap building={building} objects={objects} concealedBuildingContours={concealedBuildingContours} basemap={basemap} pointCall={pointCall} />
         <section className="fire-dispatch-planning-documents" aria-label="Документы предварительного планирования">
           <strong>Документы предварительного планирования</strong>
           <div>{planningDocuments.length === 0

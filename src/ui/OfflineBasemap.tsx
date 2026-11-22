@@ -474,16 +474,16 @@ export function OfflineBasemap({ center, zoom, basemap, concealedBuildingContour
         type: 'line',
         source: DEMOLISHED_MASK_SOURCE_ID,
         paint: {
-          // The manually traced contour can be a little tighter than the OSM
-          // footprint. A small rounded buffer hides the remaining wall edges;
-          // roads are rendered afterwards and therefore stay intact.
+          // Cover only the one-pixel outline left by the vector building
+          // layer. A wide or blurred stroke would extend beyond the manually
+          // traced contour and could erase parts of neighbouring buildings.
           'line-color': '#e9ece0',
-          'line-width': 10,
-          'line-blur': .25,
+          'line-width': 2,
+          'line-blur': 0,
         },
         layout: {
-          'line-cap': 'round',
-          'line-join': 'round',
+          'line-cap': 'butt',
+          'line-join': 'miter',
         },
       }, 'roads-casing');
       applyBasemap(map, desiredBasemapRef.current, container);
